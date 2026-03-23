@@ -1,0 +1,10 @@
+{
+  "name": "kiki",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "kiosk": "npm run start --workspace=apps/kiosk",
+    "kds": "npm run start --workspace=apps/kds",
+    "admin": "npm run dev --workspace=apps/admin"
+  }
+}

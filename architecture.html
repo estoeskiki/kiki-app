@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kiosk System Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --border: #1e2330;
+    --border-bright: #2a3045;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --accent-blue: #3b82f6;
+    --accent-cyan: #06b6d4;
+    --accent-green: #10b981;
+    --accent-amber: #f59e0b;
+    --accent-purple: #8b5cf6;
+    --accent-rose: #f43f5e;
+    --accent-orange: #f97316;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 40px 24px 60px;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 52px;
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+
+  .page-header p {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .diagram {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* LAYER */
+  .layer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .layer-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 4px;
+    margin-bottom: 4px;
+  }
+
+  .layer-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  /* NODE */
+  .node {
+    flex: 1;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 16px 18px;
+    position: relative;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .node:hover {
+    transform: translateY(-2px);
+  }
+
+  .node-icon {
+    font-size: 1.4rem;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .node-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+
+  .node-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .node-tag {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  /* Color variants */
+  .blue  { border-color: #1d3a6e; background: #0d1a2e; }
+  .blue:hover { border-color: var(--accent-blue); }
+  .blue .node-tag { background: #1d3a6e; color: var(--accent-blue); }
+
+  .cyan  { border-color: #0c3040; background: #071820; }
+  .cyan:hover { border-color: var(--accent-cyan); }
+  .cyan .node-tag { background: #0c3040; color: var(--accent-cyan); }
+
+  .green { border-color: #0d3026; background: #071a14; }
+  .green:hover { border-color: var(--accent-green); }
+  .green .node-tag { background: #0d3026; color: var(--accent-green); }
+
+  .amber { border-color: #3d2a08; background: #1e1504; }
+  .amber:hover { border-color: var(--accent-amber); }
+  .amber .node-tag { background: #3d2a08; color: var(--accent-amber); }
+
+  .purple { border-color: #2e1f5e; background: #160f30; }
+  .purple:hover { border-color: var(--accent-purple); }
+  .purple .node-tag { background: #2e1f5e; color: var(--accent-purple); }
+
+  .rose  { border-color: #3d1020; background: #1e0810; }
+  .rose:hover { border-color: var(--accent-rose); }
+  .rose .node-tag { background: #3d1020; color: var(--accent-rose); }
+
+  .orange { border-color: #3d1e08; background: #1e0f04; }
+  .orange:hover { border-color: var(--accent-orange); }
+  .orange .node-tag { background: #3d1e08; color: var(--accent-orange); }
+
+  /* CONNECTOR */
+  .connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 0;
+    gap: 2px;
+  }
+
+  .connector-line {
+    width: 1px;
+    height: 20px;
+    background: var(--border-bright);
+  }
+
+  .connector-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-align: center;
+    padding: 2px 10px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+    white-space: nowrap;
+  }
+
+  /* SPLIT CONNECTOR */
+  .connector-split {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 8px 0;
+    position: relative;
+    height: 40px;
+  }
+
+  .connector-split::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 1px;
+    height: 50%;
+    background: var(--border-bright);
+    transform: translateX(-50%);
+  }
+
+  .connector-split::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    background: var(--border-bright);
+  }
+
+  .connector-branch {
+    position: absolute;
+    bottom: 0;
+    width: 1px;
+    height: 50%;
+    background: var(--border-bright);
+  }
+
+  .connector-branch.left  { left: 20%; }
+  .connector-branch.mid   { left: 50%; transform: translateX(-50%); }
+  .connector-branch.right { right: 20%; }
+
+  /* SECTION DIVIDER */
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 0 8px;
+  }
+
+  .section-divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .section-divider-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--border-bright);
+    white-space: nowrap;
+  }
+
+  /* WIDE NODE */
+  .node.wide { flex: 2; }
+  .node.fill { flex: 3; }
+
+  /* DETAIL TABLE */
+  .detail-section {
+    max-width: 1100px;
+    margin: 48px auto 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .detail-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .detail-card h3 {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .detail-card ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .detail-card li {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    padding-left: 12px;
+    position: relative;
+    line-height: 1.5;
+  }
+
+  .detail-card li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--border-bright);
+  }
+
+  .detail-card li span {
+    color: var(--text);
+  }
+
+  @media (max-width: 700px) {
+    .layer-row { flex-direction: column; }
+    .detail-section { grid-template-columns: 1fr; }
+    .connector-split::after { left: 10%; right: 10%; }
+    .connector-branch.left { left: 10%; }
+    .connector-branch.right { right: 10%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Self-Service Kiosk — System Architecture</h1>
+  <p>Panama · React Native · Supabase · Banco General / Banistmo</p>
+</div>
+
+<div class="diagram">
+
+  <!-- LAYER 1: HARDWARE -->
+  <div class="layer">
+    <div class="layer-label">① On-Site Hardware (per restaurant)</div>
+    <div class="layer-row">
+
+      <div class="node blue">
+        <span class="node-icon">🖥️</span>
+        <div class="node-title">Android Kiosk</div>
+        <div class="node-sub">Touchscreen panel<br>Runs React Native app<br>Locked to kiosk mode</div>
+        <span class="node-tag">Customer-facing</span>
+      </div>
+
+      <div class="node rose">
+        <span class="node-icon">💳</span>
+        <div class="node-title">POS Terminal</div>
+        <div class="node-sub">Banco General or Banistmo<br>Ingenico / PAX device<br>Connected via LAN / USB</div>
+        <span class="node-tag">Bank-provided</span>
+      </div>
+
+      <div class="node amber">
+        <span class="node-icon">🖨️</span>
+        <div class="node-title">Receipt Printer</div>
+        <div class="node-sub">Thermal printer<br>SDK / API provided<br>Connected via BT or USB</div>
+        <span class="node-tag">Customer receipt</span>
+      </div>
+
+      <div class="node cyan">
+        <span class="node-icon">📺</span>
+        <div class="node-title">Kitchen Display (KDS)</div>
+        <div class="node-sub">Android tablet or screen<br>Shows live orders<br>Supabase Realtime</div>
+        <span class="node-tag">Kitchen-facing</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="connector">
+    <div class="connector-line"></div>
+    <div class="connector-label">React Native app talks to backend via HTTPS + Realtime WebSocket</div>
+    <div class="connector-line"></div>
+  </div>
+
+  <!-- LAYER 2: KIOSK APP -->
+  <div class="layer">
+    <div class="layer-label">② Kiosk App — React Native (Android)</div>
+    <div class="layer-row">
+
+      <div class="node blue wide">
+        <span class="node-icon">🛒</span>
+        <div class="node-title">Ordering Flow</div>
+        <div class="node-sub">Browse menu · Add to cart · Customize items<br>Order summary · Select payment method</div>
+        <span class="node-tag">Core UX</span>
+      </div>
+
+      <div class="node rose">
+        <span class="node-icon">💳</span>
+        <div class="node-title">Payment Module</div>
+        <div class="node-sub">Calls bank terminal via<br>ECR SDK / local API<br>Handles approve / decline</div>
+        <span class="node-tag">ECR Integration</span>
+      </div>
+
+      <div class="node amber">
+        <span class="node-icon">🖨️</span>
+        <div class="node-title">Printer Module</div>
+        <div class="node-sub">Calls printer SDK<br>Prints receipt on<br>payment success</div>
+        <span class="node-tag">Native SDK</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="connector">
+    <div class="connector-line"></div>
+    <div class="connector-label">REST API calls + Supabase Realtime subscription</div>
+    <div class="connector-line"></div>
+  </div>
+
+  <!-- LAYER 3: BACKEND -->
+  <div class="layer">
+    <div class="layer-label">③ Backend — Supabase + Next.js API</div>
+    <div class="layer-row">
+
+      <div class="node green">
+        <span class="node-icon">🗄️</span>
+        <div class="node-title">Supabase DB</div>
+        <div class="node-sub">menus · categories · items<br>orders · order_items<br>restaurants · locations</div>
+        <span class="node-tag">PostgreSQL</span>
+      </div>
+
+      <div class="node green">
+        <span class="node-icon">⚡</span>
+        <div class="node-title">Supabase Realtime</div>
+        <div class="node-sub">Broadcasts new orders<br>to KDS instantly<br>WebSocket channel per location</div>
+        <span class="node-tag">Live orders</span>
+      </div>
+
+      <div class="node purple">
+        <span class="node-icon">🔌</span>
+        <div class="node-title">Next.js API Routes</div>
+        <div class="node-sub">POST /orders · confirm payment<br>GET /menu · by restaurant<br>Auth · middleware · validation</div>
+        <span class="node-tag">REST API</span>
+      </div>
+
+      <div class="node green">
+        <span class="node-icon">🔐</span>
+        <div class="node-title">Supabase Auth</div>
+        <div class="node-sub">Restaurant admin login<br>Row Level Security<br>per restaurant isolation</div>
+        <span class="node-tag">Multi-tenant</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="connector">
+    <div class="connector-line"></div>
+    <div class="connector-label">Browser · HTTPS</div>
+    <div class="connector-line"></div>
+  </div>
+
+  <!-- LAYER 4: ADMIN -->
+  <div class="layer">
+    <div class="layer-label">④ Admin Dashboard — Next.js Web App</div>
+    <div class="layer-row">
+
+      <div class="node purple">
+        <span class="node-icon">🍽️</span>
+        <div class="node-title">Menu Manager</div>
+        <div class="node-sub">Add / edit / remove items<br>Set prices · toggle availability<br>Upload photos</div>
+        <span class="node-tag">Restaurant owner</span>
+      </div>
+
+      <div class="node purple">
+        <span class="node-icon">📋</span>
+        <div class="node-title">Live Orders View</div>
+        <div class="node-sub">Real-time order feed<br>Order status updates<br>Daily summary</div>
+        <span class="node-tag">Realtime</span>
+      </div>
+
+      <div class="node orange">
+        <span class="node-icon">🏢</span>
+        <div class="node-title">Your SaaS Dashboard</div>
+        <div class="node-sub">Manage all clients<br>Onboard restaurants<br>Monitor kiosk health</div>
+        <span class="node-tag">Your ops panel</span>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- DETAIL CARDS -->
+<div class="detail-section">
+
+  <div class="detail-card">
+    <h3>💳 Payment Flow (step by step)</h3>
+    <ul>
+      <li><span>1.</span> Customer taps "Pay" on kiosk</li>
+      <li><span>2.</span> App sends amount to bank terminal via ECR SDK</li>
+      <li><span>3.</span> Terminal prompts customer: insert / tap card</li>
+      <li><span>4.</span> Bank authorizes → terminal returns approved/declined</li>
+      <li><span>5.</span> On approval → app calls POST /orders to save order</li>
+      <li><span>6.</span> Supabase Realtime fires → KDS receives order instantly</li>
+      <li><span>7.</span> App calls printer SDK → receipt printed</li>
+    </ul>
+  </div>
+
+  <div class="detail-card">
+    <h3>📦 Supabase Data Model (core tables)</h3>
+    <ul>
+      <li><span>restaurants</span> — id, name, location, owner_id</li>
+      <li><span>menus</span> — id, restaurant_id, name, active</li>
+      <li><span>categories</span> — id, menu_id, name, sort_order</li>
+      <li><span>items</span> — id, category_id, name, price, image_url, available</li>
+      <li><span>orders</span> — id, restaurant_id, status, total, created_at</li>
+      <li><span>order_items</span> — id, order_id, item_id, qty, unit_price</li>
+      <li><span>kiosks</span> — id, restaurant_id, serial, last_seen_at</li>
+    </ul>
+  </div>
+
+  <div class="detail-card">
+    <h3>📺 KDS — How It Works</h3>
+    <ul>
+      <li>Android tablet mounted in kitchen</li>
+      <li>Runs a simple React Native or web app</li>
+      <li>Subscribes to Supabase Realtime channel for its restaurant_id</li>
+      <li>New order appears instantly without polling</li>
+      <li>Kitchen staff taps "Done" → order status updates to completed</li>
+      <li>No extra backend needed — pure Supabase Realtime</li>
+    </ul>
+  </div>
+
+  <div class="detail-card">
+    <h3>🔧 Key Tech Decisions</h3>
+    <ul>
+      <li><span>React Native</span> — shared codebase for kiosk + KDS apps</li>
+      <li><span>Supabase RLS</span> — each restaurant only sees its own data</li>
+      <li><span>ECR via LAN</span> — kiosk calls terminal on local network IP</li>
+      <li><span>MDM (Hexnode)</span> — push app updates to all kiosks remotely</li>
+      <li><span>Offline fallback</span> — queue orders locally if internet drops</li>
+      <li><span>Next.js API</span> — handles business logic, payment confirmation</li>
+    </ul>
+  </div>
+
+</div>
+
+</body>
+</html>
