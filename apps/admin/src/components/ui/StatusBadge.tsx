@@ -10,8 +10,8 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  let backgroundColor = colors.surfaceHighlight;
-  let textColor = colors.textSecondary;
+  let backgroundColor: string = colors.surfaceHighlight;
+  let textColor: string = colors.textSecondary;
   let label = status.toUpperCase();
 
   switch (status) {

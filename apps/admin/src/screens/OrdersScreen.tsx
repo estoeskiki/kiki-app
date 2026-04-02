@@ -4,7 +4,7 @@ import { ScreenWrapper } from '../components/layout/ScreenWrapper';
 import { OrderCard } from '../components/ui/OrderCard';
 import { OrderDetailsModal } from '../components/ui/OrderDetailsModal';
 import { useOrdersStore } from '../store/useOrdersStore';
-import { mockPrintTicket } from '../services/printerService';
+import { printTicket } from '../services/printerService';
 import { Order } from '../data/types';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -28,9 +28,9 @@ export default function OrdersScreen() {
 
   const handleAccept = async (orderId: string) => {
     acceptOrder(orderId);
-    if (selectedOrder) {
-      mockPrintTicket(selectedOrder.orderNumber).then(() => {
-         Alert.alert('Printed', `Ticket for Order #${selectedOrder.orderNumber} printed successfully.`);
+    if (selectedOrder && selectedOrder.id === orderId) {
+      printTicket(selectedOrder).then(() => {
+         Alert.alert('Impreso', `Ticket para Orden #${selectedOrder.orderNumber} impreso con éxito.`);
       });
       setSelectedOrder({ ...selectedOrder, status: 'preparing' });
     }
@@ -38,24 +38,27 @@ export default function OrdersScreen() {
 
   const handleMarkReady = (orderId: string) => {
     markOrderReady(orderId);
-    if (selectedOrder) {
+    if (selectedOrder && selectedOrder.id === orderId) {
       setSelectedOrder({ ...selectedOrder, status: 'ready' });
     }
   };
 
   const handleComplete = (orderId: string) => {
     markOrderCompleted(orderId);
-    setSelectedOrder(null);
+    if (selectedOrder && selectedOrder.id === orderId) {
+      setSelectedOrder(null);
+    }
   };
 
   const handleAdvance = (orderId: string) => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
+    
     switch (order.status) {
       case 'confirmed':
         acceptOrder(orderId);
-        mockPrintTicket(order.orderNumber).then(() => {
-          Alert.alert('Printed', `Ticket for Order #${order.orderNumber} printed.`);
+        printTicket(order).then(() => {
+          Alert.alert('Impreso', `Ticket para Orden #${order.orderNumber} impreso.`);
         });
         break;
       case 'preparing':
@@ -70,7 +73,7 @@ export default function OrdersScreen() {
   return (
     <ScreenWrapper>
       <View style={styles.headerContainer}>
-        <Text style={styles.title}>Active Orders</Text>
+        <Text style={styles.title}>Órdenes Activas</Text>
       </View>
       
       <FlatList
@@ -82,7 +85,7 @@ export default function OrdersScreen() {
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No active orders right now.</Text>
+            <Text style={styles.emptyText}>No hay órdenes activas en este momento.</Text>
           </View>
         }
       />

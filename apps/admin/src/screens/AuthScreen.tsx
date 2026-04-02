@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,46 +9,46 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-} from 'react-native';
-import { supabase } from '../lib/supabase';
-import { colors } from '../theme/colors';
-import { spacing } from '../theme/spacing';
-import { fonts, fontSizes } from '../theme/typography';
+} from "react-native";
+import { supabase } from "../lib/supabase";
+import { colors } from "../theme/colors";
+import { spacing } from "../theme/spacing";
+import { fonts, fontSizes } from "../theme/typography";
 
 export function AuthScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password.');
+      Alert.alert("Error", "Por favor ingresa correo electrónico y contraseña.");
       return;
     }
-
     setLoading(true);
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
-      Alert.alert('Login Failed', error.message);
+      Alert.alert("Error al Iniciar Sesión", error.message);
     }
     setLoading(false);
   };
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
       <View style={styles.card}>
         <Text style={styles.title}>Kiki Admin</Text>
-        <Text style={styles.subtitle}>Sign in to manage your restaurant</Text>
+        <Text style={styles.subtitle}>Inicia sesión para gestionar tu restaurante</Text>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>Correo Electrónico</Text>
           <TextInput
             style={styles.input}
             placeholder="admin@kikiburgers.com"
@@ -61,7 +61,7 @@ export function AuthScreen() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Password</Text>
+          <Text style={styles.label}>Contraseña</Text>
           <TextInput
             style={styles.input}
             placeholder="••••••••"
@@ -81,7 +81,7 @@ export function AuthScreen() {
           {loading ? (
             <ActivityIndicator color={colors.background} />
           ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
+            <Text style={styles.buttonText}>Iniciar Sesión</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -93,34 +93,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: spacing.xl,
   },
   card: {
     backgroundColor: colors.surface,
     borderRadius: 24,
-    padding: spacing['2xl'],
+    padding: spacing["2xl"],
     borderWidth: 1,
     borderColor: colors.border,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
   },
   title: {
     fontFamily: fonts.heading,
-    fontSize: fontSizes['3xl'],
+    fontSize: fontSizes["3xl"],
     color: colors.primary,
     marginBottom: spacing.xs,
-    textAlign: 'center',
+    textAlign: "center",
   },
   subtitle: {
     fontFamily: fonts.body,
     fontSize: fontSizes.base,
     color: colors.textSecondary,
     marginBottom: spacing.xl,
-    textAlign: 'center',
+    textAlign: "center",
   },
   inputContainer: {
     marginBottom: spacing.lg,
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: spacing.sm,
   },
   buttonDisabled: {
