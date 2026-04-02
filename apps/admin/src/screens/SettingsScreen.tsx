@@ -16,7 +16,7 @@ export default function SettingsScreen() {
 
   const handleGenerateToken = async () => {
     if (!orgId || !restaurantId) {
-      Alert.alert('Configuration Error', 'Unable to determine your current branch. Cannot generate a token.');
+      Alert.alert('Error de Configuración', 'No se puede determinar tu sucursal actual. No se puede generar un token.');
       return;
     }
 
@@ -36,19 +36,19 @@ export default function SettingsScreen() {
     if (error) {
       Alert.alert('Error', error.message);
     } else {
-      Alert.alert('Token Generated!', `Write this down: ${newToken}\n\nYou can use this token to immediately log in a physical Kiosk tablet for this branch!`);
+      Alert.alert('¡Token Generado!', `Anota esto: ${newToken}\n\n¡Puedes usar este token para iniciar sesión inmediatamente en una tablet Kiosko física para esta sucursal!`);
     }
   };
 
   return (
     <ScreenWrapper>
-      <Header title="Settings" />
+      <Header title="Configuración" />
       <View style={styles.content}>
         
         {/* Kiosk Controls */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Kiosk Status</Text>
+            <Text style={styles.cardTitle}>Estado del Kiosko</Text>
             <Switch
               value={kioskIsOpen}
               onValueChange={toggleKiosk}
@@ -58,15 +58,15 @@ export default function SettingsScreen() {
           </View>
           <Text style={styles.cardDesc}>
             {kioskIsOpen 
-              ? 'The kiosk is currently accepting new orders.' 
-              : 'The kiosk is closed and will show a "Closed" message to customers.'}
+               ? 'El kiosko está aceptando nuevas órdenes actualmente.' 
+               : 'El kiosko está cerrado y mostrará un mensaje de "Cerrado" a los clientes.'}
           </Text>
         </View>
 
         {/* Device Management */}
         <View style={[styles.card, { marginTop: spacing.xl }]}>
-          <Text style={styles.cardTitle}>Kiosk Devices</Text>
-          <Text style={styles.cardDesc}>Generate a secure hardware token to pair a new iPad or Android tablet to this specific branch.</Text>
+          <Text style={styles.cardTitle}>Dispositivos de Kiosko</Text>
+          <Text style={styles.cardDesc}>Genera un token de hardware seguro para vincular un nuevo iPad o tablet Android a esta sucursal específica.</Text>
           
           <TouchableOpacity 
             style={[styles.primaryButton, isGenerating && { opacity: 0.5 }]} 
@@ -74,21 +74,21 @@ export default function SettingsScreen() {
             disabled={isGenerating}
             activeOpacity={0.8}
           >
-            {isGenerating ? <ActivityIndicator color={colors.background} /> : <Text style={styles.primaryButtonText}>Generate Kiosk Token</Text>}
+            {isGenerating ? <ActivityIndicator color={colors.background} /> : <Text style={styles.primaryButtonText}>Generar Token de Kiosko</Text>}
           </TouchableOpacity>
         </View>
 
         {/* Account Details & Logout */}
         <View style={[styles.card, { marginTop: spacing.xl }]}>
-          <Text style={styles.cardTitle}>Account</Text>
-          <Text style={styles.cardDesc}>Logged in as: {user?.email}</Text>
+          <Text style={styles.cardTitle}>Cuenta</Text>
+          <Text style={styles.cardDesc}>Sesión iniciada como: {user?.email}</Text>
           
           <TouchableOpacity 
             style={styles.logoutButton} 
             onPress={() => signOut()}
             activeOpacity={0.8}
           >
-            <Text style={styles.logoutText}>Log Out</Text>
+            <Text style={styles.logoutText}>Cerrar Sesión</Text>
           </TouchableOpacity>
         </View>
 

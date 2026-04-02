@@ -34,7 +34,7 @@ export function OrderDetailsModal({
             style={[styles.button, { backgroundColor: colors.primary }]}
             onPress={() => onAccept(order.id)}
           >
-            <Text style={styles.buttonText}>Accept & Print Ticket</Text>
+            <Text style={styles.buttonText}>Aceptar e Imprimir Ticket</Text>
           </TouchableOpacity>
         );
       case 'preparing':
@@ -43,7 +43,7 @@ export function OrderDetailsModal({
             style={[styles.button, { backgroundColor: colors.secondary }]}
             onPress={() => onMarkReady(order.id)}
           >
-            <Text style={styles.buttonText}>Mark as Ready</Text>
+            <Text style={styles.buttonText}>Marcar como Listo</Text>
           </TouchableOpacity>
         );
       case 'ready':
@@ -52,7 +52,7 @@ export function OrderDetailsModal({
             style={[styles.button, { backgroundColor: colors.success }]}
             onPress={() => onComplete(order.id)}
           >
-            <Text style={styles.buttonText}>Complete Order</Text>
+            <Text style={styles.buttonText}>Completar Orden</Text>
           </TouchableOpacity>
         );
       default:
@@ -66,18 +66,18 @@ export function OrderDetailsModal({
         <View style={styles.modalContent}>
           <View style={styles.header}>
             <View>
-              <Text style={styles.orderNumber}>Order #{order.orderNumber}</Text>
+              <Text style={styles.orderNumber}>Orden #{order.orderNumber}</Text>
               <Text style={styles.orderType}>
-                {order.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'}
+                {order.orderType === 'dine-in' ? 'Comer Aquí' : 'Para Llevar'}
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>Close</Text>
+              <Text style={styles.closeButtonText}>Cerrar</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Status:</Text>
+            <Text style={styles.statusLabel}>Estado:</Text>
             <StatusBadge status={order.status} />
           </View>
 

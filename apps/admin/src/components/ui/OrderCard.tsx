@@ -13,9 +13,9 @@ interface OrderCardProps {
 }
 
 const NEXT_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  confirmed: { label: 'Accept', color: colors.primary },
-  preparing: { label: 'Ready', color: colors.secondary },
-  ready: { label: 'Complete', color: colors.success },
+  confirmed: { label: 'Aceptar', color: colors.primary },
+  preparing: { label: 'Listo', color: colors.secondary },
+  ready: { label: 'Completar', color: colors.success },
 };
 
 export function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
@@ -34,10 +34,10 @@ export function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
       </View>
       <View style={styles.details}>
         <Text style={styles.itemCount}>
-          {itemCount} {itemCount === 1 ? 'item' : 'items'}
+          {itemCount} {itemCount === 1 ? 'artículo' : 'artículos'}
         </Text>
         <Text style={styles.orderType}>
-          {order.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'}
+          {order.orderType === 'dine-in' ? 'Comer Aquí' : 'Para Llevar'}
         </Text>
       </View>
       <View style={styles.footer}>

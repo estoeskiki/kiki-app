@@ -18,19 +18,22 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     case 'confirmed':
       backgroundColor = colors.primary;
       textColor = colors.background;
-      label = 'NEW';
+      label = 'NUEVO';
       break;
     case 'preparing':
       backgroundColor = colors.secondary;
       textColor = colors.background;
+      label = 'PREPARANDO';
       break;
     case 'ready':
       backgroundColor = colors.success;
       textColor = colors.background;
+      label = 'LISTO';
       break;
     case 'completed':
       backgroundColor = colors.surfaceHighlight;
       textColor = colors.textSecondary;
+      label = 'COMPLETADO';
       break;
   }
 

@@ -30,6 +30,7 @@ export function RootNavigator() {
         name="Orders"
         component={OrdersScreen}
         options={{
+          tabBarLabel: 'Órdenes',
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
         }}
       />
@@ -37,6 +38,7 @@ export function RootNavigator() {
         name="Menu"
         component={MenuScreen}
         options={{
+          tabBarLabel: 'Menú',
           tabBarIcon: ({ color, size }) => <MenuSquare color={color} size={size} />,
         }}
       />
@@ -44,6 +46,7 @@ export function RootNavigator() {
         name="Settings"
         component={SettingsScreen}
         options={{
+          tabBarLabel: 'Configuración',
           tabBarIcon: ({ color, size }) => <Settings color={color} size={size} />,
         }}
       />

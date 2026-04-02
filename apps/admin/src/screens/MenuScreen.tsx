@@ -195,7 +195,7 @@ export default function MenuScreen() {
   const handleSave = () => {
     const { name, description, price, categoryId } = editingItem;
     if (!name.trim()) {
-      Alert.alert('Error', 'Item name is required.');
+      Alert.alert('Error', 'El nombre del artículo es requerido.');
       return;
     }
     const priceInCents = Math.round(parseFloat(price || '0') * 100);
@@ -246,9 +246,9 @@ export default function MenuScreen() {
   };
 
   const handleDelete = (item: MenuItem) => {
-    Alert.alert('Delete Item', `Are you sure you want to delete "${item.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteItem(item.id) },
+    Alert.alert('Eliminar Artículo', `¿Estás seguro de que quieres eliminar "${item.name}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: () => deleteItem(item.id) },
     ]);
   };
 
@@ -290,7 +290,7 @@ export default function MenuScreen() {
 
       {item.customizations.length > 0 && (
         <Text style={styles.cardAddons}>
-          {item.customizations.length} add-on{item.customizations.length > 1 ? 's' : ''}
+          {item.customizations.length} complemento{item.customizations.length > 1 ? 's' : ''}
         </Text>
       )}
 
@@ -308,9 +308,9 @@ export default function MenuScreen() {
     <ScreenWrapper>
       {/* Header */}
       <View style={styles.headerRow}>
-        <Text style={styles.screenTitle}>Menu</Text>
+        <Text style={styles.screenTitle}>Menú</Text>
         <TouchableOpacity onPress={openAddModal} style={styles.addBtn} activeOpacity={0.7}>
-          <Text style={styles.addBtnText}>+ Add Item</Text>
+          <Text style={styles.addBtnText}>+ Añadir Artículo</Text>
         </TouchableOpacity>
       </View>
 
@@ -349,9 +349,9 @@ export default function MenuScreen() {
         contentContainerStyle={styles.gridContainer}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No items in this category.</Text>
+            <Text style={styles.emptyText}>No hay artículos en esta categoría.</Text>
             <TouchableOpacity onPress={openAddModal} style={styles.emptyAddBtn} activeOpacity={0.7}>
-              <Text style={styles.emptyAddText}>+ Add one</Text>
+              <Text style={styles.emptyAddText}>+ Añadir uno</Text>
             </TouchableOpacity>
           </View>
         }
@@ -367,36 +367,36 @@ export default function MenuScreen() {
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>
-                  {isNewItem ? 'Add New Item' : 'Edit Item'}
+                  {isNewItem ? 'Añadir Nuevo Artículo' : 'Editar Artículo'}
                 </Text>
                 <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-                  <Text style={styles.modalClose}>Cancel</Text>
+                  <Text style={styles.modalClose}>Cancelar</Text>
                 </TouchableOpacity>
               </View>
 
               <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
                 {/* Basic info */}
-                <Text style={styles.label}>Name</Text>
+                <Text style={styles.label}>Nombre</Text>
                 <TextInput
                   style={styles.input}
                   value={editingItem.name}
                   onChangeText={(t) => setEditingItem({ ...editingItem, name: t })}
-                  placeholder="Item name"
+                  placeholder="Nombre del artículo"
                   placeholderTextColor={colors.textMuted}
                 />
 
-                <Text style={styles.label}>Description</Text>
+                <Text style={styles.label}>Descripción</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={editingItem.description}
                   onChangeText={(t) => setEditingItem({ ...editingItem, description: t })}
-                  placeholder="Short description"
+                  placeholder="Descripción corta"
                   placeholderTextColor={colors.textMuted}
                   multiline
                   numberOfLines={3}
                 />
 
-                <Text style={styles.label}>Price (€)</Text>
+                <Text style={styles.label}>Precio (€)</Text>
                 <TextInput
                   style={styles.input}
                   value={editingItem.price}
@@ -407,7 +407,7 @@ export default function MenuScreen() {
                 />
 
                 {/* Category chips */}
-                <Text style={styles.label}>Category</Text>
+                <Text style={styles.label}>Categoría</Text>
                 <View style={styles.categoryRow}>
                   {categories.map((cat) => (
                     <TouchableOpacity
@@ -433,7 +433,7 @@ export default function MenuScreen() {
 
                 {/* Toggles */}
                 <View style={styles.toggleRow}>
-                  <Text style={styles.toggleLabel}>Available</Text>
+                  <Text style={styles.toggleLabel}>Disponible</Text>
                   <Switch
                     value={editingItem.available}
                     onValueChange={(v) => setEditingItem({ ...editingItem, available: v })}
@@ -442,7 +442,7 @@ export default function MenuScreen() {
                   />
                 </View>
                 <View style={styles.toggleRow}>
-                  <Text style={styles.toggleLabel}>Popular / Featured</Text>
+                  <Text style={styles.toggleLabel}>Popular / Destacado</Text>
                   <Switch
                     value={editingItem.popular}
                     onValueChange={(v) => setEditingItem({ ...editingItem, popular: v })}
@@ -454,9 +454,9 @@ export default function MenuScreen() {
                 {/* ─── Customizations / Add-ons ─────────────────────────────── */}
                 <View style={styles.sectionDivider} />
                 <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionLabel}>Add-ons / Customizations</Text>
+                  <Text style={styles.sectionLabel}>Complementos / Personalizaciones</Text>
                   <TouchableOpacity onPress={addCustomizationGroup} activeOpacity={0.7}>
-                    <Text style={styles.addGroupText}>+ Add Group</Text>
+                    <Text style={styles.addGroupText}>+ Añadir Grupo</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -467,11 +467,11 @@ export default function MenuScreen() {
                         style={styles.cgNameInput}
                         value={cg.name}
                         onChangeText={(t) => updateCustomizationGroup(cg.id, { name: t })}
-                        placeholder="Group name (e.g. Patty Size)"
+                        placeholder="Nombre del grupo (ej. Tamaño)"
                         placeholderTextColor={colors.textMuted}
                       />
                       <TouchableOpacity onPress={() => removeCustomizationGroup(cg.id)}>
-                        <Text style={styles.removeText}>Remove</Text>
+                        <Text style={styles.removeText}>Eliminar</Text>
                       </TouchableOpacity>
                     </View>
 
@@ -488,11 +488,11 @@ export default function MenuScreen() {
                             cg.required && styles.cgToggleTextActive,
                           ]}
                         >
-                          Required
+                          Requerido
                         </Text>
                       </TouchableOpacity>
                       <View style={styles.maxSelRow}>
-                        <Text style={styles.maxSelLabel}>Max:</Text>
+                        <Text style={styles.maxSelLabel}>Máx:</Text>
                         <TextInput
                           style={styles.maxSelInput}
                           value={String(cg.maxSelections)}
@@ -513,7 +513,7 @@ export default function MenuScreen() {
                           style={styles.optionNameInput}
                           value={opt.name}
                           onChangeText={(t) => updateOption(cg.id, opt.id, { name: t })}
-                          placeholder="Option name"
+                          placeholder="Nombre de la opción"
                           placeholderTextColor={colors.textMuted}
                         />
                         <TextInput
@@ -537,14 +537,14 @@ export default function MenuScreen() {
                       style={styles.addOptionBtn}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.addOptionText}>+ Add Option</Text>
+                      <Text style={styles.addOptionText}>+ Añadir Opción</Text>
                     </TouchableOpacity>
                   </View>
                 ))}
 
                 {editingItem.customizations.length === 0 && (
                   <Text style={styles.noAddonsText}>
-                    No add-ons yet. Tap "+ Add Group" to create customization options.
+                    Aún no hay complementos. Toca "+ Añadir Grupo" para crear opciones de personalización.
                   </Text>
                 )}
 
@@ -554,7 +554,7 @@ export default function MenuScreen() {
               {/* Save */}
               <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
                 <Text style={styles.saveBtnText}>
-                  {isNewItem ? 'Add to Menu' : 'Save Changes'}
+                  {isNewItem ? 'Añadir al Menú' : 'Guardar Cambios'}
                 </Text>
               </TouchableOpacity>
             </View>
