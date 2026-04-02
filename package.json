@@ -1,15 +1,9 @@
 {
   "name": "kiki",
   "private": true,
-  "workspaces": [
-    "apps/kds",
-    "apps/admin",
-    "packages/*"
-  ],
   "scripts": {
-    "kiosk": "npm run start --workspace=apps/kiosk",
-    "kds": "npm run start --workspace=apps/kds",
-    "admin": "npm run dev --workspace=apps/admin"
-  },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+    "kiosk": "cd apps/kiosk && npx expo start",
+    "admin": "cd apps/admin && npx expo start",
+    "kds": "cd apps/kds && npx expo start"
+  }
 }

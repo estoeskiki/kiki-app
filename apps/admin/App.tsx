@@ -15,10 +15,10 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
-import { RootNavigator } from '@/navigation/RootNavigator';
-import { DeviceAuthScreen } from '@/screens/AuthScreen';
-import { useAuthStore } from '@/store/useAuthStore';
-import { colors } from '@/theme/colors';
+import { RootNavigator } from './src/navigation/RootNavigator';
+import { AuthScreen } from './src/screens/AuthScreen';
+import { useAuthStore } from './src/store/useAuthStore';
+import { colors } from './src/theme/colors';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -46,7 +46,7 @@ export default function App() {
     Inter_700Bold,
   });
 
-  const { deviceToken, isLoading, initialize } = useAuthStore();
+  const { session, isLoading, initialize } = useAuthStore();
 
   useEffect(() => {
     initialize();
@@ -69,12 +69,12 @@ export default function App() {
   return (
     <View style={styles.container} onLayout={onLayoutRootView}>
       <StatusBar style="light" />
-      {deviceToken ? (
+      {session ? (
         <NavigationContainer theme={navTheme}>
           <RootNavigator />
         </NavigationContainer>
       ) : (
-        <DeviceAuthScreen />
+        <AuthScreen />
       )}
     </View>
   );

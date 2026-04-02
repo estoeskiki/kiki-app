@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { ScreenWrapper } from '@/components/layout/ScreenWrapper';
 import { Header } from '@/components/layout/Header';
@@ -6,15 +6,30 @@ import { CategoryTabs } from '@/components/menu/CategoryTabs';
 import { MenuGrid } from '@/components/menu/MenuGrid';
 import { CartFAB } from '@/components/cart/CartFAB';
 import { useCartStore } from '@/store/useCartStore';
-import { categories } from '@/data/categories';
-import { menuItems } from '@/data/menu';
+import { useMenuStore } from '@/store/useMenuStore';
 import type { MenuItem } from '@/data/types';
 import type { ScreenProps } from '@/navigation/types';
 
 export function MenuScreen({ navigation }: ScreenProps<'Menu'>) {
-  const [selectedCategoryId, setSelectedCategoryId] = useState(
-    categories[0]?.id ?? '',
-  );
+  const { categories, items: menuItems, fetchMenu, subscribeToMenu, unsubscribeFromMenu } = useMenuStore();
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+
+  // Fetch initial data and subscribe to realtime updates
+  useEffect(() => {
+    fetchMenu();
+    subscribeToMenu();
+    return () => {
+      unsubscribeFromMenu();
+    };
+  }, [fetchMenu, subscribeToMenu, unsubscribeFromMenu]);
+
+  // Set default category when categories load
+  useEffect(() => {
+    if (!selectedCategoryId && categories.length > 0) {
+      setSelectedCategoryId(categories[0].id);
+    }
+  }, [categories, selectedCategoryId]);
 
   const cartItems = useCartStore((s) => s.items);
   const addItem = useCartStore((s) => s.addItem);
