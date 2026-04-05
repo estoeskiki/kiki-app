@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Order, OrderStatus } from '../../data/types';
+import { Order } from '../../data/types';
 import { StatusBadge } from './StatusBadge';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/useTheme';
 import { fonts, fontSizes } from '../../theme/typography';
-import { spacing } from '../../theme/spacing';
+import { spacing, borderRadius } from '../../theme/spacing';
 
 interface OrderCardProps {
   order: Order;
@@ -12,50 +12,88 @@ interface OrderCardProps {
   onAdvance?: (orderId: string) => void;
 }
 
-const NEXT_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  confirmed: { label: 'Aceptar', color: colors.primary },
-  preparing: { label: 'Listo', color: colors.secondary },
-  ready: { label: 'Completar', color: colors.success },
-};
-
 export function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
+  const { colors, isDark } = useTheme();
   const itemCount = order.items.reduce((acc, item) => acc + item.quantity, 0);
-  const nextAction = NEXT_STATUS_CONFIG[order.status];
+
+  const accentColorMap: Record<string, string> = {
+    confirmed: colors.statusConfirmedText,
+    preparing: colors.statusPreparingText,
+    ready: colors.statusReadyText,
+    completed: colors.textMuted,
+    failed: colors.error,
+  };
+
+  const advanceConfigMap: Record<string, { label: string; bg: string; text: string }> = {
+    confirmed: { label: 'Aceptar',   bg: colors.primary,    text: colors.onPrimary },
+    preparing: { label: 'Listo',     bg: colors.secondary,  text: '#ffffff' },
+    ready:     { label: 'Completar', bg: colors.success,    text: '#ffffff' },
+  };
+
+  const accentColor = accentColorMap[order.status] ?? colors.textMuted;
+  const advanceConfig = advanceConfigMap[order.status];
+
+  const shadowStyle = isDark
+    ? { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }
+    : { shadowColor: '#060e1d', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 };
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[
+        styles.card,
+        shadowStyle,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.borderLight,
+        },
+      ]}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeOpacity={0.75}
     >
-      <View style={styles.header}>
-        <Text style={styles.orderNumber}>#{order.orderNumber}</Text>
-        <StatusBadge status={order.status} />
-      </View>
-      <View style={styles.details}>
-        <Text style={styles.itemCount}>
-          {itemCount} {itemCount === 1 ? 'artículo' : 'artículos'}
-        </Text>
-        <Text style={styles.orderType}>
-          {order.orderType === 'dine-in' ? 'Comer Aquí' : 'Para Llevar'}
-        </Text>
-      </View>
-      <View style={styles.footer}>
-        <Text style={styles.time} numberOfLines={1}>
-          {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
-        {nextAction && onAdvance && (
-          <TouchableOpacity
-            style={[styles.advanceButton, { backgroundColor: nextAction.color }]}
-            onPress={(e) => {
-              e.stopPropagation?.();
-              onAdvance(order.id);
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.advanceText}>{nextAction.label}</Text>
-          </TouchableOpacity>
-        )}
+      {/* Status accent left bar */}
+      <View style={[styles.accentBar, { backgroundColor: accentColor }]} />
+
+      <View style={styles.inner}>
+        {/* Top row */}
+        <View style={styles.topRow}>
+          <Text style={[styles.orderNumber, { color: colors.textPrimary }]}>
+            #{order.orderNumber}
+          </Text>
+          <StatusBadge status={order.status} size="sm" />
+        </View>
+
+        {/* Middle row */}
+        <View style={styles.midRow}>
+          <Text style={[styles.detail, { color: colors.textSecondary }]}>
+            {itemCount} {itemCount === 1 ? 'artículo' : 'artículos'}
+          </Text>
+          <View style={[styles.typePill, { backgroundColor: colors.surfaceHighlight }]}>
+            <Text style={[styles.typeText, { color: colors.textSecondary }]}>
+              {order.orderType === 'dine-in' ? 'Aquí' : 'Llevar'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Bottom row */}
+        <View style={styles.bottomRow}>
+          <Text style={[styles.time, { color: colors.textMuted }]}>
+            {new Date(order.createdAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+          {advanceConfig && onAdvance && (
+            <TouchableOpacity
+              style={[styles.advanceBtn, { backgroundColor: advanceConfig.bg }]}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onAdvance(order.id);
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.advanceText, { color: advanceConfig.text }]}>
+                {advanceConfig.label}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -63,57 +101,64 @@ export function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.base,
-    marginBottom: spacing.base,
-    borderWidth: 1,
-    borderColor: colors.border,
+    flexDirection: 'row',
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
   },
-  header: {
+  accentBar: {
+    width: 4,
+  },
+  inner: {
+    flex: 1,
+    padding: spacing.base,
+    gap: spacing.sm,
+  },
+  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
   },
   orderNumber: {
     fontFamily: fonts.heading,
     fontSize: fontSizes.xl,
-    color: colors.textPrimary,
+    letterSpacing: -0.5,
   },
-  details: {
+  midRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  itemCount: {
+  detail: {
     fontFamily: fonts.body,
-    fontSize: fontSizes.base,
-    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
   },
-  orderType: {
+  typePill: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  typeText: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSizes.base,
-    color: colors.primary,
+    fontSize: fontSizes.xs,
   },
-  footer: {
+  bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   time: {
     fontFamily: fonts.body,
-    fontSize: fontSizes.sm,
-    color: colors.textMuted,
+    fontSize: fontSizes.xs,
   },
-  advanceButton: {
+  advanceBtn: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: 8,
+    paddingVertical: 6,
+    borderRadius: borderRadius.md,
   },
   advanceText: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.sm,
-    color: colors.background,
   },
 });

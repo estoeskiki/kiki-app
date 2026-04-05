@@ -1,10 +1,16 @@
+// KIKI Kiosk Typography
+// Headlines: Space Grotesk (bold, tight, premium)
+// Body/UI: Syne (matches KIKI brand guide)
+
 export const fonts = {
+  // Headlines
   heading: 'SpaceGrotesk_700Bold',
   headingSemiBold: 'SpaceGrotesk_600SemiBold',
-  body: 'Inter_400Regular',
-  bodyMedium: 'Inter_500Medium',
-  bodySemiBold: 'Inter_600SemiBold',
-  bodyBold: 'Inter_700Bold',
+  // Body / UI (Syne — KIKI brand body font)
+  body: 'Syne_400Regular',
+  bodyMedium: 'Syne_400Regular',
+  bodySemiBold: 'Syne_600SemiBold',
+  bodyBold: 'Syne_700Bold',
 } as const;
 
 export const fontSizes = {

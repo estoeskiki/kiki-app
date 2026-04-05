@@ -11,65 +11,88 @@ import {
   Alert,
 } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
-import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+import { useTheme } from '@/context/ThemeContext';
+import { spacing, borderRadius } from '@/theme/spacing';
 import { fonts, fontSizes } from '@/theme/typography';
 
 export function DeviceAuthScreen() {
   const [token, setToken] = useState('');
   const { authenticate, isLoading, error } = useAuthStore();
-  const [localLoading, setLocalLoading] = useState(false);
+  const { colors } = useTheme();
 
   const handleLinkDevice = async () => {
-    if (!token) {
+    if (!token.trim()) {
       Alert.alert('Error', 'Please enter a device token.');
       return;
     }
-
-    setLocalLoading(true);
-    const success = await authenticate(token);
-    setLocalLoading(false);
-
+    const success = await authenticate(token.trim());
     if (!success) {
-      Alert.alert('Link Failed', error || 'Invalid token. Please check the admin dashboard for valid tokens.');
+      Alert.alert(
+        'Linking Failed',
+        error || 'Invalid token. Please check the admin dashboard for valid tokens.'
+      );
     }
   };
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <View style={styles.card}>
-        <Text style={styles.title}>Kiosk Setup</Text>
-        <Text style={styles.subtitle}>Enter the device token provided by your admin dashboard to link this kiosk to a branch.</Text>
+      <View style={styles.inner}>
+        {/* Wordmark */}
+        <View style={styles.brand}>
+          <Text style={[styles.wordmark, { color: colors.textPrimary }]}>KIKI</Text>
+          <View style={[styles.brandBar, { backgroundColor: colors.primary }]} />
+          <Text style={[styles.brandSub, { color: colors.textMuted }]}>Kiosk Setup</Text>
+        </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Device Token</Text>
+        {/* Card */}
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Link This Device</Text>
+          <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
+            Enter the device token from your Kiki admin dashboard to activate this kiosk.
+          </Text>
+
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Device Token</Text>
           <TextInput
-            style={styles.input}
-            placeholder="e.g. kiki-front-cntr-abc"
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.surfaceContainer,
+                borderColor: colors.border,
+                color: colors.textPrimary,
+              },
+            ]}
+            placeholder="e.g. kiosk-abc123"
             placeholderTextColor={colors.textMuted}
             value={token}
             onChangeText={setToken}
             autoCapitalize="none"
+            autoCorrect={false}
           />
+
+          {error ? (
+            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+          ) : null}
+
+          <TouchableOpacity
+            style={[
+              styles.button,
+              { backgroundColor: colors.primary },
+              isLoading && styles.buttonDisabled,
+            ]}
+            onPress={handleLinkDevice}
+            disabled={isLoading}
+            activeOpacity={0.82}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={colors.onPrimary} />
+            ) : (
+              <Text style={[styles.buttonText, { color: colors.onPrimary }]}>Link Device</Text>
+            )}
+          </TouchableOpacity>
         </View>
-
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        <TouchableOpacity
-          style={[styles.button, (isLoading || localLoading) && styles.buttonDisabled]}
-          onPress={handleLinkDevice}
-          disabled={isLoading || localLoading}
-          activeOpacity={0.8}
-        >
-          {isLoading || localLoading ? (
-            <ActivityIndicator color={colors.background} />
-          ) : (
-            <Text style={styles.buttonText}>Link Device</Text>
-          )}
-        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -78,76 +101,96 @@ export function DeviceAuthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
     justifyContent: 'center',
-    padding: spacing.xl,
+  },
+  inner: {
+    paddingHorizontal: spacing['2xl'],
+    gap: spacing['2xl'],
+  },
+  brand: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  wordmark: {
+    fontFamily: fonts.heading,
+    fontSize: 52,
+    fontWeight: '900',
+    letterSpacing: -1.5,
+    lineHeight: 56,
+  },
+  brandBar: {
+    width: 36,
+    height: 3,
+    borderRadius: 2,
+  },
+  brandSub: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.sm,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginTop: spacing.xs,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: 24,
+    borderRadius: borderRadius.xl,
     padding: spacing['2xl'],
-    borderWidth: 1,
-    borderColor: colors.border,
-    elevation: 4,
+    borderWidth: StyleSheet.hairlineWidth,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 12,
+    elevation: 2,
+    gap: spacing.md,
   },
-  title: {
+  cardTitle: {
     fontFamily: fonts.heading,
-    fontSize: fontSizes['3xl'],
-    color: colors.primary,
+    fontSize: fontSizes.xl,
+    letterSpacing: -0.5,
     marginBottom: spacing.xs,
-    textAlign: 'center',
   },
-  subtitle: {
+  cardSubtitle: {
     fontFamily: fonts.body,
-    fontSize: fontSizes.base,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  inputContainer: {
-    marginBottom: spacing.lg,
+    fontSize: fontSizes.sm,
+    lineHeight: fontSizes.sm * 1.55,
+    marginBottom: spacing.sm,
   },
   label: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
+    fontSize: fontSizes.xs,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: -spacing.xs,
   },
   input: {
-    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     fontFamily: fonts.body,
     fontSize: fontSizes.base,
-    color: colors.textPrimary,
   },
   errorText: {
     fontFamily: fonts.body,
     fontSize: fontSizes.sm,
-    color: 'red',
-    marginBottom: spacing.md,
     textAlign: 'center',
   },
   button: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: 12,
+    height: 56,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
-    marginTop: spacing.sm,
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+    shadowColor: '#ccff00',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
   },
   buttonDisabled: {
-    opacity: 0.7,
+    opacity: 0.5,
   },
   buttonText: {
     fontFamily: fonts.headingSemiBold,
-    fontSize: fontSizes.lg,
-    color: colors.background,
+    fontSize: fontSizes.md,
+    letterSpacing: -0.2,
   },
 });

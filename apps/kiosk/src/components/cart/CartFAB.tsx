@@ -1,22 +1,22 @@
 import { Text, StyleSheet, View } from 'react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import { ShoppingCart } from 'lucide-react-native';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/context/ThemeContext';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import { formatCurrency } from '@/utils/formatCurrency';
 
 interface CartFABProps {
   itemCount: number;
-  total: number; // cents
+  total: number;
   onPress: () => void;
 }
 
 export function CartFAB({ itemCount, total, onPress }: CartFABProps) {
-  if (itemCount <= 0) {
-    return null;
-  }
+  const { colors } = useTheme();
+
+  if (itemCount <= 0) return null;
 
   return (
     <Animated.View
@@ -24,19 +24,29 @@ export function CartFAB({ itemCount, total, onPress }: CartFABProps) {
       exiting={SlideOutDown.springify().damping(18).stiffness(200)}
       style={styles.wrapper}
     >
-      <AnimatedPressable style={styles.bar} onPress={onPress} scaleValue={0.97}>
-        {/* Left: cart icon + label */}
+      <AnimatedPressable
+        style={[
+          styles.bar,
+          {
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
+          },
+        ]}
+        onPress={onPress}
+        scaleValue={0.97}
+      >
+        {/* Left */}
         <View style={styles.left}>
-          <Ionicons name="cart" size={22} color={colors.textPrimary} />
-          <Text style={styles.label}>View Cart</Text>
+          <ShoppingCart size={20} color={colors.onPrimary} strokeWidth={2.5} />
+          <Text style={[styles.label, { color: colors.onPrimary }]}>View Cart</Text>
         </View>
 
-        {/* Right: count badge + total */}
+        {/* Right: count + total */}
         <View style={styles.right}>
-          <View style={styles.countBadge}>
-            <Text style={styles.countText}>{itemCount}</Text>
+          <View style={[styles.countBadge, { backgroundColor: 'rgba(0,0,0,0.15)' }]}>
+            <Text style={[styles.countText, { color: colors.onPrimary }]}>{itemCount}</Text>
           </View>
-          <Text style={styles.total}>{formatCurrency(total)}</Text>
+          <Text style={[styles.total, { color: colors.onPrimary }]}>{formatCurrency(total)}</Text>
         </View>
       </AnimatedPressable>
     </Animated.View>
@@ -54,16 +64,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.primary,
     borderRadius: borderRadius.xl,
     paddingVertical: spacing.base,
     paddingHorizontal: spacing.xl,
-    minHeight: 60,
-    // shadow
-    shadowColor: '#000',
+    minHeight: 62,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
     elevation: 10,
   },
   left: {
@@ -72,9 +79,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   label: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.headingSemiBold,
     fontSize: fontSizes.md,
-    color: colors.textPrimary,
+    letterSpacing: -0.2,
   },
   right: {
     flexDirection: 'row',
@@ -82,7 +89,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   countBadge: {
-    backgroundColor: colors.primaryDark,
     borderRadius: borderRadius.full,
     minWidth: 28,
     height: 28,
@@ -93,11 +99,10 @@ const styles = StyleSheet.create({
   countText: {
     fontFamily: fonts.bodyBold,
     fontSize: fontSizes.sm,
-    color: colors.textPrimary,
+    fontWeight: '700',
   },
   total: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.headingSemiBold,
     fontSize: fontSizes.md,
-    color: colors.textPrimary,
   },
 });

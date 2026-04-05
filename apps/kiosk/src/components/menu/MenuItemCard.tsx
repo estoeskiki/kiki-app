@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Plus } from 'lucide-react-native';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/context/ThemeContext';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -13,88 +13,81 @@ interface MenuItemCardProps {
   onQuickAdd: () => void;
 }
 
-/**
- * Array of dark muted placeholder colors for item thumbnails.
- */
-const PLACEHOLDER_COLORS = [
-  '#5C2D0E', // dark orange-brown
-  '#1B3A4B', // dark blue
-  '#1A3C2B', // dark green
-  '#3B1F3B', // dark purple
-  '#4A2C1A', // dark sienna
-  '#2A2D4E', // dark indigo
-  '#3D2B1F', // dark coffee
-  '#1F3B3D', // dark teal
+// Soft pastel branded backgrounds (readable in light mode)
+const LIGHT_PLATE_COLORS = [
+  '#eef3ff', // soft blue
+  '#f0fff4', // soft green
+  '#fff4f0', // soft peach
+  '#f9f0ff', // soft lavender
+  '#f0fffe', // soft teal
+  '#fffbf0', // soft amber
+  '#fff0f5', // soft pink
+  '#f0f7ff', // soft periwinkle
 ] as const;
 
-/**
- * Simple hash to pick a deterministic color from the palette based on item id.
- */
-function getPlaceholderColor(id: string): string {
+// Deeper brand surface tones for dark mode
+const DARK_PLATE_COLORS = [
+  '#0a1730', '#0a2a1a', '#1a0a00', '#180a30',
+  '#001a2a', '#1a1800', '#2a0a18', '#0a1820',
+] as const;
+
+function getPlateColor(id: string, isDark: boolean): string {
+  const palette = isDark ? DARK_PLATE_COLORS : LIGHT_PLATE_COLORS;
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = id.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const index = Math.abs(hash) % PLACEHOLDER_COLORS.length;
-  return PLACEHOLDER_COLORS[index];
+  return palette[Math.abs(hash) % palette.length];
 }
 
-/**
- * Pick a representative emoji for the item. Uses a simple food emoji
- * based on categoryId prefix, with a generic fallback.
- */
-const CATEGORY_EMOJI: Record<string, string> = {
-  'cat-burgers': '\uD83C\uDF54',
-  'cat-sides': '\uD83C\uDF5F',
-  'cat-drinks': '\uD83E\uDD64',
-  'cat-desserts': '\uD83C\uDF70',
-  'cat-combos': '\u2B50',
-};
-
-function getItemEmoji(categoryId: string): string {
-  return CATEGORY_EMOJI[categoryId] ?? '\uD83C\uDF7D\uFE0F';
+function getInitial(name: string): string {
+  return name.trim().charAt(0).toUpperCase();
 }
 
 export function MenuItemCard({ item, onPress, onQuickAdd }: MenuItemCardProps) {
-  const bgColor = getPlaceholderColor(item.id);
-  const emoji = getItemEmoji(item.categoryId);
+  const { colors, isDark } = useTheme();
+  const bgColor = getPlateColor(item.id, isDark);
 
   return (
-    <AnimatedPressable style={styles.card} onPress={onPress} scaleValue={0.97}>
-      {/* Image placeholder */}
-      <View style={[styles.imagePlaceholder, { backgroundColor: bgColor }]}>
-        <Text style={styles.emoji}>{emoji}</Text>
-
-        {/* Popular badge */}
+    <AnimatedPressable
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+      onPress={onPress}
+      scaleValue={0.97}
+    >
+      {/* Thumbnail */}
+      <View style={[styles.thumbnail, { backgroundColor: bgColor }]}>
+        <Text style={[styles.initial, { color: colors.textSecondary }]}>
+          {getInitial(item.name)}
+        </Text>
         {item.popular && (
-          <View style={styles.popularBadge}>
-            <Text style={styles.popularText}>POPULAR</Text>
+          <View style={[styles.popularBadge, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.popularText, { color: colors.onPrimary }]}>★</Text>
           </View>
         )}
       </View>
 
       {/* Content */}
       <View style={styles.content}>
-        <Text style={styles.name} numberOfLines={1}>
+        <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
           {item.name}
         </Text>
-        <Text style={styles.description} numberOfLines={2}>
+        <Text style={[styles.description, { color: colors.textMuted }]} numberOfLines={2}>
           {item.description}
         </Text>
 
         <View style={styles.footer}>
-          <Text style={styles.price}>{formatCurrency(item.price)}</Text>
-
-          {/* Quick-add button */}
+          <Text style={[styles.price, { color: colors.textPrimary }]}>
+            {formatCurrency(item.price)}
+          </Text>
           <Pressable
-            style={styles.addButton}
+            style={[styles.addButton, { backgroundColor: colors.primary }]}
             onPress={(e) => {
               e.stopPropagation();
               onQuickAdd();
             }}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
           >
-            <Ionicons name="add" size={22} color={colors.textPrimary} />
+            <Plus size={18} color={colors.onPrimary} strokeWidth={3} />
           </Pressable>
         </View>
       </View>
@@ -105,50 +98,49 @@ export function MenuItemCard({ item, onPress, onQuickAdd }: MenuItemCardProps) {
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: borderRadius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
-  imagePlaceholder: {
+  thumbnail: {
     width: '100%',
-    aspectRatio: 1.3,
+    aspectRatio: 1.4,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emoji: {
-    fontSize: 48,
+  initial: {
+    fontFamily: fonts.heading,
+    fontSize: fontSizes['4xl'],
+    fontWeight: '900',
+    opacity: 0.25,
   },
   popularBadge: {
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
-    backgroundColor: colors.secondary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   popularText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: fontSizes.xs,
-    color: colors.textInverse,
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: '700',
   },
   content: {
     padding: spacing.md,
     gap: spacing.xs,
   },
   name: {
-    fontFamily: fonts.heading,
-    fontSize: fontSizes.md,
-    color: colors.textPrimary,
+    fontFamily: fonts.headingSemiBold,
+    fontSize: fontSizes.base,
+    letterSpacing: -0.2,
   },
   description: {
     fontFamily: fonts.body,
-    fontSize: fontSizes.sm,
-    color: colors.textMuted,
-    lineHeight: fontSizes.sm * 1.4,
+    fontSize: fontSizes.xs,
+    lineHeight: fontSizes.xs * 1.5,
   },
   footer: {
     flexDirection: 'row',
@@ -158,14 +150,13 @@ const styles = StyleSheet.create({
   },
   price: {
     fontFamily: fonts.heading,
-    fontSize: fontSizes.md,
-    color: colors.primary,
+    fontSize: fontSizes.base,
+    letterSpacing: -0.2,
   },
   addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },

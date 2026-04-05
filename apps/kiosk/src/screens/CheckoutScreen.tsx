@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { UtensilsCrossed, ShoppingBag } from 'lucide-react-native';
 import { ScreenWrapper } from '@/components/layout/ScreenWrapper';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/Button';
@@ -8,7 +8,7 @@ import { CartSummary } from '@/components/cart/CartSummary';
 import { useCartStore } from '@/store/useCartStore';
 import { useOrderStore } from '@/store/useOrderStore';
 import { formatCurrency } from '@/utils/formatCurrency';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/context/ThemeContext';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import type { ScreenProps } from '@/navigation/types';
@@ -19,11 +19,10 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
   const getTax = useCartStore((s) => s.getTax);
   const getTotal = useCartStore((s) => s.getTotal);
   const orderType = useOrderStore((s) => s.orderType);
+  const { colors } = useTheme();
 
   const total = getTotal();
   const orderTypeLabel = orderType === 'dine-in' ? 'Dine In' : 'Takeaway';
-  const orderTypeIcon: keyof typeof Ionicons.glyphMap =
-    orderType === 'dine-in' ? 'restaurant-outline' : 'bag-handle-outline';
 
   return (
     <ScreenWrapper padded={false}>
@@ -37,16 +36,19 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
         >
           {/* Order type badge */}
           {orderType && (
-            <View style={styles.orderTypeBadge}>
-              <Ionicons name={orderTypeIcon} size={18} color={colors.primary} />
-              <Text style={styles.orderTypeText}>{orderTypeLabel}</Text>
+            <View style={[styles.orderTypePill, { backgroundColor: colors.primary }]}>
+              {orderType === 'dine-in'
+                ? <UtensilsCrossed size={14} color={colors.onPrimary} strokeWidth={2} />
+                : <ShoppingBag size={14} color={colors.onPrimary} strokeWidth={2} />
+              }
+              <Text style={[styles.orderTypeText, { color: colors.onPrimary }]}>
+                {orderTypeLabel}
+              </Text>
             </View>
           )}
 
-          {/* Items review */}
           <OrderReviewList items={items} />
 
-          {/* Summary */}
           <CartSummary
             subtotal={getSubtotal()}
             tax={getTax()}
@@ -54,24 +56,12 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
           />
         </ScrollView>
 
-        {/* Pinned footer */}
-        <View style={styles.footer}>
-          <Button
-            variant="ghost"
-            size="md"
-            fullWidth
-            onPress={() => navigation.goBack()}
-            style={styles.editButton}
-          >
+        <View style={[styles.footer, { borderTopColor: colors.borderLight, backgroundColor: colors.surface }]}>
+          <Button variant="secondary" size="md" fullWidth onPress={() => navigation.goBack()} style={styles.editBtn}>
             Edit Order
           </Button>
-          <Button
-            variant="primary"
-            size="xl"
-            fullWidth
-            onPress={() => navigation.navigate('Payment')}
-          >
-            {`Place Order \u2014 ${formatCurrency(total)}`}
+          <Button variant="primary" size="xl" fullWidth onPress={() => navigation.navigate('Payment')}>
+            {`Place Order — ${formatCurrency(total)}`}
           </Button>
         </View>
       </View>
@@ -80,41 +70,36 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
 }
 
 const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
+  content: { flex: 1 },
+  scrollView: { flex: 1 },
   scrollContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.base,
     paddingBottom: spacing.base,
   },
-  orderTypeBadge: {
+  orderTypePill: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    gap: spacing.sm,
-    backgroundColor: colors.surfaceElevated,
+    gap: spacing.xs,
     borderRadius: borderRadius.full,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
     marginBottom: spacing.lg,
   },
   orderTypeText: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSizes.sm,
-    color: colors.primary,
-  },
-  editButton: {
-    marginBottom: spacing.md,
+    fontSize: fontSizes.xs,
+    letterSpacing: 0.3,
   },
   footer: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
     paddingTop: spacing.base,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacing.sm,
+  },
+  editBtn: {
+    marginBottom: 2,
   },
 });

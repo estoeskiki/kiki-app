@@ -1,36 +1,33 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Text, Alert } from 'react-native';
+import { View, StyleSheet, FlatList, Text, Alert } from 'react-native';
 import { ScreenWrapper } from '../components/layout/ScreenWrapper';
 import { OrderCard } from '../components/ui/OrderCard';
 import { OrderDetailsModal } from '../components/ui/OrderDetailsModal';
 import { useOrdersStore } from '../store/useOrdersStore';
 import { printTicket } from '../services/printerService';
 import { Order } from '../data/types';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/useTheme';
 import { spacing } from '../theme/spacing';
 import { fonts, fontSizes } from '../theme/typography';
 
 export default function OrdersScreen() {
   const { orders, fetchOrders, subscribeToOrders, unsubscribeFromOrders, acceptOrder, markOrderReady, markOrderCompleted } = useOrdersStore();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const { colors } = useTheme();
 
   React.useEffect(() => {
     fetchOrders();
     subscribeToOrders();
-    return () => {
-      unsubscribeFromOrders();
-    };
+    return () => { unsubscribeFromOrders(); };
   }, [fetchOrders, subscribeToOrders, unsubscribeFromOrders]);
 
   const activeOrders = orders.filter(o => !['completed', 'failed'].includes(o.status));
 
-  // Mock order simulation removed since we are now connected to Supabase
-
   const handleAccept = async (orderId: string) => {
     acceptOrder(orderId);
-    if (selectedOrder && selectedOrder.id === orderId) {
+    if (selectedOrder?.id === orderId) {
       printTicket(selectedOrder).then(() => {
-         Alert.alert('Impreso', `Ticket para Orden #${selectedOrder.orderNumber} impreso con éxito.`);
+        Alert.alert('Impreso', `Ticket para Orden #${selectedOrder.orderNumber} impreso.`);
       });
       setSelectedOrder({ ...selectedOrder, status: 'preparing' });
     }
@@ -38,54 +35,65 @@ export default function OrdersScreen() {
 
   const handleMarkReady = (orderId: string) => {
     markOrderReady(orderId);
-    if (selectedOrder && selectedOrder.id === orderId) {
-      setSelectedOrder({ ...selectedOrder, status: 'ready' });
-    }
+    if (selectedOrder?.id === orderId) setSelectedOrder({ ...selectedOrder, status: 'ready' });
   };
 
   const handleComplete = (orderId: string) => {
     markOrderCompleted(orderId);
-    if (selectedOrder && selectedOrder.id === orderId) {
-      setSelectedOrder(null);
-    }
+    if (selectedOrder?.id === orderId) setSelectedOrder(null);
   };
 
   const handleAdvance = (orderId: string) => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
-    
     switch (order.status) {
       case 'confirmed':
         acceptOrder(orderId);
-        printTicket(order).then(() => {
-          Alert.alert('Impreso', `Ticket para Orden #${order.orderNumber} impreso.`);
-        });
+        printTicket(order).then(() => Alert.alert('Impreso', `Ticket para Orden #${order.orderNumber} impreso.`));
         break;
-      case 'preparing':
-        markOrderReady(orderId);
-        break;
-      case 'ready':
-        markOrderCompleted(orderId);
-        break;
+      case 'preparing': markOrderReady(orderId); break;
+      case 'ready': markOrderCompleted(orderId); break;
     }
   };
 
   return (
     <ScreenWrapper>
-      <View style={styles.headerContainer}>
-        <Text style={styles.title}>Órdenes Activas</Text>
+      {/* Page header */}
+      <View style={[styles.pageHeader, { borderBottomColor: colors.borderLight }]}>
+        <View>
+          <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>Órdenes</Text>
+          {activeOrders.length > 0 && (
+            <Text style={[styles.pageSubtitle, { color: colors.textMuted }]}>
+              {activeOrders.length} activa{activeOrders.length !== 1 ? 's' : ''}
+            </Text>
+          )}
+        </View>
+        {activeOrders.length > 0 && (
+          <View style={[styles.countBadge, { backgroundColor: colors.statusConfirmedBg }]}>
+            <Text style={[styles.countText, { color: colors.statusConfirmedText }]}>
+              {activeOrders.length}
+            </Text>
+          </View>
+        )}
       </View>
-      
+
       <FlatList
         data={activeOrders}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <OrderCard order={item} onPress={() => setSelectedOrder(item)} onAdvance={handleAdvance} />
         )}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No hay órdenes activas en este momento.</Text>
+            <View style={[styles.emptyIcon, { backgroundColor: colors.surfaceContainer }]}>
+              <Text style={styles.emptyEmoji}>🍽</Text>
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Sin órdenes activas</Text>
+            <Text style={[styles.emptyBody, { color: colors.textMuted }]}>
+              Las nuevas órdenes aparecerán aquí en tiempo real.
+            </Text>
           </View>
         }
       />
@@ -103,39 +111,66 @@ export default function OrdersScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerContainer: {
+  pageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.base,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.base,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  title: {
+  pageTitle: {
     fontFamily: fonts.heading,
     fontSize: fontSizes['2xl'],
-    color: colors.textPrimary,
+    letterSpacing: -0.5,
   },
-  simulateBtn: {
-    backgroundColor: colors.surfaceHighlight,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 8,
+  pageSubtitle: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.xs,
+    marginTop: 2,
   },
-  simulateText: {
-    fontFamily: fonts.bodyMedium,
+  countBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countText: {
+    fontFamily: fonts.bodyBold,
     fontSize: fontSizes.sm,
-    color: colors.primary,
   },
-  listContainer: {
+  list: {
     padding: spacing.base,
+    paddingTop: spacing.md,
   },
   empty: {
-    padding: spacing['2xl'],
+    paddingVertical: spacing['5xl'],
     alignItems: 'center',
+    gap: spacing.md,
   },
-  emptyText: {
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  emptyEmoji: {
+    fontSize: 28,
+  },
+  emptyTitle: {
+    fontFamily: fonts.headingSemiBold,
+    fontSize: fontSizes.lg,
+    letterSpacing: -0.3,
+  },
+  emptyBody: {
     fontFamily: fonts.body,
-    fontSize: fontSizes.base,
-    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+    textAlign: 'center',
+    maxWidth: 240,
+    lineHeight: fontSizes.sm * 1.6,
   },
 });

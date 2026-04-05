@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Text, StyleSheet, StyleProp, ViewStyle, TextStyle, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/useTheme';
 import { fonts, fontSizes } from '../../theme/typography';
 import { spacing, borderRadius } from '../../theme/spacing';
 
@@ -32,27 +32,38 @@ export function Button({
   textStyle,
   icon,
 }: ButtonProps) {
+  const { colors } = useTheme();
   const isDisabled = disabled || loading;
+
+  const variantStyle: Record<ButtonVariant, { bg: string; text: string; border?: string }> = {
+    primary:   { bg: colors.primary,                        text: colors.onPrimary },
+    secondary: { bg: 'transparent',                         text: colors.primary,    border: colors.primary },
+    ghost:     { bg: 'transparent',                         text: colors.primary },
+    danger:    { bg: colors.error,                          text: '#ffffff' },
+  };
+
+  const vs = variantStyle[variant];
 
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.7}
+      activeOpacity={0.75}
       style={[
         styles.base,
         sizeStyles[size],
-        variantStyles[variant],
+        {
+          backgroundColor: vs.bg,
+          borderWidth: vs.border ? 1.5 : 0,
+          borderColor: vs.border,
+        },
         fullWidth && styles.fullWidth,
         isDisabled && styles.disabled,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={variant === 'ghost' ? colors.primary : colors.textPrimary}
-        />
+        <ActivityIndicator size="small" color={vs.text} />
       ) : (
         <>
           {icon}
@@ -60,7 +71,7 @@ export function Button({
             style={[
               styles.text,
               textSizeStyles[size],
-              variantTextStyles[variant],
+              { color: vs.text },
               icon ? styles.textWithIcon : null,
               textStyle,
             ]}
@@ -80,74 +91,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: borderRadius.lg,
   },
-  fullWidth: {
-    width: '100%',
-  },
-  disabled: {
-    opacity: 0.5,
-  },
+  fullWidth: { width: '100%' },
+  disabled: { opacity: 0.5 },
   text: {
     fontFamily: fonts.bodySemiBold,
     textAlign: 'center',
   },
-  textWithIcon: {
-    marginLeft: spacing.sm,
-  },
+  textWithIcon: { marginLeft: spacing.sm },
 });
 
 const sizeStyles = StyleSheet.create({
-  sm: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.base,
-    minHeight: 40,
-  },
-  md: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    minHeight: 48,
-  },
-  lg: {
-    paddingVertical: spacing.base,
-    paddingHorizontal: spacing.xl,
-    minHeight: 56,
-  },
-  xl: {
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing['2xl'],
-    minHeight: 72,
-  },
-});
-
-const variantStyles = StyleSheet.create({
-  primary: {
-    backgroundColor: colors.primary,
-  },
-  secondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
-  danger: {
-    backgroundColor: colors.error,
-  },
-});
-
-const variantTextStyles = StyleSheet.create({
-  primary: {
-    color: colors.textPrimary,
-  },
-  secondary: {
-    color: colors.primary,
-  },
-  ghost: {
-    color: colors.primary,
-  },
-  danger: {
-    color: colors.textPrimary,
-  },
+  sm: { paddingVertical: spacing.sm,   paddingHorizontal: spacing.base, minHeight: 40 },
+  md: { paddingVertical: spacing.md,   paddingHorizontal: spacing.lg,   minHeight: 48 },
+  lg: { paddingVertical: spacing.base, paddingHorizontal: spacing.xl,   minHeight: 56 },
+  xl: { paddingVertical: spacing.lg,   paddingHorizontal: spacing['2xl'], minHeight: 72 },
 });
 
 const textSizeStyles = StyleSheet.create({

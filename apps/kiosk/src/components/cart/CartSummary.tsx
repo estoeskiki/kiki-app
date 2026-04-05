@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/context/ThemeContext';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing } from '@/theme/spacing';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -11,23 +11,22 @@ interface CartSummaryProps {
 }
 
 export function CartSummary({ subtotal, tax, total }: CartSummaryProps) {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { borderTopColor: colors.borderLight }]}>
       <View style={styles.row}>
-        <Text style={styles.label}>Subtotal</Text>
-        <Text style={styles.value}>{formatCurrency(subtotal)}</Text>
+        <Text style={[styles.label, { color: colors.textMuted }]}>Subtotal</Text>
+        <Text style={[styles.value, { color: colors.textSecondary }]}>{formatCurrency(subtotal)}</Text>
       </View>
-
       <View style={styles.row}>
-        <Text style={styles.label}>Tax</Text>
-        <Text style={styles.value}>{formatCurrency(tax)}</Text>
+        <Text style={[styles.label, { color: colors.textMuted }]}>Tax</Text>
+        <Text style={[styles.value, { color: colors.textSecondary }]}>{formatCurrency(tax)}</Text>
       </View>
-
-      <View style={styles.divider} />
-
+      <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
       <View style={styles.row}>
-        <Text style={styles.totalLabel}>Total</Text>
-        <Text style={styles.totalValue}>{formatCurrency(total)}</Text>
+        <Text style={[styles.totalLabel, { color: colors.textPrimary }]}>Total</Text>
+        <Text style={[styles.totalValue, { color: colors.textPrimary }]}>{formatCurrency(total)}</Text>
       </View>
     </View>
   );
@@ -46,26 +45,23 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fonts.body,
     fontSize: fontSizes.base,
-    color: colors.textSecondary,
   },
   value: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSizes.base,
-    color: colors.textSecondary,
   },
   divider: {
-    height: 1,
-    backgroundColor: colors.border,
+    height: StyleSheet.hairlineWidth,
     marginVertical: spacing.md,
   },
   totalLabel: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.headingSemiBold,
     fontSize: fontSizes.lg,
-    color: colors.textPrimary,
+    letterSpacing: -0.3,
   },
   totalValue: {
     fontFamily: fonts.heading,
     fontSize: fontSizes.lg,
-    color: colors.primary,
+    letterSpacing: -0.3,
   },
 });

@@ -1,32 +1,39 @@
+// KIKI Kiosk Colors
+// Re-exports from the theme system for backwards compatibility.
+// Screens and components should use `useTheme()` from context instead of importing this directly.
+
+import { lightTheme } from './themes';
+
+// Default to light theme tokens (kiosk default)
 export const colors = {
-  background: '#0A0A0A',
-  surface: '#1A1A1A',
-  surfaceElevated: '#242424',
-  surfaceHighlight: '#2E2E2E',
+  background: lightTheme.background,
+  surface: lightTheme.surface,
+  surfaceElevated: lightTheme.surfaceContainer,
+  surfaceHighlight: lightTheme.surfaceHighlight,
 
-  primary: '#FF6B35',
-  primaryDark: '#CC5529',
-  primaryLight: '#FF8F66',
+  primary: lightTheme.primary,
+  primaryDark: '#aad600',       // Darker lime for pressed states
+  primaryLight: '#d9ff33',
 
-  secondary: '#FFB800',
-  secondaryDark: '#CC9300',
+  secondary: lightTheme.secondary,
+  secondaryDark: '#cc4472',
 
-  success: '#22C55E',
-  successDark: '#16A34A',
-  error: '#EF4444',
-  errorDark: '#DC2626',
-  warning: '#F59E0B',
+  success: lightTheme.success,
+  successDark: '#15803d',
+  error: lightTheme.error,
+  errorDark: '#b91c1c',
+  warning: lightTheme.warning,
 
-  textPrimary: '#FFFFFF',
-  textSecondary: '#A0A0A0',
-  textMuted: '#666666',
-  textInverse: '#0A0A0A',
+  textPrimary: lightTheme.textPrimary,
+  textSecondary: lightTheme.textSecondary,
+  textMuted: lightTheme.textMuted,
+  textInverse: lightTheme.textInverse,
 
-  border: '#2A2A2A',
-  borderLight: '#3A3A3A',
+  border: lightTheme.border,
+  borderLight: lightTheme.borderLight,
 
-  overlay: 'rgba(0, 0, 0, 0.6)',
-  overlayHeavy: 'rgba(0, 0, 0, 0.85)',
+  overlay: lightTheme.overlay,
+  overlayHeavy: lightTheme.overlayHeavy,
 } as const;
 
 export type ColorName = keyof typeof colors;

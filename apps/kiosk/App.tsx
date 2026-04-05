@@ -2,73 +2,57 @@ import 'react-native-reanimated';
 import { useCallback, useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import {
   SpaceGrotesk_600SemiBold,
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
+  Syne_400Regular,
+  Syne_600SemiBold,
+  Syne_700Bold,
+} from '@expo-google-fonts/syne';
 import * as SplashScreen from 'expo-splash-screen';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { DeviceAuthScreen } from '@/screens/AuthScreen';
 import { useAuthStore } from '@/store/useAuthStore';
-import { colors } from '@/theme/colors';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 
 SplashScreen.preventAutoHideAsync();
 
-const navTheme = {
-  ...DefaultTheme,
-  dark: true,
-  colors: {
-    ...DefaultTheme.colors,
-    primary: colors.primary,
-    background: colors.background,
-    card: colors.surface,
-    text: colors.textPrimary,
-    border: colors.border,
-    notification: colors.primary,
-  },
-};
-
-export default function App() {
-  const [fontsLoaded] = useFonts({
-    SpaceGrotesk_600SemiBold,
-    SpaceGrotesk_700Bold,
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-  });
-
+// Inner component so it can read theme from context
+function AppInner() {
+  const { colors, isDark } = useTheme();
   const { deviceToken, isLoading, initialize } = useAuthStore();
 
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
+  useEffect(() => { initialize(); }, [initialize]);
 
-  const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded && !isLoading) {
-      await SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, isLoading]);
+  const baseTheme = isDark ? DarkTheme : DefaultTheme;
+  const navTheme = {
+    ...baseTheme,
+    colors: {
+      ...baseTheme.colors,
+      primary: colors.primary,
+      background: colors.background,
+      card: colors.surface,
+      text: colors.textPrimary,
+      border: colors.border,
+      notification: colors.primary,
+    },
+  };
 
-  if (!fontsLoaded || isLoading) {
+  if (isLoading) {
     return (
-      <View style={styles.loading}>
+      <View style={[styles.loading, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container} onLayout={onLayoutRootView}>
-      <StatusBar style="light" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       {deviceToken ? (
         <NavigationContainer theme={navTheme}>
           <RootNavigator />
@@ -80,14 +64,39 @@ export default function App() {
   );
 }
 
+export default function App() {
+  const [fontsLoaded, fontError] = useFonts({
+    SpaceGrotesk_600SemiBold,
+    SpaceGrotesk_700Bold,
+    Syne_400Regular,
+    Syne_600SemiBold,
+    Syne_700Bold,
+  });
+
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded || fontError) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
+  return (
+    <View style={styles.fullScreen} onLayout={onLayoutRootView}>
+      <ThemeProvider>
+        <AppInner />
+      </ThemeProvider>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+  fullScreen: { flex: 1 },
+  container: { flex: 1 },
   loading: {
     flex: 1,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },

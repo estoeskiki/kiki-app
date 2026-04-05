@@ -1,155 +1,293 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import {
+  View, Text, StyleSheet, Switch, TouchableOpacity,
+  Alert, ActivityIndicator, ScrollView,
+} from 'react-native';
+import {
+  Store, Smartphone, LogOut, Moon, Sun, ChevronRight, Copy,
+} from 'lucide-react-native';
 import { ScreenWrapper } from '../components/layout/ScreenWrapper';
-import { Header } from '../components/layout/Header';
 import { useSystemStore } from '../store/useSystemStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useThemeStore } from '../store/useThemeStore';
+import { useTheme } from '../theme/useTheme';
 import { supabase } from '../lib/supabase';
-import { colors } from '../theme/colors';
-import { spacing } from '../theme/spacing';
+import { spacing, borderRadius } from '../theme/spacing';
 import { fonts, fontSizes } from '../theme/typography';
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function SectionLabel({ label }: { label: string }) {
+  const { colors } = useTheme();
+  return (
+    <Text style={[sStyles.sectionLabel, { color: colors.textMuted }]}>{label}</Text>
+  );
+}
+
+function SettingsRow({
+  icon,
+  label,
+  sublabel,
+  right,
+  onPress,
+  destructive,
+  first,
+  last,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  sublabel?: string;
+  right?: React.ReactNode;
+  onPress?: () => void;
+  destructive?: boolean;
+  first?: boolean;
+  last?: boolean;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <TouchableOpacity
+      style={[
+        sStyles.row,
+        {
+          backgroundColor: colors.surface,
+          borderTopWidth: first ? 0 : StyleSheet.hairlineWidth,
+          borderTopColor: colors.borderLight,
+          borderRadius: first && last ? borderRadius.lg : first ? 0 : last ? 0 : 0,
+        },
+      ]}
+      onPress={onPress}
+      disabled={!onPress}
+      activeOpacity={onPress ? 0.65 : 1}
+    >
+      <View style={[sStyles.iconWrap, { backgroundColor: destructive ? 'rgba(239,68,68,0.1)' : colors.surfaceHighlight }]}>
+        {icon}
+      </View>
+      <View style={sStyles.rowContent}>
+        <Text style={[sStyles.rowLabel, { color: destructive ? colors.error : colors.textPrimary }]}>
+          {label}
+        </Text>
+        {sublabel ? (
+          <Text style={[sStyles.rowSublabel, { color: colors.textMuted }]}>{sublabel}</Text>
+        ) : null}
+      </View>
+      {right ?? (onPress ? <ChevronRight color={colors.textMuted} size={16} strokeWidth={2} /> : null)}
+    </TouchableOpacity>
+  );
+}
+
+function CardGroup({ children }: { children: React.ReactNode }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[sStyles.group, { borderColor: colors.borderLight }]}>
+      {children}
+    </View>
+  );
+}
+
+// ─── Main Screen ─────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
   const { kioskIsOpen, toggleKiosk } = useSystemStore();
   const { signOut, user, orgId, restaurantId } = useAuthStore();
+  const { isDark, toggleTheme } = useThemeStore();
+  const { colors } = useTheme();
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleGenerateToken = async () => {
     if (!orgId || !restaurantId) {
-      Alert.alert('Error de Configuración', 'No se puede determinar tu sucursal actual. No se puede generar un token.');
+      Alert.alert('Error de Configuración', 'No se puede determinar tu sucursal. No se puede generar un token.');
       return;
     }
-
     setIsGenerating(true);
     const newToken = `kiosk-${Math.random().toString(36).substring(2, 8)}`;
-
     const { error } = await supabase.from('device_tokens').insert({
       org_id: orgId,
       restaurant_id: restaurantId,
-      device_name: `Automated Gen ${new Date().toLocaleDateString()}`,
+      device_name: `Generado ${new Date().toLocaleDateString('es')}`,
       token_hash: newToken,
       is_active: true,
     });
-
     setIsGenerating(false);
-
     if (error) {
       Alert.alert('Error', error.message);
     } else {
-      Alert.alert('¡Token Generado!', `Anota esto: ${newToken}\n\n¡Puedes usar este token para iniciar sesión inmediatamente en una tablet Kiosko física para esta sucursal!`);
+      Alert.alert(
+        'Token Generado',
+        `${newToken}\n\nUsa este token para vincular una nueva tablet kiosko a esta sucursal.`,
+        [{ text: 'Copiar y Cerrar', onPress: () => {} }, { text: 'OK' }]
+      );
     }
   };
 
   return (
     <ScreenWrapper>
-      <Header title="Configuración" />
-      <View style={styles.content}>
-        
-        {/* Kiosk Controls */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Estado del Kiosko</Text>
-            <Switch
-              value={kioskIsOpen}
-              onValueChange={toggleKiosk}
-              trackColor={{ false: colors.surfaceHighlight, true: colors.success }}
-              thumbColor={colors.textPrimary}
-            />
-          </View>
-          <Text style={styles.cardDesc}>
-            {kioskIsOpen 
-               ? 'El kiosko está aceptando nuevas órdenes actualmente.' 
-               : 'El kiosko está cerrado y mostrará un mensaje de "Cerrado" a los clientes.'}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Page title */}
+        <View style={[styles.pageHeader, { borderBottomColor: colors.borderLight }]}>
+          <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>Ajustes</Text>
+          <Text style={[styles.pageSubtitle, { color: colors.textMuted }]}>
+            {user?.email}
           </Text>
         </View>
 
-        {/* Device Management */}
-        <View style={[styles.card, { marginTop: spacing.xl }]}>
-          <Text style={styles.cardTitle}>Dispositivos de Kiosko</Text>
-          <Text style={styles.cardDesc}>Genera un token de hardware seguro para vincular un nuevo iPad o tablet Android a esta sucursal específica.</Text>
-          
-          <TouchableOpacity 
-            style={[styles.primaryButton, isGenerating && { opacity: 0.5 }]} 
-            onPress={handleGenerateToken}
-            disabled={isGenerating}
-            activeOpacity={0.8}
-          >
-            {isGenerating ? <ActivityIndicator color={colors.background} /> : <Text style={styles.primaryButtonText}>Generar Token de Kiosko</Text>}
-          </TouchableOpacity>
-        </View>
+        {/* ── Kiosco ── */}
+        <SectionLabel label="KIOSCO" />
+        <CardGroup>
+          <SettingsRow
+            first
+            last
+            icon={<Store color={kioskIsOpen ? colors.success : colors.textMuted} size={18} strokeWidth={2} />}
+            label="Estado del Kiosco"
+            sublabel={kioskIsOpen ? 'Aceptando órdenes' : 'Cerrado para clientes'}
+            right={
+              <Switch
+                value={kioskIsOpen}
+                onValueChange={toggleKiosk}
+                trackColor={{ false: colors.surfaceHighlight, true: colors.success }}
+                thumbColor={colors.surface}
+                ios_backgroundColor={colors.surfaceHighlight}
+              />
+            }
+          />
+        </CardGroup>
 
-        {/* Account Details & Logout */}
-        <View style={[styles.card, { marginTop: spacing.xl }]}>
-          <Text style={styles.cardTitle}>Cuenta</Text>
-          <Text style={styles.cardDesc}>Sesión iniciada como: {user?.email}</Text>
-          
-          <TouchableOpacity 
-            style={styles.logoutButton} 
+        {/* ── Dispositivos ── */}
+        <SectionLabel label="DISPOSITIVOS" />
+        <CardGroup>
+          <SettingsRow
+            first
+            last
+            icon={
+              isGenerating
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <Smartphone color={colors.primary} size={18} strokeWidth={2} />
+            }
+            label="Generar Token de Kiosco"
+            sublabel="Vincula un nuevo iPad o tablet Android"
+            onPress={isGenerating ? undefined : handleGenerateToken}
+          />
+        </CardGroup>
+
+        {/* ── Apariencia ── */}
+        <SectionLabel label="APARIENCIA" />
+        <CardGroup>
+          <SettingsRow
+            first
+            last
+            icon={isDark
+              ? <Moon color={colors.tertiary} size={18} strokeWidth={2} />
+              : <Sun color={colors.warning} size={18} strokeWidth={2} />
+            }
+            label={isDark ? 'Modo Oscuro' : 'Modo Claro'}
+            sublabel="Cambia la apariencia de la app"
+            right={
+              <Switch
+                value={isDark}
+                onValueChange={toggleTheme}
+                trackColor={{ false: colors.border, true: colors.tertiary }}
+                thumbColor={colors.surface}
+                ios_backgroundColor={colors.border}
+              />
+            }
+          />
+        </CardGroup>
+
+        {/* ── Cuenta ── */}
+        <SectionLabel label="CUENTA" />
+        <CardGroup>
+          <SettingsRow
+            first
+            last
+            icon={<LogOut color={colors.error} size={18} strokeWidth={2} />}
+            label="Cerrar Sesión"
+            destructive
             onPress={() => signOut()}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.logoutText}>Cerrar Sesión</Text>
-          </TouchableOpacity>
-        </View>
+          />
+        </CardGroup>
 
-      </View>
+        {/* Version */}
+        <Text style={[styles.version, { color: colors.textMuted }]}>Kiki Admin · v1.0.0</Text>
+      </ScrollView>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: { flex: 1 },
   content: {
-    padding: spacing.base,
+    paddingBottom: spacing['3xl'],
   },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+  pageHeader: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.base,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: spacing.lg,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  cardTitle: {
+  pageTitle: {
     fontFamily: fonts.heading,
-    fontSize: fontSizes.xl,
-    color: colors.textPrimary,
+    fontSize: fontSizes['2xl'],
+    letterSpacing: -0.5,
   },
-  cardDesc: {
+  pageSubtitle: {
     fontFamily: fonts.body,
-    fontSize: fontSizes.base,
-    color: colors.textSecondary,
-    lineHeight: 22,
-    marginBottom: spacing.md,
+    fontSize: fontSizes.xs,
+    marginTop: 3,
   },
-  logoutButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)', // pale red
-    paddingVertical: spacing.md,
-    borderRadius: 8,
+  version: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.xs,
+    textAlign: 'center',
+    marginTop: spacing.xl,
+  },
+});
+
+const sStyles = StyleSheet.create({
+  sectionLabel: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.xs,
+    letterSpacing: 0.8,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  group: {
+    marginHorizontal: spacing.base,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.2)',
+    paddingVertical: spacing.base,
+    paddingHorizontal: spacing.base,
+    gap: spacing.md,
+    minHeight: 60,
   },
-  logoutText: {
-    fontFamily: fonts.headingSemiBold,
-    fontSize: fontSizes.base,
-    color: '#ef4444', // solid red
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: 8,
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
-    marginTop: spacing.sm,
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-  primaryButtonText: {
-    fontFamily: fonts.headingSemiBold,
+  rowContent: {
+    flex: 1,
+  },
+  rowLabel: {
+    fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.base,
-    color: colors.background,
+  },
+  rowSublabel: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.xs,
+    marginTop: 2,
   },
 });

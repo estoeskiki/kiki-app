@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Text, StyleSheet, StyleProp, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
 import { AnimatedPressable } from './AnimatedPressable';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/context/ThemeContext';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 
@@ -33,7 +33,41 @@ export function Button({
   textStyle,
   icon,
 }: ButtonProps) {
+  const { colors } = useTheme();
   const isDisabled = disabled || loading;
+
+  const variantStyle: ViewStyle = (() => {
+    switch (variant) {
+      case 'primary':
+        return {
+          backgroundColor: colors.primary,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.35,
+          shadowRadius: 12,
+          elevation: 6,
+        };
+      case 'secondary':
+        return {
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          borderColor: colors.border,
+        };
+      case 'ghost':
+        return { backgroundColor: 'transparent' };
+      case 'danger':
+        return { backgroundColor: colors.error };
+    }
+  })();
+
+  const textColor = (() => {
+    switch (variant) {
+      case 'primary': return colors.onPrimary;
+      case 'secondary': return colors.textPrimary;
+      case 'ghost': return colors.textSecondary;
+      case 'danger': return '#ffffff';
+    }
+  })();
 
   return (
     <AnimatedPressable
@@ -42,7 +76,7 @@ export function Button({
       style={[
         styles.base,
         sizeStyles[size],
-        variantStyles[variant],
+        variantStyle,
         fullWidth && styles.fullWidth,
         isDisabled && styles.disabled,
         style,
@@ -51,7 +85,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'ghost' ? colors.primary : colors.textPrimary}
+          color={variant === 'primary' ? colors.onPrimary : colors.primary}
         />
       ) : (
         <>
@@ -60,7 +94,7 @@ export function Button({
             style={[
               styles.text,
               textSizeStyles[size],
-              variantTextStyles[variant],
+              { color: textColor },
               icon ? styles.textWithIcon : null,
               textStyle,
             ]}
@@ -84,11 +118,12 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   disabled: {
-    opacity: 0.5,
+    opacity: 0.45,
   },
   text: {
     fontFamily: fonts.bodySemiBold,
     textAlign: 'center',
+    letterSpacing: 0.1,
   },
   textWithIcon: {
     marginLeft: spacing.sm,
@@ -115,38 +150,6 @@ const sizeStyles = StyleSheet.create({
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing['2xl'],
     minHeight: 72,
-  },
-});
-
-const variantStyles = StyleSheet.create({
-  primary: {
-    backgroundColor: colors.primary,
-  },
-  secondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
-  danger: {
-    backgroundColor: colors.error,
-  },
-});
-
-const variantTextStyles = StyleSheet.create({
-  primary: {
-    color: colors.textPrimary,
-  },
-  secondary: {
-    color: colors.primary,
-  },
-  ghost: {
-    color: colors.primary,
-  },
-  danger: {
-    color: colors.textPrimary,
   },
 });
 

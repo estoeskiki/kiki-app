@@ -1,8 +1,8 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { Layout, FadeOut } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import { Minus, Plus, Trash2 } from 'lucide-react-native';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/context/ThemeContext';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -14,25 +14,6 @@ interface CartItemRowProps {
   onRemove: (id: string) => void;
 }
 
-/**
- * Derive a stable colour from an item ID for the placeholder swatch.
- */
-function getPlaceholderColor(id: string): string {
-  const palette = [
-    '#E85D3A', '#D4A843', '#4A90D9', '#6BBF6B',
-    '#C75BD2', '#D96B4A', '#4AC5C5', '#CC7A33',
-  ];
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return palette[Math.abs(hash) % palette.length];
-}
-
-/**
- * Build a readable string from selected customizations.
- * Returns option names joined with " · ".
- */
 function formatCustomizations(item: CartItem): string {
   const names: string[] = [];
   for (const group of item.menuItem.customizations) {
@@ -43,61 +24,78 @@ function formatCustomizations(item: CartItem): string {
       }
     }
   }
-  return names.join(' \u00B7 ');
+  return names.join(' · ');
+}
+
+// A clean, deterministic branded gradient using item id
+function getMonoColor(id: string): string {
+  const palette = [
+    '#e8f0fe', '#fce8ff', '#e8fff0', '#fff8e8',
+    '#e8f8ff', '#ffe8ea', '#f0e8ff', '#e8fffd',
+  ];
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return palette[Math.abs(hash) % palette.length];
+}
+
+function getInitial(name: string): string {
+  return name.trim().charAt(0).toUpperCase();
 }
 
 export function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowProps) {
+  const { colors } = useTheme();
   const customizationText = formatCustomizations(item);
+  const bgColor = getMonoColor(item.menuItem.id);
 
   return (
     <Animated.View
       layout={Layout.springify().damping(18).stiffness(200)}
-      exiting={FadeOut.duration(250)}
-      style={styles.container}
+      exiting={FadeOut.duration(200)}
+      style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
     >
-      {/* Placeholder image swatch */}
-      <View
-        style={[
-          styles.imagePlaceholder,
-          { backgroundColor: getPlaceholderColor(item.menuItem.id) },
-        ]}
-      />
+      {/* Item thumbnail */}
+      <View style={[styles.thumbnail, { backgroundColor: bgColor }]}>
+        <Text style={[styles.thumbnailInitial, { color: colors.textSecondary }]}>
+          {getInitial(item.menuItem.name)}
+        </Text>
+      </View>
 
-      {/* Center content */}
+      {/* Center info */}
       <View style={styles.center}>
-        <Text style={styles.name} numberOfLines={1}>
+        <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
           {item.menuItem.name}
         </Text>
         {customizationText.length > 0 && (
-          <Text style={styles.customizations} numberOfLines={2}>
+          <Text style={[styles.customizations, { color: colors.textMuted }]} numberOfLines={2}>
             {customizationText}
           </Text>
         )}
-        <Text style={styles.lineTotal}>{formatCurrency(item.lineTotal)}</Text>
+        <Text style={[styles.lineTotal, { color: colors.textPrimary }]}>
+          {formatCurrency(item.lineTotal)}
+        </Text>
       </View>
 
-      {/* Right side: quantity controls + remove */}
+      {/* Controls */}
       <View style={styles.right}>
-        <View style={styles.quantityRow}>
+        <View style={[styles.qtyRow, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight }]}>
           <AnimatedPressable
             onPress={() => onUpdateQuantity(item.id, item.quantity - 1)}
-            style={styles.qtyButton}
+            style={styles.qtyBtn}
           >
-            <Ionicons name="remove" size={18} color={colors.textPrimary} />
+            <Minus size={14} color={colors.textSecondary} strokeWidth={2.5} />
           </AnimatedPressable>
-
-          <Text style={styles.qtyText}>{item.quantity}</Text>
-
+          <Text style={[styles.qtyText, { color: colors.textPrimary }]}>{item.quantity}</Text>
           <AnimatedPressable
             onPress={() => onUpdateQuantity(item.id, item.quantity + 1)}
-            style={styles.qtyButton}
+            style={styles.qtyBtn}
           >
-            <Ionicons name="add" size={18} color={colors.textPrimary} />
+            <Plus size={14} color={colors.textSecondary} strokeWidth={2.5} />
           </AnimatedPressable>
         </View>
-
-        <AnimatedPressable onPress={() => onRemove(item.id)} style={styles.removeButton}>
-          <Ionicons name="trash-outline" size={18} color={colors.error} />
+        <AnimatedPressable onPress={() => onRemove(item.id)} style={styles.removeBtn}>
+          <Trash2 size={16} color={colors.error} strokeWidth={2} />
         </AnimatedPressable>
       </View>
     </Animated.View>
@@ -108,66 +106,69 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.base,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  imagePlaceholder: {
-    width: 64,
-    height: 64,
+  thumbnail: {
+    width: 60,
+    height: 60,
     borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbnailInitial: {
+    fontFamily: fonts.heading,
+    fontSize: fontSizes.xl,
+    fontWeight: '700',
   },
   center: {
     flex: 1,
-    marginLeft: spacing.md,
-    marginRight: spacing.sm,
+    marginHorizontal: spacing.md,
+    gap: 2,
   },
   name: {
     fontFamily: fonts.bodyBold,
     fontSize: fontSizes.base,
-    color: colors.textPrimary,
   },
   customizations: {
     fontFamily: fonts.body,
     fontSize: fontSizes.xs,
-    color: colors.textMuted,
-    marginTop: 2,
+    marginTop: 1,
   },
   lineTotal: {
-    fontFamily: fonts.bodySemiBold,
+    fontFamily: fonts.headingSemiBold,
     fontSize: fontSizes.sm,
-    color: colors.primary,
     marginTop: spacing.xs,
   },
   right: {
     alignItems: 'center',
     gap: spacing.sm,
   },
-  quantityRow: {
+  qtyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    borderRadius: borderRadius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.xs,
+    height: 36,
   },
-  qtyButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceElevated,
+  qtyBtn: {
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
   qtyText: {
     fontFamily: fonts.bodyBold,
-    fontSize: fontSizes.md,
-    color: colors.textPrimary,
-    minWidth: 24,
+    fontSize: fontSizes.sm,
+    minWidth: 22,
     textAlign: 'center',
   },
-  removeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  removeBtn: {
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },

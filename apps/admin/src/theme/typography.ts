@@ -1,10 +1,11 @@
+// Space Grotesk for headlines, Syne for body/UI — per KIKI brand guide
 export const fonts = {
   heading: 'SpaceGrotesk_700Bold',
   headingSemiBold: 'SpaceGrotesk_600SemiBold',
-  body: 'Inter_400Regular',
-  bodyMedium: 'Inter_500Medium',
-  bodySemiBold: 'Inter_600SemiBold',
-  bodyBold: 'Inter_700Bold',
+  body: 'Syne_400Regular',
+  bodyMedium: 'Syne_500Medium',
+  bodySemiBold: 'Syne_600SemiBold',
+  bodyBold: 'Syne_700Bold',
 } as const;
 
 export const fontSizes = {

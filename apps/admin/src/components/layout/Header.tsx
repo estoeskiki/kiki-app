@@ -1,51 +1,42 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../theme/colors';
+import { ChevronLeft } from 'lucide-react-native';
+import { useTheme } from '../../theme/useTheme';
 import { fonts, fontSizes } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 
 interface HeaderProps {
   title: string;
+  subtitle?: string;
   onBack?: () => void;
-  rightAction?: {
-    icon: keyof typeof Ionicons.glyphMap;
-    onPress: () => void;
-    badge?: number;
-  };
+  rightElement?: React.ReactNode;
 }
 
-export function Header({ title, onBack, rightAction }: HeaderProps) {
+export function Header({ title, subtitle, onBack, rightElement }: HeaderProps) {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { borderBottomColor: colors.borderLight }]}>
       <View style={styles.left}>
         {onBack && (
-          <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <TouchableOpacity onPress={onBack} style={[styles.iconBtn, { backgroundColor: colors.surfaceHighlight }]} activeOpacity={0.7}>
+            <ChevronLeft color={colors.textPrimary} size={20} strokeWidth={2} />
           </TouchableOpacity>
         )}
       </View>
 
-      <Text style={styles.title} numberOfLines={1}>
-        {title}
-      </Text>
+      <View style={styles.center}>
+        <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text style={[styles.subtitle, { color: colors.textMuted }]} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
 
       <View style={styles.right}>
-        {rightAction && (
-          <TouchableOpacity onPress={rightAction.onPress} style={styles.actionButton} activeOpacity={0.7}>
-            <Ionicons
-              name={rightAction.icon}
-              size={24}
-              color={colors.textPrimary}
-            />
-            {rightAction.badge !== undefined && rightAction.badge > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                  {rightAction.badge > 99 ? '99+' : rightAction.badge}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        )}
+        {rightElement}
       </View>
     </View>
   );
@@ -56,54 +47,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
-    backgroundColor: colors.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   left: {
-    width: 48,
+    width: 44,
     alignItems: 'flex-start',
   },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+  },
   right: {
-    width: 48,
+    width: 44,
     alignItems: 'flex-end',
   },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   title: {
-    flex: 1,
     fontFamily: fonts.heading,
     fontSize: fontSizes.lg,
-    color: colors.textPrimary,
-    textAlign: 'center',
+    letterSpacing: -0.3,
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 11,
-    color: colors.textPrimary,
+  subtitle: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.xs,
+    marginTop: 1,
   },
 });

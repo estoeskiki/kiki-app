@@ -1,37 +1,34 @@
-import { ReactNode } from 'react';
-import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+import { View, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/context/ThemeContext';
 
 interface ScreenWrapperProps {
-  children: ReactNode;
-  style?: StyleProp<ViewStyle>;
+  children: React.ReactNode;
   padded?: boolean;
-  safeArea?: boolean;
 }
 
-export function ScreenWrapper({
-  children,
-  style,
-  padded = true,
-  safeArea = true,
-}: ScreenWrapperProps) {
-  const Wrapper = safeArea ? SafeAreaView : View;
+export function ScreenWrapper({ children, padded = true }: ScreenWrapperProps) {
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   return (
-    <Wrapper style={[styles.container, padded && styles.padded, style]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.background, paddingTop: insets.top },
+        padded && styles.padded,
+      ]}
+    >
       {children}
-    </Wrapper>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   padded: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 20,
   },
 });

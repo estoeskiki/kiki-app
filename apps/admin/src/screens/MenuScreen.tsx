@@ -14,19 +14,20 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
+import { Plus, X, Trash2, Star } from 'lucide-react-native';
 import { ScreenWrapper } from '../components/layout/ScreenWrapper';
 import { useMenuStore } from '../store/useMenuStore';
 import { MenuItem, CustomizationGroup, CustomizationOption } from '../data/types';
 import { formatCurrency } from '../utils/formatCurrency';
-import { colors } from '../theme/colors';
-import { spacing } from '../theme/spacing';
+import { useTheme } from '../theme/useTheme';
+import { spacing, borderRadius } from '../theme/spacing';
 import { fonts, fontSizes } from '../theme/typography';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_GAP = spacing.sm;
 const CARD_WIDTH = (SCREEN_WIDTH - spacing.base * 2 - CARD_GAP) / 2;
 
-// ─── Types ──────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 type EditingCustomization = {
   id: string;
@@ -58,7 +59,7 @@ const EMPTY_ITEM: EditingItem = {
   customizations: [],
 };
 
-// ─── Component ──────────────────────────────────────────────────────────────────
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function MenuScreen() {
   const { items, categories, isLoading, fetchMenu, toggleItemAvailability, addItem, updateItem, deleteItem } = useMenuStore();
@@ -66,16 +67,14 @@ export default function MenuScreen() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<EditingItem>(EMPTY_ITEM);
   const [isNewItem, setIsNewItem] = useState(false);
+  const { colors, isDark } = useTheme();
+
+  React.useEffect(() => { fetchMenu(); }, [fetchMenu]);
 
   React.useEffect(() => {
-    fetchMenu();
-  }, [fetchMenu]);
-
-  React.useEffect(() => {
-    if (!selectedCategoryId && categories.length > 0) {
-      setSelectedCategoryId(categories[0].id);
-    }
+    if (!selectedCategoryId && categories.length > 0) setSelectedCategoryId(categories[0].id);
   }, [categories, selectedCategoryId]);
+
   const filteredItems = useMemo(
     () => items.filter((i) => i.categoryId === selectedCategoryId),
     [items, selectedCategoryId]
@@ -121,13 +120,7 @@ export default function MenuScreen() {
       ...prev,
       customizations: [
         ...prev.customizations,
-        {
-          id: `cg-${Date.now()}`,
-          name: '',
-          required: false,
-          maxSelections: 1,
-          options: [],
-        },
+        { id: `cg-${Date.now()}`, name: '', required: false, maxSelections: 1, options: [] },
       ],
     }));
   };
@@ -135,9 +128,7 @@ export default function MenuScreen() {
   const updateCustomizationGroup = (cgId: string, updates: Partial<EditingCustomization>) => {
     setEditingItem((prev) => ({
       ...prev,
-      customizations: prev.customizations.map((cg) =>
-        cg.id === cgId ? { ...cg, ...updates } : cg
-      ),
+      customizations: prev.customizations.map((cg) => cg.id === cgId ? { ...cg, ...updates } : cg),
     }));
   };
 
@@ -153,13 +144,7 @@ export default function MenuScreen() {
       ...prev,
       customizations: prev.customizations.map((cg) =>
         cg.id === cgId
-          ? {
-              ...cg,
-              options: [
-                ...cg.options,
-                { id: `opt-${Date.now()}`, name: '', priceModifier: '0.00' },
-              ],
-            }
+          ? { ...cg, options: [...cg.options, { id: `opt-${Date.now()}`, name: '', priceModifier: '0.00' }] }
           : cg
       ),
     }));
@@ -170,10 +155,7 @@ export default function MenuScreen() {
       ...prev,
       customizations: prev.customizations.map((cg) =>
         cg.id === cgId
-          ? {
-              ...cg,
-              options: cg.options.map((o) => (o.id === optId ? { ...o, ...updates } : o)),
-            }
+          ? { ...cg, options: cg.options.map((o) => (o.id === optId ? { ...o, ...updates } : o)) }
           : cg
       ),
     }));
@@ -183,9 +165,7 @@ export default function MenuScreen() {
     setEditingItem((prev) => ({
       ...prev,
       customizations: prev.customizations.map((cg) =>
-        cg.id === cgId
-          ? { ...cg, options: cg.options.filter((o) => o.id !== optId) }
-          : cg
+        cg.id === cgId ? { ...cg, options: cg.options.filter((o) => o.id !== optId) } : cg
       ),
     }));
   };
@@ -194,15 +174,9 @@ export default function MenuScreen() {
 
   const handleSave = () => {
     const { name, description, price, categoryId } = editingItem;
-    if (!name.trim()) {
-      Alert.alert('Error', 'El nombre del artículo es requerido.');
-      return;
-    }
+    if (!name.trim()) { Alert.alert('Error', 'El nombre del artículo es requerido.'); return; }
     const priceInCents = Math.round(parseFloat(price || '0') * 100);
-    if (isNaN(priceInCents) || priceInCents < 0) {
-      Alert.alert('Error', 'Please enter a valid price.');
-      return;
-    }
+    if (isNaN(priceInCents) || priceInCents < 0) { Alert.alert('Error', 'Ingresa un precio válido.'); return; }
 
     const customizations: CustomizationGroup[] = editingItem.customizations
       .filter((cg) => cg.name.trim())
@@ -211,110 +185,123 @@ export default function MenuScreen() {
         name: cg.name.trim(),
         required: cg.required,
         maxSelections: cg.maxSelections,
-        options: cg.options
-          .filter((o) => o.name.trim())
-          .map((o) => ({
-            id: o.id,
-            name: o.name.trim(),
-            priceModifier: Math.round(parseFloat(o.priceModifier || '0') * 100),
-          })),
+        options: cg.options.filter((o) => o.name.trim()).map((o) => ({
+          id: o.id,
+          name: o.name.trim(),
+          priceModifier: Math.round(parseFloat(o.priceModifier || '0') * 100),
+        })),
       }));
 
     if (isNewItem) {
       addItem({
-        name: name.trim(),
-        description: description.trim(),
-        price: priceInCents,
-        categoryId: categoryId || categories[0]?.id || '',
-        image: '',
-        available: editingItem.available,
-        popular: editingItem.popular,
-        customizations,
+        name: name.trim(), description: description.trim(), price: priceInCents,
+        categoryId: categoryId || categories[0]?.id || '', image: '',
+        available: editingItem.available, popular: editingItem.popular, customizations,
       });
     } else {
       updateItem(editingItem.id, {
-        name: name.trim(),
-        description: description.trim(),
-        price: priceInCents,
-        categoryId,
-        available: editingItem.available,
-        popular: editingItem.popular,
-        customizations,
+        name: name.trim(), description: description.trim(), price: priceInCents,
+        categoryId, available: editingItem.available, popular: editingItem.popular, customizations,
       });
     }
     setEditModalVisible(false);
   };
 
   const handleDelete = (item: MenuItem) => {
-    Alert.alert('Eliminar Artículo', `¿Estás seguro de que quieres eliminar "${item.name}"?`, [
+    Alert.alert('Eliminar Artículo', `¿Eliminar "${item.name}"?`, [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Eliminar', style: 'destructive', onPress: () => deleteItem(item.id) },
     ]);
   };
 
-  // ─── Grid card ──────────────────────────────────────────────────────────────
+  // ─── Grid Card ──────────────────────────────────────────────────────────────
 
-  const renderGridItem = ({ item, index }: { item: MenuItem; index: number }) => (
-    <TouchableOpacity
-      style={[
-        styles.gridCard,
-        { marginRight: index % 2 === 0 ? CARD_GAP : 0 },
-        !item.available && styles.gridCardDisabled,
-      ]}
-      onPress={() => openEditModal(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.cardTop}>
-        <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
-        <TouchableOpacity
-          onPress={() => handleDelete(item)}
-          style={styles.cardDeleteBtn}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Text style={styles.cardDeleteText}>✕</Text>
-        </TouchableOpacity>
-      </View>
+  const renderGridItem = ({ item, index }: { item: MenuItem; index: number }) => {
+    const shadowStyle = isDark
+      ? { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 3 }
+      : { shadowColor: '#060e1d', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 };
 
-      <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
+    return (
+      <TouchableOpacity
+        style={[
+          styles.gridCard,
+          shadowStyle,
+          {
+            marginRight: index % 2 === 0 ? CARD_GAP : 0,
+            backgroundColor: colors.surface,
+            borderColor: colors.borderLight,
+            opacity: item.available ? 1 : 0.55,
+          },
+        ]}
+        onPress={() => openEditModal(item)}
+        activeOpacity={0.75}
+      >
+        {/* Popular star */}
+        {item.popular && (
+          <View style={[styles.popularBadge, { backgroundColor: colors.surfaceHighlight }]}>
+            <Star color={colors.secondary} size={11} fill={colors.secondary} />
+          </View>
+        )}
 
-      <View style={styles.cardBottom}>
-        <Text style={styles.cardPrice}>{formatCurrency(item.price)}</Text>
-        <Switch
-          value={item.available}
-          onValueChange={() => toggleItemAvailability(item.id, item.available)}
-          trackColor={{ false: colors.surfaceHighlight, true: colors.success }}
-          thumbColor={colors.textPrimary}
-          style={styles.cardSwitch}
-        />
-      </View>
-
-      {item.customizations.length > 0 && (
-        <Text style={styles.cardAddons}>
-          {item.customizations.length} complemento{item.customizations.length > 1 ? 's' : ''}
-        </Text>
-      )}
-
-      {item.popular && (
-        <View style={styles.popularBadge}>
-          <Text style={styles.popularText}>⭐</Text>
+        <View style={styles.cardTop}>
+          <Text style={[styles.cardName, { color: colors.textPrimary }]} numberOfLines={2}>
+            {item.name}
+          </Text>
+          <TouchableOpacity
+            onPress={() => handleDelete(item)}
+            style={styles.cardDeleteBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <X color={colors.textMuted} size={14} strokeWidth={2} />
+          </TouchableOpacity>
         </View>
-      )}
-    </TouchableOpacity>
-  );
+
+        {item.description ? (
+          <Text style={[styles.cardDesc, { color: colors.textMuted }]} numberOfLines={2}>
+            {item.description}
+          </Text>
+        ) : null}
+
+        <View style={styles.cardBottom}>
+          <Text style={[styles.cardPrice, { color: colors.textPrimary }]}>
+            {formatCurrency(item.price)}
+          </Text>
+          <Switch
+            value={item.available}
+            onValueChange={() => toggleItemAvailability(item.id, item.available)}
+            trackColor={{ false: colors.surfaceHighlight, true: colors.success }}
+            thumbColor={item.available ? colors.surface : colors.textMuted}
+            style={styles.cardSwitch}
+          />
+        </View>
+
+        {item.customizations.length > 0 && (
+          <Text style={[styles.cardAddons, { color: colors.secondary }]}>
+            {item.customizations.length} opcion{item.customizations.length > 1 ? 'es' : ''}
+          </Text>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <ScreenWrapper>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <Text style={styles.screenTitle}>Menú</Text>
-        <TouchableOpacity onPress={openAddModal} style={styles.addBtn} activeOpacity={0.7}>
-          <Text style={styles.addBtnText}>+ Añadir Artículo</Text>
+      {/* Page header */}
+      <View style={[styles.pageHeader, { borderBottomColor: colors.borderLight }]}>
+        <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>Menú</Text>
+        <TouchableOpacity
+          onPress={openAddModal}
+          style={[styles.addBtn, { backgroundColor: colors.primary }]}
+          activeOpacity={0.8}
+        >
+          <Plus color={colors.onPrimary} size={16} strokeWidth={2.5} />
+          <Text style={[styles.addBtnText, { color: colors.onPrimary }]}>Añadir</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Category Tabs */}
+      {/* Category tabs */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -327,14 +314,24 @@ export default function MenuScreen() {
           return (
             <TouchableOpacity
               key={cat.id}
-              style={[styles.tab, isActive && styles.tabActive]}
+              style={[
+                styles.tab,
+                {
+                  backgroundColor: isActive ? colors.primary : colors.surfaceContainer,
+                  borderColor: isActive ? colors.primary : colors.borderLight,
+                },
+              ]}
               onPress={() => setSelectedCategoryId(cat.id)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+              <Text style={[styles.tabText, { color: isActive ? colors.onPrimary : colors.textSecondary }]}>
                 {cat.icon}  {cat.name}
               </Text>
-              <Text style={[styles.tabCount, isActive && styles.tabCountActive]}>{count}</Text>
+              <View style={[styles.tabCountBadge, { backgroundColor: isActive ? 'rgba(0,0,0,0.15)' : colors.surfaceHighlight }]}>
+                <Text style={[styles.tabCount, { color: isActive ? colors.onPrimary : colors.textMuted }]}>
+                  {count}
+                </Text>
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -347,58 +344,79 @@ export default function MenuScreen() {
         renderItem={renderGridItem}
         numColumns={2}
         contentContainerStyle={styles.gridContainer}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No hay artículos en esta categoría.</Text>
-            <TouchableOpacity onPress={openAddModal} style={styles.emptyAddBtn} activeOpacity={0.7}>
-              <Text style={styles.emptyAddText}>+ Añadir uno</Text>
+            <View style={[styles.emptyIcon, { backgroundColor: colors.surfaceContainer }]}>
+              <Text style={styles.emptyEmoji}>🍽</Text>
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Sin artículos</Text>
+            <Text style={[styles.emptyBody, { color: colors.textMuted }]}>
+              Añade el primer artículo a esta categoría.
+            </Text>
+            <TouchableOpacity
+              onPress={openAddModal}
+              style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.emptyBtnText, { color: colors.onPrimary }]}>+ Añadir Artículo</Text>
             </TouchableOpacity>
           </View>
         }
       />
 
-      {/* ─── Edit / Add Modal ───────────────────────────────────────────────── */}
-      <Modal visible={editModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+      {/* ─── Edit / Add Modal ──────────────────────────────────────────────────── */}
+      <Modal visible={editModalVisible} animationType="slide" transparent statusBarTranslucent>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.modalWrapper}
           >
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {isNewItem ? 'Añadir Nuevo Artículo' : 'Editar Artículo'}
+            <View style={[styles.modalContent, { backgroundColor: colors.background, borderColor: colors.borderLight }]}>
+              {/* Handle */}
+              <View style={styles.modalHandle}>
+                <View style={[styles.handleBar, { backgroundColor: colors.border }]} />
+              </View>
+
+              <View style={[styles.modalHeader, { borderBottomColor: colors.borderLight }]}>
+                <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+                  {isNewItem ? 'Nuevo Artículo' : 'Editar Artículo'}
                 </Text>
-                <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-                  <Text style={styles.modalClose}>Cancelar</Text>
+                <TouchableOpacity
+                  onPress={() => setEditModalVisible(false)}
+                  style={[styles.modalCloseBtn, { backgroundColor: colors.surfaceHighlight }]}
+                >
+                  <X color={colors.textPrimary} size={16} strokeWidth={2} />
                 </TouchableOpacity>
               </View>
 
               <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
-                {/* Basic info */}
-                <Text style={styles.label}>Nombre</Text>
+                {/* Name */}
+                <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>NOMBRE</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight, color: colors.textPrimary }]}
                   value={editingItem.name}
                   onChangeText={(t) => setEditingItem({ ...editingItem, name: t })}
                   placeholder="Nombre del artículo"
                   placeholderTextColor={colors.textMuted}
                 />
 
-                <Text style={styles.label}>Descripción</Text>
+                {/* Description */}
+                <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>DESCRIPCIÓN</Text>
                 <TextInput
-                  style={[styles.input, styles.textArea]}
+                  style={[styles.input, styles.textArea, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight, color: colors.textPrimary }]}
                   value={editingItem.description}
                   onChangeText={(t) => setEditingItem({ ...editingItem, description: t })}
-                  placeholder="Descripción corta"
+                  placeholder="Descripción corta (opcional)"
                   placeholderTextColor={colors.textMuted}
                   multiline
                   numberOfLines={3}
                 />
 
-                <Text style={styles.label}>Precio (€)</Text>
+                {/* Price */}
+                <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>PRECIO</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight, color: colors.textPrimary }]}
                   value={editingItem.price}
                   onChangeText={(t) => setEditingItem({ ...editingItem, price: t })}
                   placeholder="10.99"
@@ -406,154 +424,135 @@ export default function MenuScreen() {
                   keyboardType="numeric"
                 />
 
-                {/* Category chips */}
-                <Text style={styles.label}>Categoría</Text>
-                <View style={styles.categoryRow}>
-                  {categories.map((cat) => (
-                    <TouchableOpacity
-                      key={cat.id}
-                      style={[
-                        styles.categoryChip,
-                        editingItem.categoryId === cat.id && styles.categoryChipActive,
-                      ]}
-                      onPress={() => setEditingItem({ ...editingItem, categoryId: cat.id })}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.categoryChipText,
-                          editingItem.categoryId === cat.id && styles.categoryChipTextActive,
-                        ]}
+                {/* Category */}
+                <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>CATEGORÍA</Text>
+                <View style={styles.chipRow}>
+                  {categories.map((cat) => {
+                    const active = editingItem.categoryId === cat.id;
+                    return (
+                      <TouchableOpacity
+                        key={cat.id}
+                        style={[styles.chip, { backgroundColor: active ? colors.primary : colors.surfaceContainer, borderColor: active ? colors.primary : colors.borderLight }]}
+                        onPress={() => setEditingItem({ ...editingItem, categoryId: cat.id })}
+                        activeOpacity={0.7}
                       >
-                        {cat.icon} {cat.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text style={[styles.chipText, { color: active ? colors.onPrimary : colors.textSecondary }]}>
+                          {cat.icon} {cat.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
 
                 {/* Toggles */}
-                <View style={styles.toggleRow}>
-                  <Text style={styles.toggleLabel}>Disponible</Text>
+                <View style={[styles.toggleRow, { borderBottomColor: colors.borderLight }]}>
+                  <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>Disponible</Text>
                   <Switch
                     value={editingItem.available}
                     onValueChange={(v) => setEditingItem({ ...editingItem, available: v })}
                     trackColor={{ false: colors.surfaceHighlight, true: colors.success }}
-                    thumbColor={colors.textPrimary}
+                    thumbColor={colors.surface}
                   />
                 </View>
-                <View style={styles.toggleRow}>
-                  <Text style={styles.toggleLabel}>Popular / Destacado</Text>
+                <View style={[styles.toggleRow, { borderBottomColor: 'transparent' }]}>
+                  <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>Popular / Destacado</Text>
                   <Switch
                     value={editingItem.popular}
                     onValueChange={(v) => setEditingItem({ ...editingItem, popular: v })}
                     trackColor={{ false: colors.surfaceHighlight, true: colors.secondary }}
-                    thumbColor={colors.textPrimary}
+                    thumbColor={colors.surface}
                   />
                 </View>
 
-                {/* ─── Customizations / Add-ons ─────────────────────────────── */}
-                <View style={styles.sectionDivider} />
+                {/* ─── Customizations ─────────────────────────────────────── */}
+                <View style={[styles.sectionDivider, { backgroundColor: colors.borderLight }]} />
                 <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionLabel}>Complementos / Personalizaciones</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Complementos</Text>
                   <TouchableOpacity onPress={addCustomizationGroup} activeOpacity={0.7}>
-                    <Text style={styles.addGroupText}>+ Añadir Grupo</Text>
+                    <Text style={[styles.addGroupText, { color: colors.primary }]}>+ Añadir Grupo</Text>
                   </TouchableOpacity>
                 </View>
 
                 {editingItem.customizations.map((cg) => (
-                  <View key={cg.id} style={styles.cgCard}>
+                  <View key={cg.id} style={[styles.cgCard, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight }]}>
                     <View style={styles.cgHeader}>
                       <TextInput
-                        style={styles.cgNameInput}
+                        style={[styles.cgNameInput, { color: colors.textPrimary, borderBottomColor: colors.border }]}
                         value={cg.name}
                         onChangeText={(t) => updateCustomizationGroup(cg.id, { name: t })}
                         placeholder="Nombre del grupo (ej. Tamaño)"
                         placeholderTextColor={colors.textMuted}
                       />
                       <TouchableOpacity onPress={() => removeCustomizationGroup(cg.id)}>
-                        <Text style={styles.removeText}>Eliminar</Text>
+                        <Text style={[styles.removeText, { color: colors.error }]}>Eliminar</Text>
                       </TouchableOpacity>
                     </View>
 
                     <View style={styles.cgToggles}>
                       <TouchableOpacity
-                        style={[styles.cgToggle, cg.required && styles.cgToggleActive]}
-                        onPress={() =>
-                          updateCustomizationGroup(cg.id, { required: !cg.required })
-                        }
+                        style={[styles.cgToggle, { backgroundColor: cg.required ? colors.primary : colors.surfaceHighlight }]}
+                        onPress={() => updateCustomizationGroup(cg.id, { required: !cg.required })}
                       >
-                        <Text
-                          style={[
-                            styles.cgToggleText,
-                            cg.required && styles.cgToggleTextActive,
-                          ]}
-                        >
+                        <Text style={[styles.cgToggleText, { color: cg.required ? colors.onPrimary : colors.textSecondary }]}>
                           Requerido
                         </Text>
                       </TouchableOpacity>
                       <View style={styles.maxSelRow}>
-                        <Text style={styles.maxSelLabel}>Máx:</Text>
+                        <Text style={[styles.maxSelLabel, { color: colors.textSecondary }]}>Máx:</Text>
                         <TextInput
-                          style={styles.maxSelInput}
+                          style={[styles.maxSelInput, { backgroundColor: colors.surfaceHighlight, color: colors.textPrimary }]}
                           value={String(cg.maxSelections)}
-                          onChangeText={(t) =>
-                            updateCustomizationGroup(cg.id, {
-                              maxSelections: parseInt(t) || 1,
-                            })
-                          }
+                          onChangeText={(t) => updateCustomizationGroup(cg.id, { maxSelections: parseInt(t) || 1 })}
                           keyboardType="numeric"
                         />
                       </View>
                     </View>
 
-                    {/* Options */}
                     {cg.options.map((opt) => (
                       <View key={opt.id} style={styles.optionRow}>
                         <TextInput
-                          style={styles.optionNameInput}
+                          style={[styles.optionNameInput, { backgroundColor: colors.surfaceHighlight, color: colors.textPrimary }]}
                           value={opt.name}
                           onChangeText={(t) => updateOption(cg.id, opt.id, { name: t })}
                           placeholder="Nombre de la opción"
                           placeholderTextColor={colors.textMuted}
                         />
                         <TextInput
-                          style={styles.optionPriceInput}
+                          style={[styles.optionPriceInput, { backgroundColor: colors.surfaceHighlight, color: colors.textPrimary }]}
                           value={opt.priceModifier}
-                          onChangeText={(t) =>
-                            updateOption(cg.id, opt.id, { priceModifier: t })
-                          }
+                          onChangeText={(t) => updateOption(cg.id, opt.id, { priceModifier: t })}
                           placeholder="0.00"
                           placeholderTextColor={colors.textMuted}
                           keyboardType="numeric"
                         />
-                        <TouchableOpacity onPress={() => removeOption(cg.id, opt.id)}>
-                          <Text style={styles.optionRemove}>✕</Text>
+                        <TouchableOpacity onPress={() => removeOption(cg.id, opt.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                          <X color={colors.error} size={16} strokeWidth={2} />
                         </TouchableOpacity>
                       </View>
                     ))}
 
-                    <TouchableOpacity
-                      onPress={() => addOption(cg.id)}
-                      style={styles.addOptionBtn}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.addOptionText}>+ Añadir Opción</Text>
+                    <TouchableOpacity onPress={() => addOption(cg.id)} style={styles.addOptionBtn} activeOpacity={0.7}>
+                      <Text style={[styles.addOptionText, { color: colors.primary }]}>+ Añadir Opción</Text>
                     </TouchableOpacity>
                   </View>
                 ))}
 
                 {editingItem.customizations.length === 0 && (
-                  <Text style={styles.noAddonsText}>
-                    Aún no hay complementos. Toca "+ Añadir Grupo" para crear opciones de personalización.
+                  <Text style={[styles.noAddonsText, { color: colors.textMuted }]}>
+                    Sin complementos. Toca "+ Añadir Grupo" para crear opciones de personalización.
                   </Text>
                 )}
 
                 <View style={{ height: spacing.xl }} />
               </ScrollView>
 
-              {/* Save */}
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
-                <Text style={styles.saveBtnText}>
+              {/* Save button */}
+              <TouchableOpacity
+                style={[styles.saveBtn, { backgroundColor: colors.primary }]}
+                onPress={handleSave}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.saveBtnText, { color: colors.onPrimary }]}>
                   {isNewItem ? 'Añadir al Menú' : 'Guardar Cambios'}
                 </Text>
               </TouchableOpacity>
@@ -565,43 +564,44 @@ export default function MenuScreen() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // Header
-  headerRow: {
+  pageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.base,
-    paddingTop: spacing.base,
-    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.base,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  screenTitle: {
+  pageTitle: {
     fontFamily: fonts.heading,
     fontSize: fontSizes['2xl'],
-    color: colors.textPrimary,
+    letterSpacing: -0.5,
   },
   addBtn: {
-    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: 8,
+    borderRadius: borderRadius.md,
   },
   addBtnText: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.sm,
-    color: colors.background,
   },
-
-  // Tabs
   tabBar: {
-    maxHeight: 48,
-    marginBottom: spacing.sm,
+    maxHeight: 52,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   tabBarContent: {
     paddingHorizontal: spacing.base,
     gap: spacing.sm,
+    alignItems: 'center',
   },
   tab: {
     flexDirection: 'row',
@@ -609,80 +609,68 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: 24,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
     gap: spacing.xs,
   },
-  tabActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
   tabText: {
-    fontFamily: fonts.bodyMedium,
+    fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.sm,
-    color: colors.textSecondary,
   },
-  tabTextActive: {
-    color: colors.background,
+  tabCountBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+    minWidth: 20,
+    alignItems: 'center',
   },
   tabCount: {
     fontFamily: fonts.bodyBold,
     fontSize: fontSizes.xs,
-    color: colors.textMuted,
-    backgroundColor: colors.surfaceHighlight,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  tabCountActive: {
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    color: colors.background,
   },
 
   // Grid
   gridContainer: {
     padding: spacing.base,
-    paddingTop: spacing.xs,
+    paddingTop: spacing.sm,
   },
   gridCard: {
     width: CARD_WIDTH,
-    backgroundColor: colors.surface,
-    borderRadius: 14,
+    borderRadius: borderRadius.lg,
     padding: spacing.base,
     marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
     position: 'relative',
   },
-  gridCardDisabled: {
-    opacity: 0.5,
+  popularBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: spacing.xs,
+    paddingRight: 28, // space for popular badge
   },
   cardName: {
     fontFamily: fonts.headingSemiBold,
     fontSize: fontSizes.base,
-    color: colors.textPrimary,
     flex: 1,
-    marginRight: spacing.sm,
+    marginRight: spacing.xs,
+    letterSpacing: -0.2,
   },
   cardDeleteBtn: {
     padding: 2,
   },
-  cardDeleteText: {
-    fontSize: fontSizes.sm,
-    color: colors.textMuted,
-  },
   cardDesc: {
     fontFamily: fonts.body,
     fontSize: fontSizes.xs,
-    color: colors.textMuted,
     marginBottom: spacing.sm,
     lineHeight: 16,
   },
@@ -692,147 +680,153 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardPrice: {
-    fontFamily: fonts.bodySemiBold,
+    fontFamily: fonts.heading,
     fontSize: fontSizes.md,
-    color: colors.primary,
+    letterSpacing: -0.3,
   },
   cardSwitch: {
     transform: [{ scale: 0.8 }],
   },
   cardAddons: {
-    fontFamily: fonts.bodyMedium,
+    fontFamily: fonts.body,
     fontSize: fontSizes.xs,
-    color: colors.secondary,
     marginTop: spacing.xs,
-  },
-  popularBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-  },
-  popularText: {
-    fontSize: 14,
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing['3xl'],
+    gap: spacing.sm,
   },
-  emptyText: {
+  emptyIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  emptyEmoji: { fontSize: 26 },
+  emptyTitle: {
+    fontFamily: fonts.headingSemiBold,
+    fontSize: fontSizes.lg,
+    letterSpacing: -0.3,
+  },
+  emptyBody: {
     fontFamily: fonts.body,
-    fontSize: fontSizes.base,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
+    fontSize: fontSizes.sm,
+    textAlign: 'center',
+    maxWidth: 220,
   },
-  emptyAddBtn: {
-    backgroundColor: colors.surfaceHighlight,
+  emptyBtn: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    borderRadius: 8,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.sm,
   },
-  emptyAddText: {
+  emptyBtnText: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.sm,
-    color: colors.primary,
   },
 
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
   modalWrapper: {
     maxHeight: '92%',
   },
   modalContent: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: spacing.xl,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     maxHeight: '100%',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: StyleSheet.hairlineWidth,
+  },
+  modalHandle: {
+    alignItems: 'center',
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+  },
+  handleBar: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.base,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: spacing.base,
   },
   modalTitle: {
     fontFamily: fonts.heading,
     fontSize: fontSizes.xl,
-    color: colors.textPrimary,
+    letterSpacing: -0.3,
   },
-  modalClose: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSizes.base,
-    color: colors.primary,
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   formScroll: {
+    paddingHorizontal: spacing.xl,
     marginBottom: spacing.base,
   },
-  label: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-    marginTop: spacing.md,
+  fieldLabel: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.xs,
+    letterSpacing: 0.8,
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
   },
   input: {
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    padding: spacing.base,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.base,
     fontFamily: fonts.body,
     fontSize: fontSizes.base,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   textArea: {
     minHeight: 72,
     textAlignVertical: 'top',
   },
-  categoryRow: {
+  chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  categoryChip: {
+  chip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: 20,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  categoryChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  categoryChipText: {
+  chipText: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-  },
-  categoryChipTextActive: {
-    color: colors.background,
   },
   toggleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   toggleLabel: {
     fontFamily: fonts.body,
     fontSize: fontSizes.base,
-    color: colors.textPrimary,
   },
-
-  // Customizations section
   sectionDivider: {
-    height: 1,
-    backgroundColor: colors.border,
+    height: StyleSheet.hairlineWidth,
     marginTop: spacing.xl,
     marginBottom: spacing.md,
   },
@@ -842,23 +836,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  sectionLabel: {
+  sectionTitle: {
     fontFamily: fonts.heading,
     fontSize: fontSizes.lg,
-    color: colors.textPrimary,
+    letterSpacing: -0.2,
   },
   addGroupText: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.sm,
-    color: colors.primary,
   },
   cgCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: borderRadius.md,
     padding: spacing.base,
     marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   cgHeader: {
     flexDirection: 'row',
@@ -870,16 +861,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.base,
-    color: colors.textPrimary,
     marginRight: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     paddingVertical: spacing.xs,
   },
   removeText: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSizes.sm,
-    color: colors.error,
   },
   cgToggles: {
     flexDirection: 'row',
@@ -891,18 +879,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: 16,
-    backgroundColor: colors.surfaceHighlight,
-  },
-  cgToggleActive: {
-    backgroundColor: colors.primary,
   },
   cgToggleText: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSizes.xs,
-    color: colors.textSecondary,
-  },
-  cgToggleTextActive: {
-    color: colors.background,
   },
   maxSelRow: {
     flexDirection: 'row',
@@ -912,16 +892,13 @@ const styles = StyleSheet.create({
   maxSelLabel: {
     fontFamily: fonts.body,
     fontSize: fontSizes.xs,
-    color: colors.textSecondary,
   },
   maxSelInput: {
     width: 36,
-    backgroundColor: colors.surfaceHighlight,
     borderRadius: 6,
     padding: spacing.xs,
     fontFamily: fonts.bodyMedium,
     fontSize: fontSizes.sm,
-    color: colors.textPrimary,
     textAlign: 'center',
   },
   optionRow: {
@@ -932,28 +909,18 @@ const styles = StyleSheet.create({
   },
   optionNameInput: {
     flex: 1,
-    backgroundColor: colors.surfaceHighlight,
     borderRadius: 8,
     padding: spacing.sm,
     fontFamily: fonts.body,
     fontSize: fontSizes.sm,
-    color: colors.textPrimary,
   },
   optionPriceInput: {
     width: 64,
-    backgroundColor: colors.surfaceHighlight,
     borderRadius: 8,
     padding: spacing.sm,
     fontFamily: fonts.body,
     fontSize: fontSizes.sm,
-    color: colors.textPrimary,
     textAlign: 'right',
-  },
-  optionRemove: {
-    fontFamily: fonts.bodyBold,
-    fontSize: fontSizes.sm,
-    color: colors.error,
-    padding: spacing.xs,
   },
   addOptionBtn: {
     marginTop: spacing.xs,
@@ -962,26 +929,23 @@ const styles = StyleSheet.create({
   addOptionText: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSizes.sm,
-    color: colors.primary,
   },
   noAddonsText: {
     fontFamily: fonts.body,
     fontSize: fontSizes.sm,
-    color: colors.textMuted,
     fontStyle: 'italic',
     marginTop: spacing.sm,
   },
-
-  // Save
   saveBtn: {
-    backgroundColor: colors.primary,
-    padding: spacing.base,
-    borderRadius: 12,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.xl,
+    paddingVertical: spacing.base,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
   },
   saveBtnText: {
     fontFamily: fonts.heading,
-    fontSize: fontSizes.lg,
-    color: colors.background,
+    fontSize: fontSizes.md,
+    letterSpacing: -0.2,
   },
 });

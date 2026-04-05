@@ -2,51 +2,40 @@ import 'react-native-reanimated';
 import { useCallback, useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import {
   SpaceGrotesk_600SemiBold,
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
+  Syne_400Regular,
+  Syne_500Medium,
+  Syne_600SemiBold,
+  Syne_700Bold,
+} from '@expo-google-fonts/syne';
 import * as SplashScreen from 'expo-splash-screen';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { useAuthStore } from './src/store/useAuthStore';
-import { colors } from './src/theme/colors';
+import { useThemeStore } from './src/store/useThemeStore';
+import { darkTheme, lightTheme } from './src/theme/themes';
 
 SplashScreen.preventAutoHideAsync();
-
-const navTheme = {
-  ...DefaultTheme,
-  dark: true,
-  colors: {
-    ...DefaultTheme.colors,
-    primary: colors.primary,
-    background: colors.background,
-    card: colors.surface,
-    text: colors.textPrimary,
-    border: colors.border,
-    notification: colors.primary,
-  },
-};
 
 export default function App() {
   const [fontsLoaded] = useFonts({
     SpaceGrotesk_600SemiBold,
     SpaceGrotesk_700Bold,
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Syne_400Regular,
+    Syne_500Medium,
+    Syne_600SemiBold,
+    Syne_700Bold,
   });
 
   const { session, isLoading, initialize } = useAuthStore();
+  const isDark = useThemeStore((s) => s.isDark);
+  const theme = isDark ? darkTheme : lightTheme;
 
   useEffect(() => {
     initialize();
@@ -58,17 +47,43 @@ export default function App() {
     }
   }, [fontsLoaded, isLoading]);
 
+  const navTheme = isDark
+    ? {
+        ...DarkTheme,
+        colors: {
+          ...DarkTheme.colors,
+          primary: theme.primary,
+          background: theme.background,
+          card: theme.surface,
+          text: theme.textPrimary,
+          border: theme.border,
+          notification: theme.primary,
+        },
+      }
+    : {
+        ...DefaultTheme,
+        colors: {
+          ...DefaultTheme.colors,
+          primary: theme.primary,
+          background: theme.background,
+          card: theme.surface,
+          text: theme.textPrimary,
+          border: theme.border,
+          notification: theme.primary,
+        },
+      };
+
   if (!fontsLoaded || isLoading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={[styles.loading, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container} onLayout={onLayoutRootView}>
-      <StatusBar style="light" />
+    <View style={[styles.container, { backgroundColor: theme.background }]} onLayout={onLayoutRootView}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       {session ? (
         <NavigationContainer theme={navTheme}>
           <RootNavigator />
@@ -83,11 +98,9 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   loading: {
     flex: 1,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,7 +1,7 @@
 import { useRef, useCallback } from 'react';
 import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/context/ThemeContext';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import type { Category } from '@/data/types';
@@ -12,22 +12,14 @@ interface CategoryTabsProps {
   onSelect: (id: string) => void;
 }
 
-export function CategoryTabs({
-  categories,
-  selectedId,
-  onSelect,
-}: CategoryTabsProps) {
+export function CategoryTabs({ categories, selectedId, onSelect }: CategoryTabsProps) {
   const scrollRef = useRef<ScrollView>(null);
+  const { colors } = useTheme();
 
-  const handleSelect = useCallback(
-    (id: string) => {
-      onSelect(id);
-    },
-    [onSelect],
-  );
+  const handleSelect = useCallback((id: string) => { onSelect(id); }, [onSelect]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background, borderBottomColor: colors.borderLight }]}>
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -36,24 +28,22 @@ export function CategoryTabs({
       >
         {categories.map((category) => {
           const isSelected = category.id === selectedId;
-
           return (
             <AnimatedPressable
               key={category.id}
               onPress={() => handleSelect(category.id)}
               style={[
                 styles.pill,
-                isSelected ? styles.pillSelected : styles.pillUnselected,
+                isSelected
+                  ? { backgroundColor: colors.primary }
+                  : { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight },
               ]}
               scaleValue={0.95}
             >
-              <Text style={styles.pillIcon}>{category.icon}</Text>
               <Text
                 style={[
                   styles.pillLabel,
-                  isSelected
-                    ? styles.pillLabelSelected
-                    : styles.pillLabelUnselected,
+                  { color: isSelected ? colors.onPrimary : colors.textSecondary },
                 ]}
               >
                 {category.name}
@@ -68,8 +58,8 @@ export function CategoryTabs({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.background,
     paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
@@ -79,28 +69,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    minHeight: 48,
-    gap: spacing.sm,
-  },
-  pillSelected: {
-    backgroundColor: colors.primary,
-  },
-  pillUnselected: {
-    backgroundColor: colors.surfaceElevated,
-  },
-  pillIcon: {
-    fontSize: fontSizes.lg,
+    minHeight: 40,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'transparent',
   },
   pillLabel: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSizes.base,
-  },
-  pillLabelSelected: {
-    color: colors.textPrimary,
-  },
-  pillLabelUnselected: {
-    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+    letterSpacing: 0.1,
   },
 });

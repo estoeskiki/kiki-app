@@ -1,59 +1,54 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { OrderStatus } from '../../data/types';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/useTheme';
 import { fonts, fontSizes } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 
 interface StatusBadgeProps {
   status: OrderStatus;
+  size?: 'sm' | 'md';
 }
 
-export function StatusBadge({ status }: StatusBadgeProps) {
-  let backgroundColor: string = colors.surfaceHighlight;
-  let textColor: string = colors.textSecondary;
-  let label = status.toUpperCase();
+export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
+  const { colors } = useTheme();
 
-  switch (status) {
-    case 'confirmed':
-      backgroundColor = colors.primary;
-      textColor = colors.background;
-      label = 'NUEVO';
-      break;
-    case 'preparing':
-      backgroundColor = colors.secondary;
-      textColor = colors.background;
-      label = 'PREPARANDO';
-      break;
-    case 'ready':
-      backgroundColor = colors.success;
-      textColor = colors.background;
-      label = 'LISTO';
-      break;
-    case 'completed':
-      backgroundColor = colors.surfaceHighlight;
-      textColor = colors.textSecondary;
-      label = 'COMPLETADO';
-      break;
-  }
+  const config: Record<string, { bg: string; text: string; label: string }> = {
+    confirmed:  { bg: colors.statusConfirmedBg,  text: colors.statusConfirmedText,  label: 'NUEVO' },
+    preparing:  { bg: colors.statusPreparingBg,  text: colors.statusPreparingText,  label: 'EN COCINA' },
+    ready:      { bg: colors.statusReadyBg,       text: colors.statusReadyText,      label: 'LISTO' },
+    completed:  { bg: colors.statusCompletedBg,   text: colors.statusCompletedText,  label: 'COMPLETADO' },
+    failed:     { bg: 'rgba(239,68,68,0.12)',      text: colors.error,                label: 'FALLIDO' },
+  };
+
+  const c = config[status] ?? config.completed;
 
   return (
-    <View style={[styles.badge, { backgroundColor }]}>
-      <Text style={[styles.text, { color: textColor }]}>{label}</Text>
+    <View style={[styles.badge, size === 'sm' && styles.badgeSm, { backgroundColor: c.bg }]}>
+      <Text style={[styles.text, size === 'sm' && styles.textSm, { color: c.text }]}>
+        {c.label}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   badge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 4,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 4,
+    borderRadius: 20,
     alignSelf: 'flex-start',
+  },
+  badgeSm: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
   },
   text: {
     fontFamily: fonts.bodyBold,
     fontSize: fontSizes.xs,
-    fontWeight: '700',
+    letterSpacing: 0.6,
+  },
+  textSm: {
+    fontSize: 10,
   },
 });
