@@ -3,6 +3,7 @@ import { colors } from '@/theme/colors';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { useTranslation } from '@/i18n/useTranslation';
 import type { CartItem } from '@/data/types';
 
 interface OrderReviewListProps {
@@ -12,13 +13,13 @@ interface OrderReviewListProps {
 /**
  * Build a readable string from selected customizations.
  */
-function formatCustomizations(item: CartItem): string {
+function formatCustomizations(item: CartItem, localize: (val: any) => string): string {
   const names: string[] = [];
   for (const group of item.menuItem.customizations) {
     const selectedIds = item.selectedCustomizations[group.id] ?? [];
     for (const option of group.options) {
       if (selectedIds.includes(option.id)) {
-        names.push(option.name);
+        names.push(localize(option.name));
       }
     }
   }
@@ -26,17 +27,19 @@ function formatCustomizations(item: CartItem): string {
 }
 
 export function OrderReviewList({ items }: OrderReviewListProps) {
+  const { localize } = useTranslation();
+
   return (
     <View style={styles.container}>
       {items.map((item) => {
-        const customizationText = formatCustomizations(item);
+        const customizationText = formatCustomizations(item, localize);
 
         return (
           <View key={item.id} style={styles.row}>
             <View style={styles.left}>
               <View style={styles.nameRow}>
                 <Text style={styles.name} numberOfLines={1}>
-                  {item.menuItem.name}
+                  {localize(item.menuItem.name)}
                 </Text>
                 <View style={styles.qtyBadge}>
                   <Text style={styles.qtyBadgeText}>x{item.quantity}</Text>

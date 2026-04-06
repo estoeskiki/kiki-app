@@ -1,4 +1,7 @@
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,17 +13,41 @@ import Animated, {
   FadeInUp,
 } from 'react-native-reanimated';
 import { useEffect, useRef, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/context/ThemeContext';
 import { useThemeStore } from '@/store/useThemeStore';
+import { useTranslation } from '@/i18n/useTranslation';
+import { useRestaurantStore } from '@/store/useRestaurantStore';
+import { LanguageSelector } from '@/components/layout/LanguageSelector';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import type { ScreenProps } from '@/navigation/types';
 
 const { width } = Dimensions.get('window');
 
+function getMediaType(url: string): 'video' | 'image' | null {
+  if (!url) return null;
+  if (/\.(mp4|mov|webm)$/i.test(url)) return 'video';
+  return 'image';
+}
+
 export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { toggleTheme } = useThemeStore();
+  const { t } = useTranslation();
+  const { profile } = useRestaurantStore();
+  const mediaType = getMediaType(profile?.welcomeBgUrl ?? '');
+  const hasMedia = mediaType !== null;
+
+  const videoPlayer = useVideoPlayer(
+    mediaType === 'video' ? { uri: profile!.welcomeBgUrl } : null,
+    (player) => {
+      player.loop = true;
+      player.muted = true;
+      player.play();
+    }
+  );
 
   // Hidden 5-tap theme toggle
   const tapCount = useRef(0);
@@ -54,10 +81,45 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
 
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
 
+  const textColor = hasMedia ? '#ffffff' : colors.textPrimary;
+  const mutedColor = hasMedia ? 'rgba(255,255,255,0.75)' : colors.textMuted;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Background media */}
+      {mediaType === 'video' && (
+        <VideoView
+          player={videoPlayer}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          nativeControls={false}
+        />
+      )}
+      {mediaType === 'image' && (
+        <Image
+          source={profile!.welcomeBgUrl}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="disk"
+        />
+      )}
+      {hasMedia && (
+        <LinearGradient
+          colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.65)']}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+
       {/* Subtle top accent line */}
       <View style={[styles.accentLine, { backgroundColor: colors.primary }]} />
+
+      {/* Language Selector (Top Right) */}
+      <Animated.View
+        entering={FadeInDown.delay(300).duration(500)}
+        style={[styles.langToggleContainer, { top: Math.max(insets.top, 20) + 16 }]}
+      >
+        <LanguageSelector variant="full" />
+      </Animated.View>
 
       {/* Content */}
       <View style={styles.content}>
@@ -68,13 +130,15 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
         >
           <TouchableOpacity onPress={handleLogoTap} activeOpacity={1}>
             <View style={[styles.wordmarkContainer, tapFlash && { opacity: 0.7 }]}>
-              <Text style={[styles.wordmark, { color: colors.textPrimary }]}>KIKI</Text>
+              <Text style={[styles.wordmark, { color: textColor }]}>{profile?.name ?? 'KIKI'}</Text>
               <View style={[styles.wordmarkBar, { backgroundColor: colors.primary }]} />
             </View>
           </TouchableOpacity>
-          <Text style={[styles.tagline, { color: colors.textMuted }]}>
-            Order · Dine · Enjoy
-          </Text>
+          {(profile?.slogan || !profile) && (
+            <Text style={[styles.tagline, { color: mutedColor }]}>
+              {profile?.slogan || 'Order · Dine · Enjoy'}
+            </Text>
+          )}
         </Animated.View>
 
         {/* CTA */}
@@ -91,11 +155,11 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
             activeOpacity={0.85}
           >
             <Text style={[styles.ctaText, { color: colors.onPrimary }]}>
-              Start Your Order
+              {t('startOrder')}
             </Text>
           </TouchableOpacity>
 
-          <Text style={[styles.hint, { color: colors.textMuted }]}>Tap to begin</Text>
+          <Text style={[styles.hint, { color: mutedColor }]}>{t('welcome')}</Text>
         </Animated.View>
       </View>
 
@@ -104,10 +168,10 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
         entering={FadeInUp.delay(800).duration(600)}
         style={styles.footer}
       >
-        <Text style={[styles.footerText, { color: colors.textMuted }]}>
-          Powered by{' '}
+        <Text style={[styles.footerText, { color: mutedColor }]}>
+          {t('poweredBy')}
           <Text style={{ color: colors.primary, fontFamily: fonts.bodyBold }}>
-            Kiki
+            kiki
           </Text>
         </Text>
       </Animated.View>
@@ -202,5 +266,29 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: fontSizes.xs,
     letterSpacing: 0.5,
+  },
+  langToggleContainer: {
+    position: 'absolute',
+    top: spacing['2xl'],
+    right: spacing.lg,
+    zIndex: 10,
+  },
+  langToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    gap: spacing.xs,
+  },
+  langToggleText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.sm,
+    letterSpacing: 0.5,
+  },
+  langToggleSeparator: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.sm,
+    marginHorizontal: 2,
   },
 });

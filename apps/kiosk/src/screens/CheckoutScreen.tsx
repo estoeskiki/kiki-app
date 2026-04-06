@@ -9,6 +9,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useOrderStore } from '@/store/useOrderStore';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { useTheme } from '@/context/ThemeContext';
+import { useTranslation } from '@/i18n/useTranslation';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import type { ScreenProps } from '@/navigation/types';
@@ -20,13 +21,14 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
   const getTotal = useCartStore((s) => s.getTotal);
   const orderType = useOrderStore((s) => s.orderType);
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const total = getTotal();
-  const orderTypeLabel = orderType === 'dine-in' ? 'Dine In' : 'Takeaway';
+  const orderTypeLabel = orderType === 'dine-in' ? t('dineIn') : t('takeaway');
 
   return (
     <ScreenWrapper padded={false}>
-      <Header title="Review Order" onBack={() => navigation.goBack()} />
+      <Header title={t('reviewOrder')} onBack={() => navigation.goBack()} />
 
       <View style={styles.content}>
         <ScrollView
@@ -58,10 +60,10 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
 
         <View style={[styles.footer, { borderTopColor: colors.borderLight, backgroundColor: colors.surface }]}>
           <Button variant="secondary" size="md" fullWidth onPress={() => navigation.goBack()} style={styles.editBtn}>
-            Edit Order
+            {t('editOrder')}
           </Button>
           <Button variant="primary" size="xl" fullWidth onPress={() => navigation.navigate('Payment')}>
-            {`Place Order — ${formatCurrency(total)}`}
+            {`${t('placeOrder')} — ${formatCurrency(total)}`}
           </Button>
         </View>
       </View>

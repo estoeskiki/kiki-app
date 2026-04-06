@@ -10,6 +10,7 @@ import { spacing, borderRadius } from '@/theme/spacing';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { mediumTap } from '@/utils/haptics';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
+import { useTranslation } from '@/i18n/useTranslation';
 import type { ScreenProps } from '@/navigation/types';
 import type { CustomizationGroup } from '@/data/types';
 
@@ -35,6 +36,7 @@ export function ItemDetailModal({ navigation, route }: ScreenProps<'ItemDetail'>
   const addItem = useCartStore((s) => s.addItem);
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
+  const { localize } = useTranslation();
 
   const [selectedCustomizations, setSelectedCustomizations] = useState<Record<string, string[]>>(() => {
     const init: Record<string, string[]> = {};
@@ -82,7 +84,7 @@ export function ItemDetailModal({ navigation, route }: ScreenProps<'ItemDetail'>
   }, [canAdd, addItem, item, quantity, selectedCustomizations, navigation]);
 
   const heroColor = getPlateColor(item.id, isDark);
-  const initial = item.name.trim().charAt(0).toUpperCase();
+  const initial = localize(item.name).trim().charAt(0).toUpperCase();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -107,15 +109,15 @@ export function ItemDetailModal({ navigation, route }: ScreenProps<'ItemDetail'>
 
         {/* Details */}
         <Animated.View entering={FadeInDown.delay(80).duration(500)} style={styles.details}>
-          <Text style={[styles.itemName, { color: colors.textPrimary }]}>{item.name}</Text>
-          <Text style={[styles.description, { color: colors.textMuted }]}>{item.description}</Text>
+          <Text style={[styles.itemName, { color: colors.textPrimary }]}>{localize(item.name)}</Text>
+          <Text style={[styles.description, { color: colors.textMuted }]}>{localize(item.description)}</Text>
           <Text style={[styles.basePrice, { color: colors.textPrimary }]}>{formatCurrency(item.price)}</Text>
 
           {/* Customization groups */}
           {item.customizations.map((group) => (
             <View key={group.id} style={[styles.groupContainer, { borderTopColor: colors.borderLight }]}>
               <View style={styles.groupHeader}>
-                <Text style={[styles.groupName, { color: colors.textPrimary }]}>{group.name}</Text>
+                <Text style={[styles.groupName, { color: colors.textPrimary }]}>{localize(group.name)}</Text>
                 {group.required && (
                   <View style={[styles.requiredBadge, { backgroundColor: colors.primary }]}>
                     <Text style={[styles.requiredText, { color: colors.onPrimary }]}>Required</Text>
@@ -154,7 +156,7 @@ export function ItemDetailModal({ navigation, route }: ScreenProps<'ItemDetail'>
                       )}
                     </View>
                     <Text style={[styles.optionName, { color: isSelected ? colors.textPrimary : colors.textSecondary }]}>
-                      {option.name}
+                      {localize(option.name)}
                     </Text>
                     {option.priceModifier !== 0 && (
                       <Text style={[styles.optionPrice, { color: isSelected ? colors.textPrimary : colors.textMuted }]}>

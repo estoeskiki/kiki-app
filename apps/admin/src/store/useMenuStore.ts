@@ -13,6 +13,9 @@ interface MenuState {
   addItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
   updateItem: (itemId: string, updates: Partial<MenuItem>) => Promise<void>;
   deleteItem: (itemId: string) => Promise<void>;
+  addCategory: (name: { es: string; en: string }, icon: string) => Promise<void>;
+  updateCategory: (catId: string, name: { es: string; en: string }, icon: string) => Promise<void>;
+  deleteCategory: (catId: string) => Promise<{ hasItems: boolean }>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -132,6 +135,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   updateItem: async (itemId, updates) => {
+    const { restaurantId } = useAuthStore.getState();
     const { error } = await supabase.from('menu_items').update({
       name: updates.name,
       description: updates.description,
@@ -141,9 +145,95 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       popular: updates.popular,
     }).eq('id', itemId);
 
-    if (!error) {
-      get().fetchMenu(); // Refetch to sync any complex nested changes like customizations
+    if (error) return;
+
+    // Persist customization changes (upsert groups + options, delete removed ones)
+    if (updates.customizations && restaurantId) {
+      // Fetch current group IDs from DB so we know what to delete
+      const { data: existingGroups } = await supabase
+        .from('customization_groups')
+        .select('id')
+        .eq('menu_item_id', itemId);
+
+      const existingGroupIds = new Set((existingGroups || []).map((g: any) => g.id));
+      const incomingGroupIds = new Set(
+        updates.customizations
+          .filter((cg) => !cg.id.startsWith('cg-')) // temp IDs are new
+          .map((cg) => cg.id)
+      );
+
+      // Delete removed groups (cascade deletes their options)
+      const toDeleteGroupIds = [...existingGroupIds].filter((id) => !incomingGroupIds.has(id));
+      if (toDeleteGroupIds.length > 0) {
+        await supabase.from('customization_groups').delete().in('id', toDeleteGroupIds);
+      }
+
+      for (const cg of updates.customizations) {
+        const isNew = cg.id.startsWith('cg-');
+        let groupId = cg.id;
+
+        if (isNew) {
+          // Insert new group
+          const { data: insertedGroup } = await supabase
+            .from('customization_groups')
+            .insert({
+              menu_item_id: itemId,
+              restaurant_id: restaurantId,
+              name: cg.name,
+              required: cg.required,
+              max_selections: cg.maxSelections,
+            })
+            .select('id')
+            .single();
+          if (!insertedGroup) continue;
+          groupId = insertedGroup.id;
+        } else {
+          // Update existing group
+          await supabase.from('customization_groups').update({
+            name: cg.name,
+            required: cg.required,
+            max_selections: cg.maxSelections,
+          }).eq('id', groupId);
+        }
+
+        // Fetch current option IDs for this group
+        const { data: existingOpts } = await supabase
+          .from('customization_options')
+          .select('id')
+          .eq('group_id', groupId);
+
+        const existingOptIds = new Set((existingOpts || []).map((o: any) => o.id));
+        const incomingOptIds = new Set(
+          cg.options
+            .filter((o) => !o.id.startsWith('opt-'))
+            .map((o) => o.id)
+        );
+
+        // Delete removed options
+        const toDeleteOptIds = [...existingOptIds].filter((id) => !incomingOptIds.has(id));
+        if (toDeleteOptIds.length > 0) {
+          await supabase.from('customization_options').delete().in('id', toDeleteOptIds);
+        }
+
+        for (const opt of cg.options) {
+          if (opt.id.startsWith('opt-')) {
+            await supabase.from('customization_options').insert({
+              group_id: groupId,
+              restaurant_id: restaurantId,
+              name: opt.name,
+              price_modifier: opt.priceModifier,
+            });
+          } else {
+            await supabase.from('customization_options').update({
+              name: opt.name,
+              price_modifier: opt.priceModifier,
+            }).eq('id', opt.id);
+          }
+        }
+      }
     }
+
+    await get().fetchMenu();
   },
 
   deleteItem: async (itemId) => {
@@ -153,5 +243,41 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         items: state.items.filter((i) => i.id !== itemId),
       }));
     }
+  },
+
+  addCategory: async (name, icon) => {
+    const { restaurantId } = useAuthStore.getState();
+    if (!restaurantId) return;
+    const maxOrder = get().categories.reduce((m, c) => Math.max(m, c.sortOrder ?? 0), 0);
+    const slug = name.es.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const { error } = await supabase.from('categories').insert({
+      restaurant_id: restaurantId,
+      name,
+      icon,
+      slug: `${slug}-${Date.now()}`,
+      sort_order: maxOrder + 1,
+    });
+    if (!error) await get().fetchMenu();
+  },
+
+  updateCategory: async (catId, name, icon) => {
+    const { error } = await supabase.from('categories').update({ name, icon }).eq('id', catId);
+    if (!error) {
+      set((state) => ({
+        categories: state.categories.map((c) =>
+          c.id === catId ? { ...c, name, icon } : c
+        ),
+      }));
+    }
+  },
+
+  deleteCategory: async (catId) => {
+    const hasItems = get().items.some((i) => i.categoryId === catId);
+    if (hasItems) return { hasItems: true };
+    await supabase.from('categories').delete().eq('id', catId);
+    set((state) => ({
+      categories: state.categories.filter((c) => c.id !== catId),
+    }));
+    return { hasItems: false };
   },
 }));

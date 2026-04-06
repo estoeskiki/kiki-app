@@ -8,6 +8,14 @@ import { useTheme } from '../../theme/useTheme';
 import { fonts, fontSizes } from '../../theme/typography';
 import { spacing, borderRadius } from '../../theme/spacing';
 
+const t = (val: any) => {
+  if (!val) return '';
+  if (typeof val === 'string') {
+    try { val = JSON.parse(val); } catch {}
+  }
+  return val?.es || val?.en || val || '';
+};
+
 interface OrderDetailsModalProps {
   order: Order | null;
   visible: boolean;
@@ -116,7 +124,7 @@ export function OrderDetailsModal({
                   <Text style={[styles.qtyText, { color: colors.primary }]}>{item.quantity}</Text>
                 </View>
                 <View style={styles.itemInfo}>
-                  <Text style={[styles.itemName, { color: colors.textPrimary }]}>{item.menuItem.name}</Text>
+                  <Text style={[styles.itemName, { color: colors.textPrimary }]}>{t(item.menuItem.name)}</Text>
                   {Object.values(item.selectedCustomizations).flat().map((opt, idx) => (
                     <Text key={idx} style={[styles.customization, { color: colors.textMuted }]}>
                       + {opt}

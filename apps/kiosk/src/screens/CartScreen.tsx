@@ -7,6 +7,7 @@ import { CartItemRow } from '@/components/cart/CartItemRow';
 import { CartSummary } from '@/components/cart/CartSummary';
 import { useCartStore } from '@/store/useCartStore';
 import { useTheme } from '@/context/ThemeContext';
+import { useTranslation } from '@/i18n/useTranslation';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing } from '@/theme/spacing';
 import type { ScreenProps } from '@/navigation/types';
@@ -19,6 +20,7 @@ export function CartScreen({ navigation }: ScreenProps<'Cart'>) {
   const getTax = useCartStore((s) => s.getTax);
   const getTotal = useCartStore((s) => s.getTotal);
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const totalItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const isEmpty = items.length === 0;
@@ -26,7 +28,7 @@ export function CartScreen({ navigation }: ScreenProps<'Cart'>) {
   return (
     <ScreenWrapper padded={false}>
       <Header
-        title="Your Order"
+        title={t('yourOrder')}
         onBack={() => navigation.goBack()}
         rightAction={{ icon: 'cart', onPress: () => {}, badge: totalItemCount }}
       />
@@ -36,12 +38,12 @@ export function CartScreen({ navigation }: ScreenProps<'Cart'>) {
           <View style={[styles.emptyIconBox, { backgroundColor: colors.surfaceContainer }]}>
             <ShoppingCart size={36} color={colors.textMuted} strokeWidth={1.5} />
           </View>
-          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Your cart is empty</Text>
+          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{t('emptyCartTitle')}</Text>
           <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-            Add items from the menu to get started
+            {t('emptyCartSub')}
           </Text>
           <Button variant="ghost" size="lg" onPress={() => navigation.goBack()}>
-            Browse Menu
+            {t('browseMenu')}
           </Button>
         </View>
       ) : (
@@ -68,7 +70,7 @@ export function CartScreen({ navigation }: ScreenProps<'Cart'>) {
               total={getTotal()}
             />
             <Button variant="primary" size="xl" fullWidth onPress={() => navigation.navigate('Checkout')}>
-              Continue to Checkout
+              {t('continueToCheckout')}
             </Button>
           </View>
         </View>

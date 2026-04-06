@@ -18,6 +18,7 @@ import { RootNavigator } from '@/navigation/RootNavigator';
 import { DeviceAuthScreen } from '@/screens/AuthScreen';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { LanguageModal } from '@/components/layout/LanguageModal';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -60,6 +61,7 @@ function AppInner() {
       ) : (
         <DeviceAuthScreen />
       )}
+      <LanguageModal />
     </View>
   );
 }

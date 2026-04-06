@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { useTheme } from '@/context/ThemeContext';
+import { useTranslation } from '@/i18n/useTranslation';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -46,6 +47,7 @@ function getInitial(name: string): string {
 
 export function MenuItemCard({ item, onPress, onQuickAdd }: MenuItemCardProps) {
   const { colors, isDark } = useTheme();
+  const { localize } = useTranslation();
   const bgColor = getPlateColor(item.id, isDark);
 
   return (
@@ -57,7 +59,7 @@ export function MenuItemCard({ item, onPress, onQuickAdd }: MenuItemCardProps) {
       {/* Thumbnail */}
       <View style={[styles.thumbnail, { backgroundColor: bgColor }]}>
         <Text style={[styles.initial, { color: colors.textSecondary }]}>
-          {getInitial(item.name)}
+          {getInitial(localize(item.name))}
         </Text>
         {item.popular && (
           <View style={[styles.popularBadge, { backgroundColor: colors.primary }]}>
@@ -69,10 +71,10 @@ export function MenuItemCard({ item, onPress, onQuickAdd }: MenuItemCardProps) {
       {/* Content */}
       <View style={styles.content}>
         <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
-          {item.name}
+          {localize(item.name)}
         </Text>
         <Text style={[styles.description, { color: colors.textMuted }]} numberOfLines={2}>
-          {item.description}
+          {localize(item.description)}
         </Text>
 
         <View style={styles.footer}>

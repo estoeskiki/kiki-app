@@ -41,13 +41,10 @@ export function AuthScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <View style={[styles.card, shadowStyle, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-        {/* Brand mark */}
-        <View style={styles.brand}>
-          <View style={[styles.logoDot, { backgroundColor: colors.primary }]} />
-          <Text style={[styles.logoText, { color: colors.textPrimary }]}>kiki</Text>
-        </View>
+      {/* Top header */}
+      <Text style={styles.headerWordmark}>kiki</Text>
 
+      <View style={[styles.card, shadowStyle, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>Bienvenido de vuelta</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Inicia sesión para gestionar tu restaurante
@@ -94,6 +91,11 @@ export function AuthScreen() {
           }
         </TouchableOpacity>
       </View>
+
+      {/* Footer */}
+      <Text style={[styles.footer, { color: colors.textMuted }]}>
+        Potenciado por <Text style={{ color: colors.primary, fontFamily: fonts.bodyBold }}>kiki</Text>
+      </Text>
     </KeyboardAvoidingView>
   );
 }
@@ -103,27 +105,25 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: spacing.xl,
+    gap: spacing.xl,
+  },
+  headerWordmark: {
+    fontFamily: fonts.heading,
+    fontSize: fontSizes['2xl'],
+    letterSpacing: -1.5,
+    textAlign: 'center',
+    color: '#ccff00',
   },
   card: {
     borderRadius: borderRadius['2xl'],
     padding: spacing['2xl'],
     borderWidth: StyleSheet.hairlineWidth,
   },
-  brand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-  },
-  logoDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  logoText: {
-    fontFamily: fonts.heading,
-    fontSize: fontSizes.xl,
-    letterSpacing: 2,
+  footer: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.xs,
+    letterSpacing: 0.5,
+    textAlign: 'center',
   },
   title: {
     fontFamily: fonts.heading,

@@ -5,20 +5,13 @@ import { ScreenWrapper } from '@/components/layout/ScreenWrapper';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { useOrderStore } from '@/store/useOrderStore';
 import { useTheme } from '@/context/ThemeContext';
+import { useTranslation } from '@/i18n/useTranslation';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import type { ScreenProps } from '@/navigation/types';
 import type { OrderType } from '@/data/types';
 
-const options: {
-  type: OrderType;
-  icon: 'dine' | 'take';
-  title: string;
-  subtitle: string;
-}[] = [
-  { type: 'dine-in', icon: 'dine', title: 'Dine In', subtitle: 'Eat at the restaurant' },
-  { type: 'takeaway', icon: 'take', title: 'Takeaway', subtitle: 'Take your order to go' },
-];
+// Options moved inside component to access translations
 
 function OptionIcon({ icon, color }: { icon: 'dine' | 'take'; color: string }) {
   if (icon === 'dine') return <UtensilsCrossed size={40} color={color} strokeWidth={1.5} />;
@@ -28,6 +21,17 @@ function OptionIcon({ icon, color }: { icon: 'dine' | 'take'; color: string }) {
 export function OrderTypeScreen({ navigation }: ScreenProps<'OrderType'>) {
   const setOrderType = useOrderStore((s) => s.setOrderType);
   const { colors } = useTheme();
+  const { t } = useTranslation();
+
+  const options: {
+    type: OrderType;
+    icon: 'dine' | 'take';
+    title: string;
+    subtitle: string;
+  }[] = [
+    { type: 'dine-in', icon: 'dine', title: t('dineIn'), subtitle: t('dineInSub') },
+    { type: 'takeaway', icon: 'take', title: t('takeaway'), subtitle: t('takeawaySub') },
+  ];
 
   const handleSelect = (type: OrderType) => {
     setOrderType(type);
@@ -38,9 +42,9 @@ export function OrderTypeScreen({ navigation }: ScreenProps<'OrderType'>) {
     <ScreenWrapper>
       <View style={styles.content}>
         <Animated.View entering={FadeInDown.delay(80).duration(600)} style={styles.header}>
-          <Text style={[styles.eyebrow, { color: colors.primary }]}>Welcome</Text>
+          <Text style={[styles.eyebrow, { color: colors.primary }]}>{t('welcome')}</Text>
           <Text style={[styles.heading, { color: colors.textPrimary }]}>
-            How would you{'\n'}like to order?
+            {t('chooseOrderType')}
           </Text>
         </Animated.View>
 

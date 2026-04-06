@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
+import { useRestaurantStore } from './useRestaurantStore';
 
 interface AuthState {
   deviceToken: string | null;
@@ -80,6 +81,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         deviceName: deviceData.ret_device_name,
       });
 
+      // Fetch restaurant profile (name, slogan) for display across the kiosk
+      await useRestaurantStore.getState().fetchProfile(deviceData.ret_org_id);
+
       return true;
     } catch (e: any) {
       set({ error: e.message || 'Authentication failed' });
@@ -92,6 +96,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     await supabase.auth.signOut();
     await AsyncStorage.removeItem(STORAGE_KEY);
+    useRestaurantStore.getState().clear();
     set({
       deviceToken: null,
       restaurantId: null,

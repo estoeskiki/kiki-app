@@ -12,6 +12,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useOrderStore } from '@/store/useOrderStore';
 import { printReceipt } from '@/services/printerService';
 import { useTheme } from '@/context/ThemeContext';
+import { useTranslation } from '@/i18n/useTranslation';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import { config } from '@/constants/config';
@@ -29,6 +30,7 @@ export function ThankYouScreen({ navigation, route }: ScreenProps<'ThankYou'>) {
   const currentOrder = useOrderStore((s) => s.currentOrder);
   const orderType = useOrderStore((s) => s.orderType);
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const [countdown, setCountdown] = useState(INITIAL_SECONDS);
   const [printStatus, setPrintStatus] = useState<'idle' | 'printing' | 'printed'>('idle');
@@ -77,8 +79,8 @@ export function ThankYouScreen({ navigation, route }: ScreenProps<'ThankYou'>) {
     navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
   }, [cartStore, orderStore, navigation]);
 
-  const orderTypeLabel = orderType === 'dine-in' ? 'Dine In' : 'Takeaway';
-  const printLabel = printStatus === 'printing' ? 'Printing…' : printStatus === 'printed' ? 'Receipt Printed!' : 'Print Receipt';
+  const orderTypeLabel = orderType === 'dine-in' ? t('dineIn') : t('takeaway');
+  const printLabel = printStatus === 'printing' ? t('printing') : printStatus === 'printed' ? t('printed') : t('printReceipt');
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -98,7 +100,7 @@ export function ThankYouScreen({ navigation, route }: ScreenProps<'ThankYou'>) {
 
         {/* Heading */}
         <Animated.Text entering={FadeInDown.delay(220).duration(600)} style={[styles.heading, { color: colors.textPrimary }]}>
-          Thank You!
+          {t('thankYouSuccess')}
         </Animated.Text>
 
         {/* Order number */}
@@ -116,7 +118,7 @@ export function ThankYouScreen({ navigation, route }: ScreenProps<'ThankYou'>) {
 
         {/* Wait time */}
         <Animated.Text entering={FadeInUp.delay(580).duration(500)} style={[styles.waitText, { color: colors.textMuted }]}>
-          Estimated wait: 5–10 minutes
+          {t('estimatedWait')}
         </Animated.Text>
 
         {/* Print */}
@@ -146,7 +148,7 @@ export function ThankYouScreen({ navigation, route }: ScreenProps<'ThankYou'>) {
             fullWidth
             onPress={handleStartNew}
           >
-            {`Start New Order (${countdown}s)`}
+            {`${t('startNewOrder')} (${countdown}s)`}
           </Button>
         </Animated.View>
       ) : (
@@ -154,7 +156,7 @@ export function ThankYouScreen({ navigation, route }: ScreenProps<'ThankYou'>) {
           entering={FadeInUp.delay(850).duration(500)}
           style={[styles.countdownHint, { color: colors.textMuted }]}
         >
-          Auto-reset in {countdown}s
+          {t('autoResetHint')} {countdown}s
         </Animated.Text>
       )}
     </View>

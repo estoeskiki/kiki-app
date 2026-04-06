@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { ChevronLeft, ShoppingCart, RotateCcw } from 'lucide-react-native';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
+import { LanguageSelector } from './LanguageSelector';
 import { useTheme } from '@/context/ThemeContext';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing } from '@/theme/spacing';
@@ -63,11 +64,14 @@ export function Header({ title, onBack, rightAction, secondaryRightAction }: Hea
             <ChevronLeft size={22} color={colors.textPrimary} strokeWidth={2.5} />
           </AnimatedPressable>
         )}
+        <LanguageSelector variant="compact" />
       </View>
 
-      <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
-        {title}
-      </Text>
+      <View pointerEvents="none" style={styles.titleContainer}>
+        <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
+          {title}
+        </Text>
+      </View>
 
       <View style={[styles.right, { width: secondaryRightAction ? 96 : 44 }]}>
         {secondaryRightAction && renderIcon(secondaryRightAction)}
@@ -87,8 +91,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   left: {
-    width: 44,
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    zIndex: 1,
   },
   right: {
     flexDirection: 'row',
@@ -96,12 +102,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  titleContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 0,
+  },
   title: {
-    flex: 1,
     fontFamily: fonts.headingSemiBold,
     fontSize: fontSizes.lg,
     textAlign: 'center',
-    letterSpacing: -0.3,
   },
   iconBtn: {
     width: 40,

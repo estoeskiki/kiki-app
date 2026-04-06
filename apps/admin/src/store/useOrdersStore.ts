@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from './useAuthStore';
 import { Order, OrderStatus } from '../data/types';
 import { RealtimeChannel } from '@supabase/supabase-js';
-
 interface OrdersState {
   orders: Order[];
   isLoading: boolean;
@@ -124,8 +123,9 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
     const { error } = await supabase.from('orders').update({ status: 'completed' }).eq('id', orderId);
     if (!error) {
       set((state) => ({
-        orders: state.orders.filter((o) => o.id !== orderId), // remove from active list
+        orders: state.orders.filter((o) => o.id !== orderId),
       }));
     }
   },
+
 }));

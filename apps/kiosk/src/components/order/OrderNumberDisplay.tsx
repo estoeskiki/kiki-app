@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from '@/i18n/useTranslation';
 import { colors } from '@/theme/colors';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
@@ -9,6 +10,7 @@ interface OrderNumberDisplayProps {
 
 export function OrderNumberDisplay({ orderNumber }: OrderNumberDisplayProps) {
   const formatted = String(orderNumber).padStart(2, '0');
+  const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
@@ -16,7 +18,7 @@ export function OrderNumberDisplay({ orderNumber }: OrderNumberDisplayProps) {
       <View style={styles.glow} />
 
       <View style={styles.inner}>
-        <Text style={styles.label}>ORDER</Text>
+        <Text style={styles.label}>{t('orderLabel')}</Text>
         <Text style={styles.number}>#{formatted}</Text>
       </View>
     </View>

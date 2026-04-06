@@ -22,14 +22,14 @@ export function DeviceAuthScreen() {
 
   const handleLinkDevice = async () => {
     if (!token.trim()) {
-      Alert.alert('Error', 'Please enter a device token.');
+      Alert.alert('Error', 'Por favor ingresa un token de dispositivo.');
       return;
     }
     const success = await authenticate(token.trim());
     if (!success) {
       Alert.alert(
-        'Linking Failed',
-        error || 'Invalid token. Please check the admin dashboard for valid tokens.'
+        'Error al vincular',
+        error || 'Token inválido. Verifica el panel de administración para obtener un token válido.'
       );
     }
   };
@@ -42,19 +42,19 @@ export function DeviceAuthScreen() {
       <View style={styles.inner}>
         {/* Wordmark */}
         <View style={styles.brand}>
-          <Text style={[styles.wordmark, { color: colors.textPrimary }]}>KIKI</Text>
+          <Text style={[styles.wordmark, { color: colors.textPrimary }]}>kiki</Text>
           <View style={[styles.brandBar, { backgroundColor: colors.primary }]} />
-          <Text style={[styles.brandSub, { color: colors.textMuted }]}>Kiosk Setup</Text>
+          <Text style={[styles.brandSub, { color: colors.textMuted }]}>Configuración de Kiosco</Text>
         </View>
 
         {/* Card */}
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Link This Device</Text>
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Vincular este dispositivo</Text>
           <Text style={[styles.cardSubtitle, { color: colors.textMuted }]}>
-            Enter the device token from your Kiki admin dashboard to activate this kiosk.
+            Ingresa el token del dispositivo desde tu panel de administración de Kiki para activar este kiosco.
           </Text>
 
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Device Token</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Token del dispositivo</Text>
           <TextInput
             style={[
               styles.input,
@@ -64,7 +64,7 @@ export function DeviceAuthScreen() {
                 color: colors.textPrimary,
               },
             ]}
-            placeholder="e.g. kiosk-abc123"
+            placeholder="ej. kiosk-abc123"
             placeholderTextColor={colors.textMuted}
             value={token}
             onChangeText={setToken}
@@ -89,7 +89,7 @@ export function DeviceAuthScreen() {
             {isLoading ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
-              <Text style={[styles.buttonText, { color: colors.onPrimary }]}>Link Device</Text>
+              <Text style={[styles.buttonText, { color: colors.onPrimary }]}>Vincular dispositivo</Text>
             )}
           </TouchableOpacity>
         </View>

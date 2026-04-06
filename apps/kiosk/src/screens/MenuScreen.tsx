@@ -8,6 +8,7 @@ import { CartFAB } from '@/components/cart/CartFAB';
 import { useCartStore } from '@/store/useCartStore';
 import { useOrderStore } from '@/store/useOrderStore';
 import { useMenuStore } from '@/store/useMenuStore';
+import { useTranslation } from '@/i18n/useTranslation';
 import type { MenuItem } from '@/data/types';
 import type { ScreenProps } from '@/navigation/types';
 
@@ -15,15 +16,16 @@ export function MenuScreen({ navigation }: ScreenProps<'Menu'>) {
   const { categories, items: menuItems, fetchMenu, subscribeToMenu, unsubscribeFromMenu } = useMenuStore();
   const clearCart = useCartStore((s) => s.clearCart);
   const resetOrder = useOrderStore((s) => s.resetOrder);
+  const { t } = useTranslation();
 
   const handleRestart = useCallback(() => {
     Alert.alert(
-      'Start New Order',
-      'This will clear your current cart and start fresh.',
+      t('startNewOrder'),
+      t('startNewOrderConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Restart',
+          text: t('confirmRestart'),
           style: 'destructive',
           onPress: () => {
             clearCart();
@@ -80,7 +82,7 @@ export function MenuScreen({ navigation }: ScreenProps<'Menu'>) {
   return (
     <ScreenWrapper padded={false}>
       <Header
-        title="Menu"
+        title={t('menu')}
         onBack={() => navigation.goBack()}
         secondaryRightAction={{ icon: 'restart', onPress: handleRestart }}
         rightAction={{ icon: 'cart', onPress: () => navigation.navigate('Cart'), badge: totalItemCount > 0 ? totalItemCount : undefined }}

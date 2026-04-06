@@ -2,6 +2,7 @@ import { useRef, useCallback } from 'react';
 import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { useTheme } from '@/context/ThemeContext';
+import { useTranslation } from '@/i18n/useTranslation';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import type { Category } from '@/data/types';
@@ -15,6 +16,7 @@ interface CategoryTabsProps {
 export function CategoryTabs({ categories, selectedId, onSelect }: CategoryTabsProps) {
   const scrollRef = useRef<ScrollView>(null);
   const { colors } = useTheme();
+  const { localize } = useTranslation();
 
   const handleSelect = useCallback((id: string) => { onSelect(id); }, [onSelect]);
 
@@ -46,7 +48,7 @@ export function CategoryTabs({ categories, selectedId, onSelect }: CategoryTabsP
                   { color: isSelected ? colors.onPrimary : colors.textSecondary },
                 ]}
               >
-                {category.name}
+                {localize(category.name)}
               </Text>
             </AnimatedPressable>
           );

@@ -1,6 +1,11 @@
+export type TranslatableText = {
+  es: string;
+  en: string;
+};
+
 export interface Category {
   id: string;
-  name: string;
+  name: TranslatableText | string;
   slug: string;
   icon: string;
   sortOrder: number;
@@ -8,13 +13,13 @@ export interface Category {
 
 export interface CustomizationOption {
   id: string;
-  name: string;
+  name: TranslatableText | string;
   priceModifier: number; // in cents (can be negative, zero, or positive)
 }
 
 export interface CustomizationGroup {
   id: string;
-  name: string;
+  name: TranslatableText | string;
   required: boolean;
   maxSelections: number; // 1 = radio, >1 = checkbox
   options: CustomizationOption[];
@@ -23,8 +28,8 @@ export interface CustomizationGroup {
 export interface MenuItem {
   id: string;
   categoryId: string;
-  name: string;
-  description: string;
+  name: TranslatableText | string;
+  description: TranslatableText | string;
   price: number; // base price in cents
   image: string; // URI or require() key
   available: boolean;

@@ -3,6 +3,7 @@ import Animated, { Layout, FadeOut } from 'react-native-reanimated';
 import { Minus, Plus, Trash2 } from 'lucide-react-native';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { useTheme } from '@/context/ThemeContext';
+import { useTranslation } from '@/i18n/useTranslation';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -14,13 +15,13 @@ interface CartItemRowProps {
   onRemove: (id: string) => void;
 }
 
-function formatCustomizations(item: CartItem): string {
+function formatCustomizations(item: CartItem, localize: (val: any) => string): string {
   const names: string[] = [];
   for (const group of item.menuItem.customizations) {
     const selectedIds = item.selectedCustomizations[group.id] ?? [];
     for (const option of group.options) {
       if (selectedIds.includes(option.id)) {
-        names.push(option.name);
+        names.push(localize(option.name));
       }
     }
   }
@@ -46,8 +47,9 @@ function getInitial(name: string): string {
 
 export function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowProps) {
   const { colors } = useTheme();
-  const customizationText = formatCustomizations(item);
-  const bgColor = getMonoColor(item.menuItem.id);
+  const { localize } = useTranslation();
+  const customizationText = formatCustomizations(item, localize);
+  const bgColor = getMonoColor(item.id);
 
   return (
     <Animated.View
@@ -58,14 +60,14 @@ export function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowPro
       {/* Item thumbnail */}
       <View style={[styles.thumbnail, { backgroundColor: bgColor }]}>
         <Text style={[styles.thumbnailInitial, { color: colors.textSecondary }]}>
-          {getInitial(item.menuItem.name)}
+          {getInitial(localize(item.menuItem.name))}
         </Text>
       </View>
 
       {/* Center info */}
       <View style={styles.center}>
         <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
-          {item.menuItem.name}
+          {localize(item.menuItem.name)}
         </Text>
         {customizationText.length > 0 && (
           <Text style={[styles.customizations, { color: colors.textMuted }]} numberOfLines={2}>

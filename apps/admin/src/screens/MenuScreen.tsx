@@ -14,7 +14,8 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
-import { Plus, X, Trash2, Star } from 'lucide-react-native';
+import { Plus, X, Trash2, Star, Wand2, Loader2 } from 'lucide-react-native';
+import { supabase, supabaseAnonKey } from '../lib/supabase';
 import { ScreenWrapper } from '../components/layout/ScreenWrapper';
 import { useMenuStore } from '../store/useMenuStore';
 import { MenuItem, CustomizationGroup, CustomizationOption } from '../data/types';
@@ -22,6 +23,8 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { useTheme } from '../theme/useTheme';
 import { spacing, borderRadius } from '../theme/spacing';
 import { fonts, fontSizes } from '../theme/typography';
+
+const t = (val: any) => val?.es || val || '';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_GAP = spacing.sm;
@@ -31,16 +34,16 @@ const CARD_WIDTH = (SCREEN_WIDTH - spacing.base * 2 - CARD_GAP) / 2;
 
 type EditingCustomization = {
   id: string;
-  name: string;
+  name: { es: string; en: string };
   required: boolean;
   maxSelections: number;
-  options: { id: string; name: string; priceModifier: string }[];
+  options: { id: string; name: { es: string; en: string }; priceModifier: string }[];
 };
 
 type EditingItem = {
   id: string;
-  name: string;
-  description: string;
+  name: { es: string; en: string };
+  description: { es: string; en: string };
   price: string;
   categoryId: string;
   available: boolean;
@@ -50,8 +53,8 @@ type EditingItem = {
 
 const EMPTY_ITEM: EditingItem = {
   id: '',
-  name: '',
-  description: '',
+  name: { es: '', en: '' },
+  description: { es: '', en: '' },
   price: '',
   categoryId: '',
   available: true,
@@ -61,12 +64,19 @@ const EMPTY_ITEM: EditingItem = {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
+const EMPTY_CAT = { id: '', name: { es: '', en: '' } };
+
 export default function MenuScreen() {
-  const { items, categories, isLoading, fetchMenu, toggleItemAvailability, addItem, updateItem, deleteItem } = useMenuStore();
+  const { items, categories, isLoading, fetchMenu, toggleItemAvailability, addItem, updateItem, deleteItem, addCategory, updateCategory, deleteCategory } = useMenuStore();
   const [selectedCategoryId, setSelectedCategoryId] = useState(categories[0]?.id || '');
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<EditingItem>(EMPTY_ITEM);
   const [isNewItem, setIsNewItem] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [isCatTranslating, setIsCatTranslating] = useState(false);
+  const [catModalVisible, setCatModalVisible] = useState(false);
+  const [editingCat, setEditingCat] = useState(EMPTY_CAT);
+  const [isNewCat, setIsNewCat] = useState(false);
   const { colors, isDark } = useTheme();
 
   React.useEffect(() => { fetchMenu(); }, [fetchMenu]);
@@ -91,26 +101,104 @@ export default function MenuScreen() {
   const openEditModal = (item: MenuItem) => {
     setEditingItem({
       id: item.id,
-      name: item.name,
-      description: item.description,
+      name: { es: t(item.name), en: (item.name as any)?.en || '' },
+      description: { es: t(item.description), en: (item.description as any)?.en || '' },
       price: (item.price / 100).toFixed(2),
       categoryId: item.categoryId,
       available: item.available,
       popular: item.popular,
       customizations: item.customizations.map((cg) => ({
         id: cg.id,
-        name: cg.name,
+        name: { es: t(cg.name), en: (cg.name as any)?.en || '' },
         required: cg.required,
         maxSelections: cg.maxSelections,
         options: cg.options.map((o) => ({
           id: o.id,
-          name: o.name,
+          name: { es: t(o.name), en: (o.name as any)?.en || '' },
           priceModifier: (o.priceModifier / 100).toFixed(2),
         })),
       })),
     });
     setIsNewItem(false);
     setEditModalVisible(true);
+  };
+
+  // ─── Category helpers ───────────────────────────────────────────────────────
+
+  const openAddCatModal = () => {
+    setEditingCat(EMPTY_CAT);
+    setIsNewCat(true);
+    setCatModalVisible(true);
+  };
+
+  const openEditCatModal = (cat: typeof categories[0]) => {
+    setEditingCat({
+      id: cat.id,
+      name: { es: t(cat.name), en: (cat.name as any)?.en || '' },
+    });
+    setIsNewCat(false);
+    setCatModalVisible(true);
+  };
+
+  const handleSaveCategory = async () => {
+    if (!editingCat.name.es.trim()) return;
+    if (isNewCat) {
+      await addCategory({ es: editingCat.name.es.trim(), en: editingCat.name.en.trim() }, '');
+    } else {
+      await updateCategory(editingCat.id, { es: editingCat.name.es.trim(), en: editingCat.name.en.trim() }, '');
+    }
+    setCatModalVisible(false);
+  };
+
+  const handleTranslateCategory = async () => {
+    if (!editingCat.name.es) return;
+    try {
+      setIsCatTranslating(true);
+      const fnUrl = `https://shmmbnvdtmqxmrlzpluh.supabase.co/functions/v1/translate`;
+      const response = await fetch(fnUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({ texts: [editingCat.name.es], targetLanguage: 'en', sourceLanguage: 'es' }),
+      });
+      if (!response.ok) throw new Error(`${response.status}`);
+      const data = await response.json();
+      const translated = data.translations?.[0] || '';
+      setEditingCat((p) => ({ ...p, name: { ...p.name, en: translated } }));
+    } catch (err: any) {
+      Alert.alert('Error al traducir', err.message);
+    } finally {
+      setIsCatTranslating(false);
+    }
+  };
+
+  const handleLongPressCategory = (cat: typeof categories[0]) => {
+    const itemCount = items.filter((i) => i.categoryId === cat.id).length;
+    Alert.alert(t(cat.name), undefined, [
+      { text: 'Renombrar', onPress: () => openEditCatModal(cat) },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => {
+          if (itemCount > 0) {
+            Alert.alert(
+              'No se puede eliminar',
+              `Esta categoría tiene ${itemCount} artículo${itemCount > 1 ? 's' : ''}. Mueve o elimina los artículos primero.`,
+              [{ text: 'OK' }]
+            );
+          } else {
+            Alert.alert('Eliminar categoría', `¿Eliminar "${t(cat.name)}"?`, [
+              { text: 'Cancelar', style: 'cancel' },
+              { text: 'Eliminar', style: 'destructive', onPress: () => deleteCategory(cat.id) },
+            ]);
+          }
+        },
+      },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
   };
 
   // ─── Customization helpers ──────────────────────────────────────────────────
@@ -120,7 +208,7 @@ export default function MenuScreen() {
       ...prev,
       customizations: [
         ...prev.customizations,
-        { id: `cg-${Date.now()}`, name: '', required: false, maxSelections: 1, options: [] },
+        { id: `cg-${Date.now()}`, name: { es: '', en: '' }, required: false, maxSelections: 1, options: [] },
       ],
     }));
   };
@@ -144,13 +232,13 @@ export default function MenuScreen() {
       ...prev,
       customizations: prev.customizations.map((cg) =>
         cg.id === cgId
-          ? { ...cg, options: [...cg.options, { id: `opt-${Date.now()}`, name: '', priceModifier: '0.00' }] }
+          ? { ...cg, options: [...cg.options, { id: `opt-${Date.now()}`, name: { es: '', en: '' }, priceModifier: '0.00' }] }
           : cg
       ),
     }));
   };
 
-  const updateOption = (cgId: string, optId: string, updates: Partial<{ name: string; priceModifier: string }>) => {
+  const updateOption = (cgId: string, optId: string, updates: Partial<{ name: { es: string; en: string }; priceModifier: string }>) => {
     setEditingItem((prev) => ({
       ...prev,
       customizations: prev.customizations.map((cg) =>
@@ -172,35 +260,101 @@ export default function MenuScreen() {
 
   // ─── Save ───────────────────────────────────────────────────────────────────
 
+  const handleTranslateAllFields = async () => {
+    try {
+      setIsTranslating(true);
+      
+      const textsToTranslate: string[] = [];
+      const mapping: { type: string, index?: number, optIndex?: number }[] = [];
+      
+      if (editingItem.name.es) { textsToTranslate.push(editingItem.name.es); mapping.push({ type: 'name' }); }
+      if (editingItem.description.es) { textsToTranslate.push(editingItem.description.es); mapping.push({ type: 'description' }); }
+      
+      editingItem.customizations.forEach((cg, i) => {
+        if (cg.name.es) { textsToTranslate.push(cg.name.es); mapping.push({ type: 'cgName', index: i }); }
+        cg.options.forEach((opt, j) => {
+          if (opt.name.es) { textsToTranslate.push(opt.name.es); mapping.push({ type: 'optName', index: i, optIndex: j }); }
+        });
+      });
+
+      if (textsToTranslate.length === 0) {
+        setIsTranslating(false);
+        return;
+      }
+
+      const fnUrl = `https://shmmbnvdtmqxmrlzpluh.supabase.co/functions/v1/translate`;
+      const response = await fetch(fnUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({ texts: textsToTranslate, targetLanguage: 'en', sourceLanguage: 'es' }),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`${response.status}: ${text}`);
+      }
+
+      const data = await response.json();
+      const results = data.translations;
+      
+      setEditingItem(prev => {
+        const next = { ...prev, name: { ...prev.name }, description: { ...prev.description }, customizations: prev.customizations.map(c => ({...c, name: {...c.name}, options: c.options.map(o => ({...o, name: {...o.name}}))})) };
+        
+        mapping.forEach((m, resIndex) => {
+          const translated = results[resIndex] || '';
+          if (m.type === 'name') next.name.en = translated;
+          else if (m.type === 'description') next.description.en = translated;
+          else if (m.type === 'cgName') next.customizations[m.index!].name.en = translated;
+          else if (m.type === 'optName') next.customizations[m.index!].options[m.optIndex!].name.en = translated;
+        });
+
+        return next;
+      });
+      
+    } catch (err: any) {
+      Alert.alert("Translation failed", err.message);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   const handleSave = () => {
     const { name, description, price, categoryId } = editingItem;
-    if (!name.trim()) { Alert.alert('Error', 'El nombre del artículo es requerido.'); return; }
+    if (!name.es.trim()) { Alert.alert('Error', 'El nombre del artículo en español es requerido.'); return; }
     const priceInCents = Math.round(parseFloat(price || '0') * 100);
     if (isNaN(priceInCents) || priceInCents < 0) { Alert.alert('Error', 'Ingresa un precio válido.'); return; }
 
     const customizations: CustomizationGroup[] = editingItem.customizations
-      .filter((cg) => cg.name.trim())
+      .filter((cg) => cg.name.es.trim())
       .map((cg) => ({
         id: cg.id,
-        name: cg.name.trim(),
+        name: { es: cg.name.es.trim(), en: cg.name.en.trim() },
         required: cg.required,
         maxSelections: cg.maxSelections,
-        options: cg.options.filter((o) => o.name.trim()).map((o) => ({
+        options: cg.options.filter((o) => o.name.es.trim()).map((o) => ({
           id: o.id,
-          name: o.name.trim(),
+          name: { es: o.name.es.trim(), en: o.name.en.trim() },
           priceModifier: Math.round(parseFloat(o.priceModifier || '0') * 100),
         })),
       }));
 
     if (isNewItem) {
       addItem({
-        name: name.trim(), description: description.trim(), price: priceInCents,
+        name: { es: name.es.trim(), en: name.en.trim() },
+        description: { es: description.es.trim(), en: description.en.trim() },
+        price: priceInCents,
         categoryId: categoryId || categories[0]?.id || '', image: '',
         available: editingItem.available, popular: editingItem.popular, customizations,
       });
     } else {
       updateItem(editingItem.id, {
-        name: name.trim(), description: description.trim(), price: priceInCents,
+        name: { es: name.es.trim(), en: name.en.trim() },
+        description: { es: description.es.trim(), en: description.en.trim() },
+        price: priceInCents,
         categoryId, available: editingItem.available, popular: editingItem.popular, customizations,
       });
     }
@@ -245,7 +399,7 @@ export default function MenuScreen() {
 
         <View style={styles.cardTop}>
           <Text style={[styles.cardName, { color: colors.textPrimary }]} numberOfLines={2}>
-            {item.name}
+            {t(item.name)}
           </Text>
           <TouchableOpacity
             onPress={() => handleDelete(item)}
@@ -256,9 +410,9 @@ export default function MenuScreen() {
           </TouchableOpacity>
         </View>
 
-        {item.description ? (
+        {t(item.description) ? (
           <Text style={[styles.cardDesc, { color: colors.textMuted }]} numberOfLines={2}>
-            {item.description}
+            {t(item.description)}
           </Text>
         ) : null}
 
@@ -322,10 +476,11 @@ export default function MenuScreen() {
                 },
               ]}
               onPress={() => setSelectedCategoryId(cat.id)}
+              onLongPress={() => handleLongPressCategory(cat)}
               activeOpacity={0.7}
             >
               <Text style={[styles.tabText, { color: isActive ? colors.onPrimary : colors.textSecondary }]}>
-                {cat.icon}  {cat.name}
+                {t(cat.name)}
               </Text>
               <View style={[styles.tabCountBadge, { backgroundColor: isActive ? 'rgba(0,0,0,0.15)' : colors.surfaceHighlight }]}>
                 <Text style={[styles.tabCount, { color: isActive ? colors.onPrimary : colors.textMuted }]}>
@@ -335,6 +490,14 @@ export default function MenuScreen() {
             </TouchableOpacity>
           );
         })}
+        {/* Add category button */}
+        <TouchableOpacity
+          style={[styles.tab, styles.tabAdd, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight }]}
+          onPress={openAddCatModal}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.tabText, { color: colors.primary }]}>+</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Grid */}
@@ -382,36 +545,100 @@ export default function MenuScreen() {
                 <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
                   {isNewItem ? 'Nuevo Artículo' : 'Editar Artículo'}
                 </Text>
-                <TouchableOpacity
-                  onPress={() => setEditModalVisible(false)}
-                  style={[styles.modalCloseBtn, { backgroundColor: colors.surfaceHighlight }]}
-                >
-                  <X color={colors.textPrimary} size={16} strokeWidth={2} />
-                </TouchableOpacity>
+                
+                <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                  <TouchableOpacity
+                    onPress={handleTranslateAllFields}
+                    disabled={isTranslating}
+                    style={{
+                      backgroundColor: isTranslating ? colors.surfaceHighlight : colors.surface,
+                      borderColor: colors.borderLight,
+                      borderWidth: StyleSheet.hairlineWidth,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 16,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    {isTranslating ? (
+                       <Loader2 color={colors.primary} size={14} />
+                    ) : (
+                       <Wand2 color={colors.primary} size={14} />
+                    )}
+                    <Text style={{ fontFamily: fonts.bodySemiBold, fontSize: fontSizes.xs, color: isTranslating ? colors.textMuted : colors.textPrimary }}>
+                      Traducir
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setEditModalVisible(false)}
+                    style={[styles.modalCloseBtn, { backgroundColor: colors.surfaceHighlight }]}
+                  >
+                    <X color={colors.textPrimary} size={16} strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
                 {/* Name */}
                 <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>NOMBRE</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight, color: colors.textPrimary }]}
-                  value={editingItem.name}
-                  onChangeText={(t) => setEditingItem({ ...editingItem, name: t })}
-                  placeholder="Nombre del artículo"
-                  placeholderTextColor={colors.textMuted}
-                />
+                <View style={styles.bilingualField}>
+                  <View style={[styles.langBadge, { backgroundColor: colors.surfaceHighlight }]}>
+                    <Text style={[styles.langBadgeText, { color: colors.textMuted }]}>ES</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.bilingualInput, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight, color: colors.textPrimary }]}
+                    value={editingItem.name.es}
+                    onChangeText={(t) => setEditingItem({ ...editingItem, name: { ...editingItem.name, es: t } })}
+                    placeholder="Nombre del artículo"
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
+                <View style={styles.bilingualField}>
+                  <View style={[styles.langBadge, { backgroundColor: colors.primary + '22' }]}>
+                    <Text style={[styles.langBadgeText, { color: colors.primary }]}>EN</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.bilingualInput, { backgroundColor: colors.surfaceContainer, borderColor: editingItem.name.en ? colors.primary + '55' : colors.borderLight, color: colors.textPrimary }]}
+                    value={editingItem.name.en}
+                    onChangeText={(t) => setEditingItem({ ...editingItem, name: { ...editingItem.name, en: t } })}
+                    placeholder="Item name (English)"
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
 
                 {/* Description */}
                 <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>DESCRIPCIÓN</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight, color: colors.textPrimary }]}
-                  value={editingItem.description}
-                  onChangeText={(t) => setEditingItem({ ...editingItem, description: t })}
-                  placeholder="Descripción corta (opcional)"
-                  placeholderTextColor={colors.textMuted}
-                  multiline
-                  numberOfLines={3}
-                />
+                <View style={styles.bilingualField}>
+                  <View style={[styles.langBadge, { backgroundColor: colors.surfaceHighlight }]}>
+                    <Text style={[styles.langBadgeText, { color: colors.textMuted }]}>ES</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.bilingualInput, styles.textArea, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight, color: colors.textPrimary }]}
+                    value={editingItem.description.es}
+                    onChangeText={(t) => setEditingItem({ ...editingItem, description: { ...editingItem.description, es: t } })}
+                    placeholder="Descripción corta (opcional)"
+                    placeholderTextColor={colors.textMuted}
+                    multiline
+                    numberOfLines={3}
+                  />
+                </View>
+                <View style={styles.bilingualField}>
+                  <View style={[styles.langBadge, { backgroundColor: colors.primary + '22', alignSelf: 'flex-start', marginTop: spacing.md }]}>
+                    <Text style={[styles.langBadgeText, { color: colors.primary }]}>EN</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.bilingualInput, styles.textArea, { backgroundColor: colors.surfaceContainer, borderColor: editingItem.description.en ? colors.primary + '55' : colors.borderLight, color: colors.textPrimary }]}
+                    value={editingItem.description.en}
+                    onChangeText={(t) => setEditingItem({ ...editingItem, description: { ...editingItem.description, en: t } })}
+                    placeholder="Short description (English, optional)"
+                    placeholderTextColor={colors.textMuted}
+                    multiline
+                    numberOfLines={3}
+                  />
+                </View>
 
                 {/* Price */}
                 <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>PRECIO</Text>
@@ -437,7 +664,7 @@ export default function MenuScreen() {
                         activeOpacity={0.7}
                       >
                         <Text style={[styles.chipText, { color: active ? colors.onPrimary : colors.textSecondary }]}>
-                          {cat.icon} {cat.name}
+                          {t(cat.name)}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -476,13 +703,22 @@ export default function MenuScreen() {
                 {editingItem.customizations.map((cg) => (
                   <View key={cg.id} style={[styles.cgCard, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight }]}>
                     <View style={styles.cgHeader}>
-                      <TextInput
-                        style={[styles.cgNameInput, { color: colors.textPrimary, borderBottomColor: colors.border }]}
-                        value={cg.name}
-                        onChangeText={(t) => updateCustomizationGroup(cg.id, { name: t })}
-                        placeholder="Nombre del grupo (ej. Tamaño)"
-                        placeholderTextColor={colors.textMuted}
-                      />
+                      <View style={{ flex: 1, marginRight: spacing.sm }}>
+                        <TextInput
+                          style={[styles.cgNameInput, { color: colors.textPrimary, borderBottomColor: colors.border }]}
+                          value={cg.name.es}
+                          onChangeText={(t) => updateCustomizationGroup(cg.id, { name: { ...cg.name, es: t } })}
+                          placeholder="Nombre del grupo (ej. Tamaño)"
+                          placeholderTextColor={colors.textMuted}
+                        />
+                        <TextInput
+                          style={[styles.cgNameInput, styles.cgNameInputEn, { color: colors.textSecondary, borderBottomColor: cg.name.en ? colors.primary + '55' : colors.borderLight }]}
+                          value={cg.name.en}
+                          onChangeText={(t) => updateCustomizationGroup(cg.id, { name: { ...cg.name, en: t } })}
+                          placeholder="Group name (EN)"
+                          placeholderTextColor={colors.textMuted}
+                        />
+                      </View>
                       <TouchableOpacity onPress={() => removeCustomizationGroup(cg.id)}>
                         <Text style={[styles.removeText, { color: colors.error }]}>Eliminar</Text>
                       </TouchableOpacity>
@@ -510,13 +746,22 @@ export default function MenuScreen() {
 
                     {cg.options.map((opt) => (
                       <View key={opt.id} style={styles.optionRow}>
-                        <TextInput
-                          style={[styles.optionNameInput, { backgroundColor: colors.surfaceHighlight, color: colors.textPrimary }]}
-                          value={opt.name}
-                          onChangeText={(t) => updateOption(cg.id, opt.id, { name: t })}
-                          placeholder="Nombre de la opción"
-                          placeholderTextColor={colors.textMuted}
-                        />
+                        <View style={{ flex: 1, gap: 4 }}>
+                          <TextInput
+                            style={[styles.optionNameInput, { backgroundColor: colors.surfaceHighlight, color: colors.textPrimary }]}
+                            value={opt.name.es}
+                            onChangeText={(t) => updateOption(cg.id, opt.id, { name: { ...opt.name, es: t } })}
+                            placeholder="Nombre de la opción"
+                            placeholderTextColor={colors.textMuted}
+                          />
+                          <TextInput
+                            style={[styles.optionNameInput, styles.optionNameInputEn, { backgroundColor: colors.surfaceHighlight, color: colors.textSecondary, borderColor: opt.name.en ? colors.primary + '55' : 'transparent' }]}
+                            value={opt.name.en}
+                            onChangeText={(t) => updateOption(cg.id, opt.id, { name: { ...opt.name, en: t } })}
+                            placeholder="Option name (EN)"
+                            placeholderTextColor={colors.textMuted}
+                          />
+                        </View>
                         <TextInput
                           style={[styles.optionPriceInput, { backgroundColor: colors.surfaceHighlight, color: colors.textPrimary }]}
                           value={opt.priceModifier}
@@ -554,6 +799,98 @@ export default function MenuScreen() {
               >
                 <Text style={[styles.saveBtnText, { color: colors.onPrimary }]}>
                   {isNewItem ? 'Añadir al Menú' : 'Guardar Cambios'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* ─── Category Modal ────────────────────────────────────────────────────── */}
+      <Modal visible={catModalVisible} animationType="slide" transparent statusBarTranslucent>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalWrapper}>
+            <View style={[styles.modalContent, { backgroundColor: colors.background, borderColor: colors.borderLight }]}>
+              <View style={styles.modalHandle}>
+                <View style={[styles.handleBar, { backgroundColor: colors.border }]} />
+              </View>
+
+              <View style={[styles.modalHeader, { borderBottomColor: colors.borderLight }]}>
+                <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+                  {isNewCat ? 'Nueva Categoría' : 'Editar Categoría'}
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                  <TouchableOpacity
+                    onPress={handleTranslateCategory}
+                    disabled={isCatTranslating || !editingCat.name.es.trim()}
+                    style={{
+                      backgroundColor: isCatTranslating ? colors.surfaceHighlight : colors.surface,
+                      borderColor: colors.borderLight,
+                      borderWidth: StyleSheet.hairlineWidth,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 16,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    {isCatTranslating ? (
+                      <Loader2 color={colors.primary} size={14} />
+                    ) : (
+                      <Wand2 color={colors.primary} size={14} />
+                    )}
+                    <Text style={{ fontFamily: fonts.bodySemiBold, fontSize: fontSizes.xs, color: isCatTranslating ? colors.textMuted : colors.textPrimary }}>
+                      Traducir
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setCatModalVisible(false)}
+                    style={[styles.modalCloseBtn, { backgroundColor: colors.surfaceHighlight }]}
+                  >
+                    <X color={colors.textPrimary} size={16} strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
+                {/* Name */}
+                <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>NOMBRE</Text>
+                <View style={styles.bilingualField}>
+                  <View style={[styles.langBadge, { backgroundColor: colors.surfaceHighlight }]}>
+                    <Text style={[styles.langBadgeText, { color: colors.textMuted }]}>ES</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.bilingualInput, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight, color: colors.textPrimary }]}
+                    value={editingCat.name.es}
+                    onChangeText={(v) => setEditingCat((p) => ({ ...p, name: { ...p.name, es: v } }))}
+                    placeholder="Nombre de la categoría"
+                    placeholderTextColor={colors.textMuted}
+                    autoFocus
+                  />
+                </View>
+                <View style={[styles.bilingualField, { marginBottom: spacing.xl }]}>
+                  <View style={[styles.langBadge, { backgroundColor: colors.primary + '22' }]}>
+                    <Text style={[styles.langBadgeText, { color: colors.primary }]}>EN</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.bilingualInput, { backgroundColor: colors.surfaceContainer, borderColor: editingCat.name.en ? colors.primary + '55' : colors.borderLight, color: colors.textPrimary }]}
+                    value={editingCat.name.en}
+                    onChangeText={(v) => setEditingCat((p) => ({ ...p, name: { ...p.name, en: v } }))}
+                    placeholder="Category name (English)"
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
+              </ScrollView>
+
+              <TouchableOpacity
+                style={[styles.saveBtn, { backgroundColor: editingCat.name.es.trim() ? colors.primary : colors.surfaceHighlight }]}
+                onPress={handleSaveCategory}
+                activeOpacity={0.85}
+                disabled={!editingCat.name.es.trim()}
+              >
+                <Text style={[styles.saveBtnText, { color: editingCat.name.es.trim() ? colors.onPrimary : colors.textMuted }]}>
+                  {isNewCat ? 'Crear Categoría' : 'Guardar Cambios'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -615,6 +952,9 @@ const styles = StyleSheet.create({
   tabText: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.sm,
+  },
+  tabAdd: {
+    paddingHorizontal: spacing.md,
   },
   tabCountBadge: {
     paddingHorizontal: 6,
@@ -901,6 +1241,31 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     textAlign: 'center',
   },
+  bilingualField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  bilingualInput: {
+    flex: 1,
+  },
+  langBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  langBadgeText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.xs,
+    letterSpacing: 0.5,
+  },
+  cgNameInputEn: {
+    marginTop: 6,
+    fontSize: fontSizes.sm,
+  },
   optionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -908,11 +1273,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   optionNameInput: {
-    flex: 1,
     borderRadius: 8,
     padding: spacing.sm,
     fontFamily: fonts.body,
     fontSize: fontSizes.sm,
+  },
+  optionNameInputEn: {
+    fontSize: fontSizes.xs,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   optionPriceInput: {
     width: 64,

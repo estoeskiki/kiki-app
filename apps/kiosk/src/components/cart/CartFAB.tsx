@@ -3,6 +3,7 @@ import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { ShoppingCart } from 'lucide-react-native';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { useTheme } from '@/context/ThemeContext';
+import { useTranslation } from '@/i18n/useTranslation';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -15,6 +16,7 @@ interface CartFABProps {
 
 export function CartFAB({ itemCount, total, onPress }: CartFABProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   if (itemCount <= 0) return null;
 
@@ -38,7 +40,7 @@ export function CartFAB({ itemCount, total, onPress }: CartFABProps) {
         {/* Left */}
         <View style={styles.left}>
           <ShoppingCart size={20} color={colors.onPrimary} strokeWidth={2.5} />
-          <Text style={[styles.label, { color: colors.onPrimary }]}>View Cart</Text>
+          <Text style={[styles.label, { color: colors.onPrimary }]}>{t('viewCart')}</Text>
         </View>
 
         {/* Right: count + total */}
