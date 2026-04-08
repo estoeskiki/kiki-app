@@ -19,7 +19,7 @@ try {
  */
 export const printTicket = async (order: Order): Promise<boolean> => {
   return new Promise(async (resolve) => {
-    
+
     // 1. GRACEFUL FALLBACK (Emulator/Mac Development)
     if (Platform.OS !== 'android' || !SenraisePrinter) {
       console.log(`\n========================================`);
@@ -32,7 +32,7 @@ export const printTicket = async (order: Order): Promise<boolean> => {
       console.log(`----------------------------------------`);
       console.log(`Total: ${formatCurrency(order.total)}`);
       console.log(`========================================\n`);
-      
+
       setTimeout(() => resolve(true), 1000);
       return;
     }
@@ -41,28 +41,28 @@ export const printTicket = async (order: Order): Promise<boolean> => {
     try {
       // NOTE: Method names vary per SDK version. Adjust these exact calls
       // based on the react-native-senraise-printer documentation.
-      
+
       // await SenraisePrinter.setAlignment(1); // 1 = Center
       await SenraisePrinter.printText("KIKI BURGERS\n");
-      
+
       // await SenraisePrinter.setAlignment(0); // 0 = Left
       await SenraisePrinter.printText(`Order: #${order.orderNumber}\n`);
       await SenraisePrinter.printText(`Type: ${order.orderType}\n`);
       await SenraisePrinter.printText("--------------------------------\n");
-      
+
       for (const item of order.items) {
         await SenraisePrinter.printText(`${item.quantity}x ${item.menuItem.name}   ${formatCurrency(item.lineTotal)}\n`);
       }
-      
+
       await SenraisePrinter.printText("--------------------------------\n");
       await SenraisePrinter.printText(`TOTAL: ${formatCurrency(order.total)}\n`);
       await SenraisePrinter.printText("\n\n\n"); // Spool paper out to tear off
-      
+
       resolve(true);
     } catch (err: any) {
       console.error('[PRINTER ERROR] Hardware failed:', err.message);
       // We resolve(true) anyway in this prototype so the app doesn't freeze the kitchen if paper runs out
-      resolve(true); 
+      resolve(true);
     }
   });
 };
