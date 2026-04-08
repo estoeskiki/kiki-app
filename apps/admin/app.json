@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "admin",
-    "slug": "admin",
+    "name": "Kiki Admin",
+    "slug": "kiki-admin",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,13 +21,22 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.anonymous.admin"
+      "package": "com.kiki.admin",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "supabaseUrl": "$(EXPO_PUBLIC_SUPABASE_URL)",
+      "supabaseAnonKey": "$(EXPO_PUBLIC_SUPABASE_ANON_KEY)",
+      "eas": {
+        "projectId": "2f0cb7f9-7a02-48fa-92ca-cda5f0acb874"
+      }
+    },
+    "owner": "omacac"
   }
 }
