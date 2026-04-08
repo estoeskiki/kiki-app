@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "kiosk",
-    "slug": "kiosk",
+    "name": "Kiki Kiosk",
+    "slug": "kiki-kiosk",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -22,7 +22,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.kiosk"
+      "package": "com.kiki.kiosk",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,6 +32,14 @@
       "expo-font",
       "expo-asset",
       "expo-video"
-    ]
+    ],
+    "extra": {
+      "supabaseUrl": "$(EXPO_PUBLIC_SUPABASE_URL)",
+      "supabaseAnonKey": "$(EXPO_PUBLIC_SUPABASE_ANON_KEY)",
+      "eas": {
+        "projectId": "7065901c-2d01-45be-b6fb-e85244a6e3e0"
+      }
+    },
+    "owner": "omacac"
   }
 }
