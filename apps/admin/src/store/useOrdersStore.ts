@@ -26,9 +26,9 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
 
     set({ isLoading: true });
     
-    // Fetch active orders (not completed or cancelled)
+    // Fetch active sub_orders for this specific stall
     const { data, error } = await supabase
-      .from('orders')
+      .from('sub_orders')
       .select('*, order_items(*, order_item_customizations(*))')
       .eq('restaurant_id', restaurantId)
       .in('status', ['confirmed', 'preparing', 'ready'])
@@ -41,6 +41,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
       const mappedOrders: Order[] = data.map((d: any) => ({
         id: d.id,
         orderNumber: d.order_number,
+        customerName: d.customer_name,
         orderType: d.order_type,
         status: d.status,
         subtotal: d.subtotal,
@@ -71,13 +72,13 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
     }
 
     const channel = supabase
-      .channel(`orders-${restaurantId}`)
+      .channel(`sub_orders-${restaurantId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'orders',
+          table: 'sub_orders',
           filter: `restaurant_id=eq.${restaurantId}`,
         },
         (payload) => {
@@ -101,7 +102,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
   },
 
   acceptOrder: async (orderId) => {
-    const { error } = await supabase.from('orders').update({ status: 'preparing' }).eq('id', orderId);
+    const { error } = await supabase.from('sub_orders').update({ status: 'preparing' }).eq('id', orderId);
     if (!error) {
       // Local optimistic update
       set((state) => ({
@@ -111,7 +112,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
   },
 
   markOrderReady: async (orderId) => {
-    const { error } = await supabase.from('orders').update({ status: 'ready' }).eq('id', orderId);
+    const { error } = await supabase.from('sub_orders').update({ status: 'ready' }).eq('id', orderId);
     if (!error) {
       set((state) => ({
         orders: state.orders.map((o) => (o.id === orderId ? { ...o, status: 'ready' } : o)),
@@ -120,7 +121,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
   },
 
   markOrderCompleted: async (orderId) => {
-    const { error } = await supabase.from('orders').update({ status: 'completed' }).eq('id', orderId);
+    const { error } = await supabase.from('sub_orders').update({ status: 'completed' }).eq('id', orderId);
     if (!error) {
       set((state) => ({
         orders: state.orders.filter((o) => o.id !== orderId),

@@ -59,6 +59,7 @@ export type OrderStatus =
 export interface Order {
   id: string;
   orderNumber: number;
+  customerName?: string;
   orderType: OrderType;
   items: CartItem[];
   subtotal: number; // cents

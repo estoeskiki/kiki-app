@@ -93,7 +93,7 @@ export function OrderDetailsModal({
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <Text style={[styles.orderNumber, { color: colors.textPrimary }]}>
-                Orden #{order.orderNumber}
+                Orden #{order.orderNumber}{order.customerName ? ` — ${order.customerName}` : ''}
               </Text>
               <View style={styles.headerMeta}>
                 <Text style={[styles.orderType, { color: colors.textSecondary }]}>

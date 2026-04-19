@@ -57,7 +57,7 @@ export function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
         {/* Top row */}
         <View style={styles.topRow}>
           <Text style={[styles.orderNumber, { color: colors.textPrimary }]}>
-            #{order.orderNumber}
+            #{order.orderNumber}{order.customerName ? ` — ${order.customerName}` : ''}
           </Text>
           <StatusBadge status={order.status} size="sm" />
         </View>
