@@ -9,12 +9,14 @@ export interface CreateOrderRequest {
   tax: number;
   total: number;
   paymentTransactionId: string;
+  customerName?: string;
 }
 
 export interface CreateOrderResult {
   orderId: string;
   orderNumber: number;
   createdAt: string;
+  customerName?: string;
 }
 
 /**
@@ -28,7 +30,7 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
 
   // 1. Get next daily order number
   const { data: orderNumberData, error: orderNumberError } = await supabase
-    .rpc('get_next_order_number', { p_restaurant_id: restaurantId });
+    .rpc('next_order_number', { p_restaurant_id: restaurantId, p_food_court_id: null });
 
   if (orderNumberError) {
     throw new Error(`Failed to generate order number: ${orderNumberError.message}`);
@@ -36,13 +38,14 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
 
   const orderNumber = parseInt(orderNumberData as string, 10) || 100;
 
-  // 2. Insert order
+  // 2. Insert parent order
   const { data: orderData, error: orderError } = await supabase
     .from('orders')
     .insert({
       restaurant_id: restaurantId,
       order_number: orderNumber,
       order_type: request.orderType,
+      customer_name: request.customerName,
       status: 'confirmed',
       subtotal: request.subtotal,
       tax: request.tax,
@@ -55,13 +58,35 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
     throw new Error(`Failed to create order: ${orderError?.message}`);
   }
 
-  // 3. Insert order items
+  // 3. Insert the sub-order slice for the Admin POS
+  const { data: subOrderData, error: subOrderError } = await supabase
+    .from('sub_orders')
+    .insert({
+      order_id: orderData.id,
+      restaurant_id: restaurantId,
+      order_number: orderNumber,
+      customer_name: request.customerName,
+      order_type: request.orderType,
+      status: 'confirmed',
+      subtotal: request.subtotal,
+      tax: request.tax,
+      total: request.total,
+    })
+    .select('id')
+    .single();
+
+  if (subOrderError || !subOrderData) {
+    throw new Error(`Failed to create sub-order ticket: ${subOrderError?.message}`);
+  }
+
+  // 4. Insert order items linked to the sub-order
   for (const item of request.items) {
     const { data: orderItemData, error: orderItemError } = await supabase
       .from('order_items')
       .insert({
         order_id: orderData.id,
         restaurant_id: restaurantId,
+        sub_order_id: subOrderData.id,
         menu_item_id: item.menuItem.id,
         item_name: item.menuItem.name,
         item_price: item.menuItem.price,
@@ -76,7 +101,7 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
       continue; // keep going with other items
     }
 
-    // 4. Insert customizations for this item
+    // 5. Insert customizations for this item
     const customizationsToInsert = [];
     for (const group of item.menuItem.customizations) {
       const selectedOptionIds = item.selectedCustomizations[group.id] || [];
@@ -103,5 +128,6 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
     orderId: orderData.id,
     orderNumber,
     createdAt: orderData.created_at,
+    customerName: request.customerName,
   };
 }

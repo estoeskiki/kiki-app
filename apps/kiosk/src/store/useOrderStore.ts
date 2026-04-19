@@ -5,9 +5,11 @@ type OrderFlowStatus = 'idle' | 'processing' | 'success' | 'failed';
 
 interface OrderState {
   orderType: OrderType | null;
+  customerName: string | null;
   currentOrder: Order | null;
   orderStatus: OrderFlowStatus;
   setOrderType: (type: OrderType) => void;
+  setCustomerName: (name: string) => void;
   setCurrentOrder: (order: Order) => void;
   setOrderStatus: (status: OrderFlowStatus) => void;
   resetOrder: () => void;
@@ -15,11 +17,16 @@ interface OrderState {
 
 export const useOrderStore = create<OrderState>((set) => ({
   orderType: null,
+  customerName: null,
   currentOrder: null,
   orderStatus: 'idle',
 
   setOrderType: (type) => {
     set({ orderType: type });
+  },
+
+  setCustomerName: (name) => {
+    set({ customerName: name });
   },
 
   setCurrentOrder: (order) => {
@@ -33,6 +40,7 @@ export const useOrderStore = create<OrderState>((set) => ({
   resetOrder: () => {
     set({
       orderType: null,
+      customerName: null,
       currentOrder: null,
       orderStatus: 'idle',
     });

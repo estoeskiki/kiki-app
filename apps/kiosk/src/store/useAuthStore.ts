@@ -83,6 +83,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       // Fetch restaurant profile (name, slogan) for display across the kiosk
       await useRestaurantStore.getState().fetchProfile(deviceData.ret_org_id);
+      
+      // Subscribe to real-time open/close status
+      if (deviceData.ret_restaurant_id) {
+        await useRestaurantStore.getState().subscribeToStatus(deviceData.ret_restaurant_id);
+      }
 
       return true;
     } catch (e: any) {

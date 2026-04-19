@@ -19,6 +19,8 @@ import { DeviceAuthScreen } from '@/screens/AuthScreen';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { LanguageModal } from '@/components/layout/LanguageModal';
+import { StoreClosedOverlay } from '@/components/layout/StoreClosedOverlay';
+import { useRestaurantStore } from '@/store/useRestaurantStore';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -26,6 +28,7 @@ SplashScreen.preventAutoHideAsync();
 function AppInner() {
   const { colors, isDark } = useTheme();
   const { deviceToken, isLoading, initialize } = useAuthStore();
+  const { isOpen } = useRestaurantStore();
 
   useEffect(() => { initialize(); }, [initialize]);
 
@@ -57,6 +60,7 @@ function AppInner() {
       {deviceToken ? (
         <NavigationContainer theme={navTheme}>
           <RootNavigator />
+          {!isOpen && <StoreClosedOverlay />}
         </NavigationContainer>
       ) : (
         <DeviceAuthScreen />

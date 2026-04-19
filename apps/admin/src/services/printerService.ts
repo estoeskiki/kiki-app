@@ -24,6 +24,9 @@ export const printTicket = async (order: Order): Promise<boolean> => {
     if (Platform.OS !== 'android' || !SenraisePrinter) {
       console.log(`\n========================================`);
       console.log(`🖨️  [SIMULATED TICKET] Order #${order.orderNumber}`);
+      if (order.customerName) {
+        console.log(`Customer: ${order.customerName}`);
+      }
       console.log(`Type: ${order.orderType.toUpperCase()}`);
       console.log(`----------------------------------------`);
       order.items.forEach(item => {
@@ -47,6 +50,9 @@ export const printTicket = async (order: Order): Promise<boolean> => {
 
       // await SenraisePrinter.setAlignment(0); // 0 = Left
       await SenraisePrinter.printText(`Order: #${order.orderNumber}\n`);
+      if (order.customerName) {
+        await SenraisePrinter.printText(`Customer: ${order.customerName}\n`);
+      }
       await SenraisePrinter.printText(`Type: ${order.orderType}\n`);
       await SenraisePrinter.printText("--------------------------------\n");
 

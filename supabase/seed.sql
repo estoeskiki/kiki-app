@@ -99,6 +99,29 @@ INSERT INTO customization_options (id, group_id, restaurant_id, name, price_modi
    '{"es": "Cookies & Cream", "en": "Cookies & Cream"}'::jsonb, 0, 4);
 
 -- ============================================================================
+-- FOOD COURTS (Migration Seed Data)
+-- ============================================================================
+
+-- Create the food court
+INSERT INTO food_courts (id, name, slug, address) VALUES
+  ('fc000000-0000-0000-0000-000000000001', 'Plaza Mayor Food Hall', 'plaza-mayor-hall', 'Plaza Mayor 1, Madrid');
+
+-- Create a 3rd restaurant stall inside the food court
+INSERT INTO restaurants (id, org_id, name, slug, address, food_court_id, is_open, timezone, currency, tax_rate) VALUES
+  ('b0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001',
+   'Kiki Sushi', 'kiki-sushi', 'Plaza Mayor 1, Madrid', 'fc000000-0000-0000-0000-000000000001', true, 'Europe/Madrid', 'EUR', 0.1000);
+
+-- Link only Kiki Centro into the food court
+UPDATE restaurants 
+SET food_court_id = 'fc000000-0000-0000-0000-000000000001'
+WHERE id = 'b0000000-0000-0000-0000-000000000001';
+
+-- Create a centralized food-court-scoped device token for testing the Kiosk App
+INSERT INTO device_tokens (id, org_id, food_court_id, device_name, token_hash, is_active) VALUES
+  ('fc000000-0000-0000-0000-100000000001', 'a0000000-0000-0000-0000-000000000001', 'fc000000-0000-0000-0000-000000000001', 'Main Hall Kiosk 1', 'test_plain_token_hash_value', true);
+
+
+-- ============================================================================
 -- NOTE: To create the test admin user, run this AFTER seed via Supabase Auth:
 --
 --   1. Sign up a user with email: admin@kikiburgers.com / password: testpass123

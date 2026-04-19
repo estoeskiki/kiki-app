@@ -83,6 +83,7 @@ export function PaymentScreen({ navigation }: ScreenProps<'Payment'>) {
           tax,
           total,
           paymentTransactionId: paymentResult.transactionId,
+          customerName: orderStore.customerName || undefined,
         });
 
         if (!isMounted.current) return;

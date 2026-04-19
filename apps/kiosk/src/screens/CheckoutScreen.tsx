@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { UtensilsCrossed, ShoppingBag } from 'lucide-react-native';
 import { ScreenWrapper } from '@/components/layout/ScreenWrapper';
 import { Header } from '@/components/layout/Header';
@@ -12,6 +12,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useTranslation } from '@/i18n/useTranslation';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
+import { config } from '@/constants/config';
 import type { ScreenProps } from '@/navigation/types';
 
 export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
@@ -22,6 +23,8 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
   const orderType = useOrderStore((s) => s.orderType);
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const customerName = useOrderStore((s) => s.customerName);
+  const setCustomerName = useOrderStore((s) => s.setCustomerName);
 
   const total = getTotal();
   const orderTypeLabel = orderType === 'dine-in' ? t('dineIn') : t('takeaway');
@@ -46,6 +49,23 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
               <Text style={[styles.orderTypeText, { color: colors.onPrimary }]}>
                 {orderTypeLabel}
               </Text>
+            </View>
+          )}
+
+          {/* Customer Name Input (Feature Flagged) */}
+          {config.features.askCustomerName && (
+            <View style={[styles.nameInputContainer, { backgroundColor: colors.surfaceHighlight, borderColor: colors.borderLight }]}>
+              <Text style={[styles.nameInputLabel, { color: colors.textSecondary }]}>¿Cómo te llamas? (Opcional)</Text>
+              <TextInput
+                style={[styles.nameInput, { color: colors.textPrimary, backgroundColor: colors.surface }]}
+                placeholder="Ej: Isabella"
+                placeholderTextColor={colors.textMuted}
+                value={customerName || ''}
+                onChangeText={setCustomerName}
+                autoCapitalize="words"
+                maxLength={20}
+                autoCorrect={false}
+              />
             </View>
           )}
 
@@ -103,5 +123,23 @@ const styles = StyleSheet.create({
   },
   editBtn: {
     marginBottom: 2,
+  },
+  nameInputContainer: {
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: spacing.lg,
+    gap: spacing.xs,
+  },
+  nameInputLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.sm,
+  },
+  nameInput: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.base,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.xs,
   },
 });

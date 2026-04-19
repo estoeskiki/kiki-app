@@ -9,4 +9,7 @@ export const config = {
   paymentDelay: { min: 2000, max: 3000 },
   orderDelay: 500,
   printDelay: 1500,
+  features: {
+    askCustomerName: false,
+  },
 } as const;
