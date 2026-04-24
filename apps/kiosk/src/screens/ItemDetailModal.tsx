@@ -32,7 +32,7 @@ function getPlateColor(id: string, isDark: boolean): string {
 }
 
 export function ItemDetailModal({ navigation, route }: ScreenProps<'ItemDetail'>) {
-  const { item } = route.params;
+  const { item, restaurantId, restaurantName } = route.params;
   const addItem = useCartStore((s) => s.addItem);
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
@@ -79,9 +79,9 @@ export function ItemDetailModal({ navigation, route }: ScreenProps<'ItemDetail'>
   const handleAddToCart = useCallback(() => {
     if (!canAdd) return;
     mediumTap();
-    addItem(item, quantity, selectedCustomizations);
+    addItem(item, quantity, selectedCustomizations, restaurantId, restaurantName);
     navigation.goBack();
-  }, [canAdd, addItem, item, quantity, selectedCustomizations, navigation]);
+  }, [canAdd, addItem, item, quantity, selectedCustomizations, navigation, restaurantId, restaurantName]);
 
   const heroColor = getPlateColor(item.id, isDark);
   const initial = localize(item.name).trim().charAt(0).toUpperCase();

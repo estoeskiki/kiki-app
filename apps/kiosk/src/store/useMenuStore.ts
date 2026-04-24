@@ -9,8 +9,8 @@ interface MenuState {
   categories: Category[];
   isLoading: boolean;
   channel: RealtimeChannel | null;
-  fetchMenu: () => Promise<void>;
-  subscribeToMenu: () => void;
+  fetchMenu: (targetRestaurantId?: string) => Promise<void>;
+  subscribeToMenu: (targetRestaurantId?: string) => void;
   unsubscribeFromMenu: () => void;
 }
 
@@ -20,16 +20,17 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   isLoading: false,
   channel: null,
 
-  fetchMenu: async () => {
-    const { restaurantId } = useAuthStore.getState();
-    if (!restaurantId) return;
+  fetchMenu: async (targetRestaurantId?: string) => {
+    const defaultId = useAuthStore.getState().restaurantId;
+    const rId = targetRestaurantId || defaultId;
+    if (!rId) return;
 
     set({ isLoading: true });
 
     // Fetch categories and items
     // RLS in Kiosk mode limits to "available" items based on our schema policies
     const [{ data: catData }, { data: itemData }] = await Promise.all([
-      supabase.from('categories').select('*').eq('restaurant_id', restaurantId).order('sort_order'),
+      supabase.from('categories').select('*').eq('restaurant_id', rId).order('sort_order'),
       supabase.from('menu_items')
         .select(`
           *,
@@ -38,7 +39,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
             customization_options (*)
           )
         `)
-        .eq('restaurant_id', restaurantId)
+        .eq('restaurant_id', rId)
         .order('sort_order'),
     ]);
 
@@ -72,9 +73,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     set({ isLoading: false });
   },
 
-  subscribeToMenu: () => {
-    const { restaurantId } = useAuthStore.getState();
-    if (!restaurantId) return;
+  subscribeToMenu: (targetRestaurantId?: string) => {
+    const defaultId = useAuthStore.getState().restaurantId;
+    const rId = targetRestaurantId || defaultId;
+    if (!rId) return;
     
     const currentChannel = get().channel;
     if (currentChannel) {
@@ -82,18 +84,18 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     }
 
     const channel = supabase
-      .channel(`menu-${restaurantId}`)
+      .channel(`menu-${rId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'menu_items',
-          filter: `restaurant_id=eq.${restaurantId}`,
+          filter: `restaurant_id=eq.${rId}`,
         },
         () => {
           // Re-fetch entire menu on any change (price change, availability toggle)
-          get().fetchMenu();
+          get().fetchMenu(rId);
         }
       )
       .subscribe();

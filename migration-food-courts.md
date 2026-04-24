@@ -595,14 +595,14 @@ No existing data is deleted or broken. The migration only adds new columns (all 
 
 | Step | Action | Details | Status |
 |---|---|---|---|
-| 4.1 | **Add `useDeviceStore.ts`** | On boot, read device token payload. Determine `mode: 'standalone' \| 'food_court'` based on which field is set. Store `foodCourtId` or `restaurantId`. | ⏳ TODO |
-| 4.2 | **Add `DirectoryScreen.tsx`** | Fetch `restaurants` filtered by `food_court_id`. Display cards with logo, name, cuisine. Grey out + "Cerrados al momento" badge for closed stalls. | ⏳ TODO |
-| 4.3 | **Update `useCartStore.ts`** | Support items from multiple restaurants. Add `restaurantId` to each `CartItem`. Add `getItemsByRestaurant()` and `removeItemsByRestaurant()` methods. | ⏳ TODO |
-| 4.4 | **Update `CartScreen.tsx`** | Group items by restaurant with section headers when in food court mode. Flat list when in standalone mode. | ⏳ TODO |
-| 4.5 | **Update checkout flow** | In food court mode: create 1 `order` → N `sub_orders` (one per restaurant in cart) → distribute `order_items` to correct `sub_order_id`. | ⏳ TODO |
-| 4.6 | **Add Realtime close/open handling** | If a stall closes: grey out card, kick customer out of that menu, remove that stall's items from cart, toast notification. | ⏳ TODO |
-| 4.7 | **Update navigation** | Boot flow: standalone → `MenuScreen`, food court → `DirectoryScreen`. | ⏳ TODO |
-| 4.8 | **End-to-end test** | Food court kiosk → add items from 2 stalls → checkout → 2 Admin POS devices each receive only their sub_order. | ⏳ TODO |
+| 4.1 | **Add `mode` to auth store** | On boot, read device token payload. Determine `mode: 'standalone' \| 'food_court'` based on which field is set. Store `foodCourtId` or `restaurantId`. | ✅ DONE |
+| 4.2 | **Add `DirectoryScreen.tsx`** | Fetch `restaurants` filtered by `food_court_id`. Display cards with logo, name, cuisine. Grey out + "Cerrados al momento" badge for closed stalls. | ✅ DONE |
+| 4.3 | **Update `useCartStore.ts`** | Support items from multiple restaurants. Add `restaurantId` to each `CartItem`. Add `getItemsByRestaurant()` and `getRestaurantIds()` methods. | ✅ DONE |
+| 4.4 | **Update `CartScreen.tsx`** | Group items by restaurant with section headers when in food court mode. Flat list when in standalone mode. | ✅ DONE |
+| 4.5 | **Update checkout flow** | In food court mode: create 1 `order` → N `sub_orders` (one per restaurant in cart) → distribute `order_items` to correct `sub_order_id`. | ✅ DONE |
+| 4.6 | **Add Realtime close/open handling** | If a stall closes: grey out card, kick customer out of that menu, remove that stall's items from cart, toast notification. | ✅ DONE |
+| 4.7 | **Update navigation** | Boot flow: standalone → `MenuScreen`, food court → `DirectoryScreen`. | ✅ DONE |
+| 4.8 | **End-to-end test** | Food court kiosk → add items from 2 stalls → checkout → 2 Admin POS devices each receive only their sub_order. | ✅ READY FOR TESTING |
 
 ### Phase 5 — Verification & Deploy
 

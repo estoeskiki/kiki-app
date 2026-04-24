@@ -4,6 +4,7 @@ import { ScreenWrapper } from '../components/layout/ScreenWrapper';
 import { OrderCard } from '../components/ui/OrderCard';
 import { OrderDetailsModal } from '../components/ui/OrderDetailsModal';
 import { useOrdersStore } from '../store/useOrdersStore';
+import { useAuthStore } from '../store/useAuthStore';
 import { printTicket } from '../services/printerService';
 import { Order } from '../data/types';
 import { useTheme } from '../theme/useTheme';
@@ -12,14 +13,17 @@ import { fonts, fontSizes } from '../theme/typography';
 
 export default function OrdersScreen() {
   const { orders, fetchOrders, subscribeToOrders, unsubscribeFromOrders, acceptOrder, markOrderReady, markOrderCompleted } = useOrdersStore();
+  const restaurantId = useAuthStore((s) => s.restaurantId);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const { colors } = useTheme();
 
+  // Re-fetch when restaurantId becomes available (async after login)
   React.useEffect(() => {
+    if (!restaurantId) return;
     fetchOrders();
     subscribeToOrders();
     return () => { unsubscribeFromOrders(); };
-  }, [fetchOrders, subscribeToOrders, unsubscribeFromOrders]);
+  }, [restaurantId, fetchOrders, subscribeToOrders, unsubscribeFromOrders]);
 
   const activeOrders = orders.filter(o => !['completed', 'failed'].includes(o.status));
 

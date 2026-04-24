@@ -22,6 +22,7 @@
 
 - [ ] **Sound/vibration alerts on new order** — play an audio cue when `orders` Realtime fires an INSERT
 - [ ] **Thermal print formatting** — finalize receipt layout on the Senraise hardware, handle print failure gracefully
+- [ ] **Use device tokens** — authenticate via `device_tokens` (like the Kiosk) instead of email/password
 - [ ] **Menu item image uploads** — image picker → upload to Supabase Storage → save URL on `menu_items`
 - [ ] **Daily sales summary** — simple card on OrdersScreen showing today's order count + revenue total
 - [ ] **Error boundary + crash logging** — global handler, consider Sentry or Expo's crash reporting

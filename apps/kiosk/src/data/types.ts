@@ -43,6 +43,8 @@ export interface CartItem {
   quantity: number;
   selectedCustomizations: Record<string, string[]>; // groupId -> optionId[]
   lineTotal: number; // (base + modifiers) * qty, in cents
+  restaurantId?: string; // which restaurant this item belongs to (food court mode)
+  restaurantName?: string; // display name for grouping in cart
 }
 
 export type OrderType = 'dine-in' | 'takeaway';

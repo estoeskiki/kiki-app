@@ -4,8 +4,9 @@ import type { MenuItem } from '@/data/types';
 export type RootStackParamList = {
   Welcome: undefined;
   OrderType: undefined;
-  Menu: undefined;
-  ItemDetail: { item: MenuItem };
+  Directory: undefined;
+  Menu: { restaurantId?: string; restaurantName?: string } | undefined;
+  ItemDetail: { item: MenuItem; restaurantId?: string; restaurantName?: string };
   Cart: undefined;
   Checkout: undefined;
   Payment: undefined;

@@ -21,13 +21,26 @@ export interface CreateOrderResult {
 
 /**
  * Creates an order in the Supabase backend.
+ * 
+ * Standalone mode: 1 order → 1 sub_order (single restaurant)
+ * Food court mode:  1 order → N sub_orders (one per restaurant in cart)
  */
 export async function createOrder(request: CreateOrderRequest): Promise<CreateOrderResult> {
-  const { restaurantId } = useAuthStore.getState();
-  if (!restaurantId) {
-    throw new Error('Device not linked to a restaurant.');
-  }
+  const { mode, restaurantId, foodCourtId } = useAuthStore.getState();
 
+  if (mode === 'food_court') {
+    return createFoodCourtOrder(request, foodCourtId!);
+  } else {
+    return createStandaloneOrder(request, restaurantId!);
+  }
+}
+
+// ─── STANDALONE MODE ────────────────────────────────────────────────────────
+
+async function createStandaloneOrder(
+  request: CreateOrderRequest,
+  restaurantId: string,
+): Promise<CreateOrderResult> {
   // 1. Get next daily order number
   const { data: orderNumberData, error: orderNumberError } = await supabase
     .rpc('next_order_number', { p_restaurant_id: restaurantId, p_food_court_id: null });
@@ -80,13 +93,116 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
   }
 
   // 4. Insert order items linked to the sub-order
+  await insertOrderItems(orderData.id, subOrderData.id, restaurantId, request.items);
+
+  return {
+    orderId: orderData.id,
+    orderNumber,
+    createdAt: orderData.created_at,
+    customerName: request.customerName,
+  };
+}
+
+// ─── FOOD COURT MODE ────────────────────────────────────────────────────────
+
+async function createFoodCourtOrder(
+  request: CreateOrderRequest,
+  foodCourtId: string,
+): Promise<CreateOrderResult> {
+  // 1. Group items by restaurant
+  const byRestaurant = new Map<string, CartItem[]>();
   for (const item of request.items) {
-    const { data: orderItemData, error: orderItemError } = await supabase
-      .from('order_items')
+    const rId = item.restaurantId || 'unknown';
+    if (!byRestaurant.has(rId)) byRestaurant.set(rId, []);
+    byRestaurant.get(rId)!.push(item);
+  }
+
+  // 2. Get next order number (scoped to food court)
+  const { data: orderNumberData, error: orderNumberError } = await supabase
+    .rpc('next_order_number', { p_restaurant_id: null, p_food_court_id: foodCourtId });
+
+  if (orderNumberError) {
+    throw new Error(`Failed to generate order number: ${orderNumberError.message}`);
+  }
+
+  const orderNumber = parseInt(orderNumberData as string, 10) || 100;
+
+  // 3. Insert parent order (food court scoped, pick first restaurant as nominal)
+  const firstRestaurantId = Array.from(byRestaurant.keys())[0];
+  const { data: orderData, error: orderError } = await supabase
+    .from('orders')
+    .insert({
+      restaurant_id: firstRestaurantId,
+      food_court_id: foodCourtId,
+      order_number: orderNumber,
+      order_type: request.orderType,
+      customer_name: request.customerName,
+      status: 'confirmed',
+      subtotal: request.subtotal,
+      tax: request.tax,
+      total: request.total,
+    })
+    .select('id, created_at')
+    .single();
+
+  if (orderError || !orderData) {
+    throw new Error(`Failed to create order: ${orderError?.message}`);
+  }
+
+  // 4. Create one sub_order per restaurant
+  for (const [restaurantId, items] of byRestaurant.entries()) {
+    const subSubtotal = items.reduce((sum, i) => sum + i.lineTotal, 0);
+    const subTax = Math.round(subSubtotal * 0.1); // TODO: use restaurant-specific tax rate
+    const subTotal = subSubtotal + subTax;
+
+    const { data: subOrderData, error: subOrderError } = await supabase
+      .from('sub_orders')
       .insert({
         order_id: orderData.id,
         restaurant_id: restaurantId,
-        sub_order_id: subOrderData.id,
+        order_number: orderNumber,
+        customer_name: request.customerName,
+        order_type: request.orderType,
+        status: 'confirmed',
+        subtotal: subSubtotal,
+        tax: subTax,
+        total: subTotal,
+      })
+      .select('id')
+      .single();
+
+    if (subOrderError || !subOrderData) {
+      console.error(`Failed to create sub-order for restaurant ${restaurantId}:`, subOrderError);
+      continue;
+    }
+
+    // Insert order items for this sub-order
+    await insertOrderItems(orderData.id, subOrderData.id, restaurantId, items);
+  }
+
+  return {
+    orderId: orderData.id,
+    orderNumber,
+    createdAt: orderData.created_at,
+    customerName: request.customerName,
+  };
+}
+
+// ─── SHARED: Insert order items + customizations ────────────────────────────
+
+async function insertOrderItems(
+  orderId: string,
+  subOrderId: string,
+  restaurantId: string,
+  items: CartItem[],
+) {
+  for (const item of items) {
+    const { data: orderItemData, error: orderItemError } = await supabase
+      .from('order_items')
+      .insert({
+        order_id: orderId,
+        restaurant_id: restaurantId,
+        sub_order_id: subOrderId,
         menu_item_id: item.menuItem.id,
         item_name: item.menuItem.name,
         item_price: item.menuItem.price,
@@ -98,10 +214,10 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
 
     if (orderItemError || !orderItemData) {
       console.error('Failed to insert order item', item.menuItem.name, orderItemError);
-      continue; // keep going with other items
+      continue;
     }
 
-    // 5. Insert customizations for this item
+    // Insert customizations for this item
     const customizationsToInsert = [];
     for (const group of item.menuItem.customizations) {
       const selectedOptionIds = item.selectedCustomizations[group.id] || [];
@@ -123,11 +239,4 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
       await supabase.from('order_item_customizations').insert(customizationsToInsert);
     }
   }
-
-  return {
-    orderId: orderData.id,
-    orderNumber,
-    createdAt: orderData.created_at,
-    customerName: request.customerName,
-  };
 }
