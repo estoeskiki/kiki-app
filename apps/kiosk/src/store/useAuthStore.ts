@@ -5,7 +5,9 @@ import { useRestaurantStore } from './useRestaurantStore';
 
 interface AuthState {
   deviceToken: string | null;
+  mode: 'standalone' | 'food_court' | null;
   restaurantId: string | null;
+  foodCourtId: string | null;
   orgId: string | null;
   deviceName: string | null;
   isLoading: boolean;
@@ -19,7 +21,9 @@ const STORAGE_KEY = '@kiki_kiosk_device_token';
 
 export const useAuthStore = create<AuthState>((set) => ({
   deviceToken: null,
+  mode: null,
   restaurantId: null,
+  foodCourtId: null,
   orgId: null,
   deviceName: null,
   isLoading: true,
@@ -70,24 +74,26 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       const deviceData = data[0];
+      const newMode = deviceData.ret_food_court_id ? 'food_court' : 'standalone';
 
       // Store in Async Storage
       await AsyncStorage.setItem(STORAGE_KEY, token);
 
       set({
         deviceToken: token,
-        restaurantId: deviceData.ret_restaurant_id,
-        orgId: deviceData.ret_org_id,
+        mode: newMode,
+        restaurantId: deviceData.ret_restaurant_id || null,
+        foodCourtId: deviceData.ret_food_court_id || null,
+        orgId: deviceData.ret_org_id || null,
         deviceName: deviceData.ret_device_name,
       });
 
-      // Fetch restaurant profile (name, slogan) for display across the kiosk
-      await useRestaurantStore.getState().fetchProfile(deviceData.ret_org_id);
-      
-      // Subscribe to real-time open/close status
-      if (deviceData.ret_restaurant_id) {
+      // Standalone mode: fetch restaurant profile + subscribe to status
+      if (newMode === 'standalone' && deviceData.ret_restaurant_id) {
+        await useRestaurantStore.getState().fetchProfile(deviceData.ret_org_id);
         await useRestaurantStore.getState().subscribeToStatus(deviceData.ret_restaurant_id);
       }
+      // Food court mode: DirectoryScreen handles fetching all restaurants
 
       return true;
     } catch (e: any) {
@@ -104,7 +110,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     useRestaurantStore.getState().clear();
     set({
       deviceToken: null,
+      mode: null,
       restaurantId: null,
+      foodCourtId: null,
       orgId: null,
       deviceName: null,
     });

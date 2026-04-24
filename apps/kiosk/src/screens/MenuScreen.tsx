@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { ScreenWrapper } from '@/components/layout/ScreenWrapper';
 import { Header } from '@/components/layout/Header';
@@ -8,15 +8,23 @@ import { CartFAB } from '@/components/cart/CartFAB';
 import { useCartStore } from '@/store/useCartStore';
 import { useOrderStore } from '@/store/useOrderStore';
 import { useMenuStore } from '@/store/useMenuStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useTranslation } from '@/i18n/useTranslation';
+import { supabase } from '@/lib/supabase';
 import type { MenuItem } from '@/data/types';
 import type { ScreenProps } from '@/navigation/types';
 
-export function MenuScreen({ navigation }: ScreenProps<'Menu'>) {
+export function MenuScreen({ route, navigation }: ScreenProps<'Menu'>) {
   const { categories, items: menuItems, fetchMenu, subscribeToMenu, unsubscribeFromMenu } = useMenuStore();
   const clearCart = useCartStore((s) => s.clearCart);
+  const removeItemsByRestaurant = useCartStore((s) => s.removeItemsByRestaurant);
   const resetOrder = useOrderStore((s) => s.resetOrder);
+  const mode = useAuthStore((s) => s.mode);
   const { t } = useTranslation();
+  const closedAlertShown = useRef(false);
+
+  const selectedRestaurantId = route.params?.restaurantId;
+  const selectedRestaurantName = route.params?.restaurantName;
 
   const handleRestart = useCallback(() => {
     Alert.alert(
@@ -39,16 +47,58 @@ export function MenuScreen({ navigation }: ScreenProps<'Menu'>) {
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
 
   useEffect(() => {
-    fetchMenu();
-    subscribeToMenu();
+    fetchMenu(selectedRestaurantId);
+    subscribeToMenu(selectedRestaurantId);
     return () => { unsubscribeFromMenu(); };
-  }, [fetchMenu, subscribeToMenu, unsubscribeFromMenu]);
+  }, [fetchMenu, subscribeToMenu, unsubscribeFromMenu, selectedRestaurantId]);
+
+  // Realtime: watch if this restaurant closes while user is browsing
+  useEffect(() => {
+    if (!selectedRestaurantId || mode !== 'food_court') return;
+    closedAlertShown.current = false;
+
+    const channel = supabase
+      .channel(`menu_restaurant_status_${selectedRestaurantId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'restaurants',
+          filter: `id=eq.${selectedRestaurantId}`,
+        },
+        (payload) => {
+          if (payload.new && payload.new.is_open === false && !closedAlertShown.current) {
+            closedAlertShown.current = true;
+            // Remove this restaurant's items from cart
+            removeItemsByRestaurant(selectedRestaurantId);
+            // Alert and go back to directory
+            Alert.alert(
+              '¡Restaurante cerrado!',
+              `${selectedRestaurantName || 'Este restaurante'} acaba de cerrar. Los productos se removieron del carrito.`,
+              [{ text: 'OK', onPress: () => navigation.goBack() }],
+              { cancelable: false }
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedRestaurantId, mode]);
+
+  // Reset category selection when switching restaurants (food court navigation)
+  useEffect(() => {
+    setSelectedCategoryId('');
+  }, [selectedRestaurantId]);
 
   useEffect(() => {
-    if (!selectedCategoryId && categories.length > 0) {
+    if (categories.length > 0 && (!selectedCategoryId || !categories.find(c => c.id === selectedCategoryId))) {
       setSelectedCategoryId(categories[0].id);
     }
-  }, [categories, selectedCategoryId]);
+  }, [categories]);
 
   const cartItems = useCartStore((s) => s.items);
   const addItem = useCartStore((s) => s.addItem);
@@ -67,17 +117,17 @@ export function MenuScreen({ navigation }: ScreenProps<'Menu'>) {
   );
 
   const handleItemPress = useCallback((item: MenuItem) => {
-    navigation.navigate('ItemDetail', { item });
-  }, [navigation]);
+    navigation.navigate('ItemDetail', { item, restaurantId: selectedRestaurantId, restaurantName: selectedRestaurantName });
+  }, [navigation, selectedRestaurantId, selectedRestaurantName]);
 
   const handleQuickAdd = useCallback((item: MenuItem) => {
     const hasRequired = item.customizations.some((g) => g.required);
     if (hasRequired) {
-      navigation.navigate('ItemDetail', { item });
+      navigation.navigate('ItemDetail', { item, restaurantId: selectedRestaurantId, restaurantName: selectedRestaurantName });
       return;
     }
-    addItem(item, 1, {});
-  }, [addItem, navigation]);
+    addItem(item, 1, {}, selectedRestaurantId, selectedRestaurantName);
+  }, [addItem, navigation, selectedRestaurantId, selectedRestaurantName]);
 
   return (
     <ScreenWrapper padded={false}>

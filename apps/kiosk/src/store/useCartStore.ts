@@ -8,6 +8,8 @@ interface CartState {
     menuItem: MenuItem,
     quantity: number,
     selectedCustomizations: Record<string, string[]>,
+    restaurantId?: string,
+    restaurantName?: string,
   ) => void;
   removeItem: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, newQty: number) => void;
@@ -15,6 +17,12 @@ interface CartState {
   getSubtotal: () => number;
   getTax: () => number;
   getTotal: () => number;
+  /** Group items by restaurantId — used in food court cart UI */
+  getItemsByRestaurant: () => { restaurantId: string; restaurantName: string; items: CartItem[] }[];
+  /** Get unique restaurant IDs in the cart */
+  getRestaurantIds: () => string[];
+  /** Remove all items from a specific restaurant (e.g. when it closes) */
+  removeItemsByRestaurant: (restaurantId: string) => void;
 }
 
 /**
@@ -50,7 +58,7 @@ function generateCartItemId(): string {
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
 
-  addItem: (menuItem, quantity, selectedCustomizations) => {
+  addItem: (menuItem, quantity, selectedCustomizations, restaurantId, restaurantName) => {
     const lineTotal = computeLineTotal(menuItem, quantity, selectedCustomizations);
     const newItem: CartItem = {
       id: generateCartItemId(),
@@ -58,6 +66,8 @@ export const useCartStore = create<CartState>((set, get) => ({
       quantity,
       selectedCustomizations,
       lineTotal,
+      restaurantId,
+      restaurantName,
     };
     set((state) => ({ items: [...state.items, newItem] }));
   },
@@ -102,4 +112,36 @@ export const useCartStore = create<CartState>((set, get) => ({
   getTotal: () => {
     return get().getSubtotal() + get().getTax();
   },
+
+  getItemsByRestaurant: () => {
+    const items = get().items;
+    const grouped = new Map<string, { restaurantName: string; items: CartItem[] }>();
+
+    for (const item of items) {
+      const rId = item.restaurantId || 'default';
+      const rName = item.restaurantName || '';
+      if (!grouped.has(rId)) {
+        grouped.set(rId, { restaurantName: rName, items: [] });
+      }
+      grouped.get(rId)!.items.push(item);
+    }
+
+    return Array.from(grouped.entries()).map(([restaurantId, { restaurantName, items: rItems }]) => ({
+      restaurantId,
+      restaurantName,
+      items: rItems,
+    }));
+  },
+
+  getRestaurantIds: () => {
+    const ids = new Set(get().items.map((item) => item.restaurantId).filter(Boolean) as string[]);
+    return Array.from(ids);
+  },
+
+  removeItemsByRestaurant: (restaurantId) => {
+    set((state) => ({
+      items: state.items.filter((item) => item.restaurantId !== restaurantId),
+    }));
+  },
 }));
+

@@ -10,6 +10,7 @@ import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import type { ScreenProps } from '@/navigation/types';
 import type { OrderType } from '@/data/types';
+import { useAuthStore } from '@/store/useAuthStore';
 
 // Options moved inside component to access translations
 
@@ -20,6 +21,7 @@ function OptionIcon({ icon, color }: { icon: 'dine' | 'take'; color: string }) {
 
 export function OrderTypeScreen({ navigation }: ScreenProps<'OrderType'>) {
   const setOrderType = useOrderStore((s) => s.setOrderType);
+  const { mode } = useAuthStore();
   const { colors } = useTheme();
   const { t } = useTranslation();
 
@@ -35,7 +37,11 @@ export function OrderTypeScreen({ navigation }: ScreenProps<'OrderType'>) {
 
   const handleSelect = (type: OrderType) => {
     setOrderType(type);
-    navigation.navigate('Menu');
+    if (mode === 'food_court') {
+      navigation.navigate('Directory');
+    } else {
+      navigation.navigate('Menu');
+    }
   };
 
   return (

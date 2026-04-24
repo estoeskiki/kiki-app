@@ -28,19 +28,32 @@ export const useAuthStore = create<AuthState>((set) => ({
       return;
     }
 
-    // Attempt to extract metadata
     const user = session.user;
-    const meta = user?.user_metadata || {};
 
-    set({
-      session,
-      user,
-      orgId: meta.org_id || null,
-      // If no specific restaurant_id is set (like for an owner), default to the Kiki Centro branch for this prototype
-      //todo: remove when going to production
-      restaurantId: meta.restaurant_id || 'b0000000-0000-0000-0000-000000000001',
-      role: meta.role || null,
-    });
+    // Set session immediately, then fetch membership from DB
+    set({ session, user });
+
+    // Fetch the real org_members row for this user
+    (async () => {
+      const { data, error } = await supabase
+        .from('org_members')
+        .select('org_id, restaurant_id, role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching org membership:', error.message);
+        return;
+      }
+
+      if (data) {
+        set({
+          orgId: data.org_id,
+          restaurantId: data.restaurant_id,
+          role: data.role,
+        });
+      }
+    })();
   },
 
   initialize: async () => {
@@ -68,3 +81,4 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ session: null, user: null, orgId: null, restaurantId: null, role: null });
   },
 }));
+

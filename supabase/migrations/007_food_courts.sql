@@ -162,3 +162,5 @@ CREATE TRIGGER trg_sync_parent_order
   FOR EACH ROW
   WHEN (OLD.status IS DISTINCT FROM NEW.status)
   EXECUTE FUNCTION sync_parent_order_status();
+
+-- authenticate_device() is defined in 008_food_court_members.sql

@@ -9,11 +9,11 @@ INSERT INTO organizations (id, name, slug, logo_url) VALUES
   ('a0000000-0000-0000-0000-000000000001', 'Kiki Burgers', 'kiki-burgers', '');
 
 -- ─── Restaurant Branches ────────────────────────────────────────────────────
-INSERT INTO restaurants (id, org_id, name, slug, address, is_open, timezone, currency, tax_rate) VALUES
+INSERT INTO restaurants (id, org_id, name, slug, address, is_open, timezone, currency, tax_rate, fiscal_api_token) VALUES
   ('b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001',
-   'Kiki Centro', 'kiki-centro', 'Calle Gran Vía 42, Madrid', true, 'Europe/Madrid', 'EUR', 0.1000),
+   'Kiki Centro', 'kiki-centro', 'Calle Gran Vía 42, Panamá', true, 'America/Panama', 'USD', 0.0700, 'Bearer MOCK_FISCAL_TOKEN_CENTRO_123'),
   ('b0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001',
-   'Kiki Malasaña', 'kiki-malasana', 'Calle Fuencarral 15, Madrid', false, 'Europe/Madrid', 'EUR', 0.1000);
+   'Kiki Malasaña', 'kiki-malasana', 'Calle Fuencarral 15, Panamá', false, 'America/Panama', 'USD', 0.0700, 'Bearer MOCK_FISCAL_TOKEN_MALASANA_123');
 
 -- ─── Categories (Branch 1: Kiki Centro) ─────────────────────────────────────
 INSERT INTO categories (id, restaurant_id, name, slug, icon, sort_order) VALUES
@@ -107,9 +107,9 @@ INSERT INTO food_courts (id, name, slug, address) VALUES
   ('fc000000-0000-0000-0000-000000000001', 'Plaza Mayor Food Hall', 'plaza-mayor-hall', 'Plaza Mayor 1, Madrid');
 
 -- Create a 3rd restaurant stall inside the food court
-INSERT INTO restaurants (id, org_id, name, slug, address, food_court_id, is_open, timezone, currency, tax_rate) VALUES
+INSERT INTO restaurants (id, org_id, name, slug, address, food_court_id, is_open, timezone, currency, tax_rate, fiscal_api_token) VALUES
   ('b0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001',
-   'Kiki Sushi', 'kiki-sushi', 'Plaza Mayor 1, Madrid', 'fc000000-0000-0000-0000-000000000001', true, 'Europe/Madrid', 'EUR', 0.1000);
+   'Kiki Sushi', 'kiki-sushi', 'Plaza Mayor 1, Panamá', 'fc000000-0000-0000-0000-000000000001', true, 'America/Panama', 'USD', 0.0700, 'Bearer MOCK_FISCAL_TOKEN_SUSHI_123');
 
 -- Link only Kiki Centro into the food court
 UPDATE restaurants 
@@ -117,8 +117,73 @@ SET food_court_id = 'fc000000-0000-0000-0000-000000000001'
 WHERE id = 'b0000000-0000-0000-0000-000000000001';
 
 -- Create a centralized food-court-scoped device token for testing the Kiosk App
-INSERT INTO device_tokens (id, org_id, food_court_id, device_name, token_hash, is_active) VALUES
-  ('fc000000-0000-0000-0000-100000000001', 'a0000000-0000-0000-0000-000000000001', 'fc000000-0000-0000-0000-000000000001', 'Main Hall Kiosk 1', 'test_plain_token_hash_value', true);
+-- NOTE: Food court kiosks do NOT belong to any organization. They belong to the food court.
+INSERT INTO device_tokens (id, food_court_id, device_name, token_hash, is_active) VALUES
+  ('fc000000-0000-0000-0000-100000000001', 'fc000000-0000-0000-0000-000000000001', 'Main Hall Kiosk 1', 'test_plain_token_hash_value', true);
+
+-- ============================================================================
+-- KIKI SUSHI — Menu Seed Data
+-- ============================================================================
+
+-- ─── Categories (Kiki Sushi) ────────────────────────────────────────────────
+INSERT INTO categories (id, restaurant_id, name, slug, icon, sort_order) VALUES
+  ('c1000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000003', '{"es": "Rolls", "en": "Rolls"}'::jsonb, 'rolls', '🍣', 1),
+  ('c1000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003', '{"es": "Nigiri", "en": "Nigiri"}'::jsonb, 'nigiri', '🍱', 2),
+  ('c1000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000003', '{"es": "Bebidas", "en": "Drinks"}'::jsonb, 'sushi-drinks', '🍵', 3);
+
+-- ─── Menu Items: Rolls ──────────────────────────────────────────────────────
+INSERT INTO menu_items (id, restaurant_id, category_id, name, description, price, available, popular, sort_order) VALUES
+  ('d1000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000001',
+   '{"es": "Dragon Roll", "en": "Dragon Roll"}'::jsonb, '{"es": "Tempura de langostino, aguacate, tobiko y salsa de anguila por encima.", "en": "Shrimp tempura, avocado, tobiko, and eel sauce on top."}'::jsonb, 1399, true, true, 1),
+  ('d1000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000001',
+   '{"es": "California Roll", "en": "California Roll"}'::jsonb, '{"es": "Kanikama, aguacate y pepino con sésamo tostado.", "en": "Crab stick, avocado, and cucumber with toasted sesame."}'::jsonb, 899, true, true, 2),
+  ('d1000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000001',
+   '{"es": "Spicy Tuna Roll", "en": "Spicy Tuna Roll"}'::jsonb, '{"es": "Atún picante con mayonesa sriracha, cebolleta y tempura crunch.", "en": "Spicy tuna with sriracha mayo, scallion, and tempura crunch."}'::jsonb, 1249, true, false, 3),
+  ('d1000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000001',
+   '{"es": "Salmon Avocado Roll", "en": "Salmon Avocado Roll"}'::jsonb, '{"es": "Salmón fresco y aguacate cremoso en arroz de sushi.", "en": "Fresh salmon and creamy avocado in sushi rice."}'::jsonb, 1099, true, false, 4),
+  ('d1000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000001',
+   '{"es": "Veggie Roll", "en": "Veggie Roll"}'::jsonb, '{"es": "Pepino, aguacate, zanahoria, rábano y espárragos con salsa ponzu.", "en": "Cucumber, avocado, carrot, radish, and asparagus with ponzu sauce."}'::jsonb, 799, true, false, 5);
+
+-- ─── Menu Items: Nigiri ─────────────────────────────────────────────────────
+INSERT INTO menu_items (id, restaurant_id, category_id, name, description, price, available, popular, sort_order) VALUES
+  ('d1000000-0000-0000-0000-000000000010', 'b0000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000002',
+   '{"es": "Nigiri de Salmón (2 pzs)", "en": "Salmon Nigiri (2 pcs)"}'::jsonb, '{"es": "Láminas de salmón fresco sobre arroz de sushi prensado.", "en": "Fresh salmon slices over pressed sushi rice."}'::jsonb, 699, true, true, 1),
+  ('d1000000-0000-0000-0000-000000000011', 'b0000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000002',
+   '{"es": "Nigiri de Atún (2 pzs)", "en": "Tuna Nigiri (2 pcs)"}'::jsonb, '{"es": "Atún rojo de calidad sashimi sobre arroz de sushi.", "en": "Sashimi-grade tuna over sushi rice."}'::jsonb, 799, true, false, 2),
+  ('d1000000-0000-0000-0000-000000000012', 'b0000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000002',
+   '{"es": "Nigiri de Langostino (2 pzs)", "en": "Shrimp Nigiri (2 pcs)"}'::jsonb, '{"es": "Langostino cocido y glaseado sobre arroz de sushi.", "en": "Cooked, glazed shrimp over sushi rice."}'::jsonb, 649, true, false, 3);
+
+-- ─── Menu Items: Drinks ─────────────────────────────────────────────────────
+INSERT INTO menu_items (id, restaurant_id, category_id, name, description, price, available, popular, sort_order) VALUES
+  ('d1000000-0000-0000-0000-000000000020', 'b0000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000003',
+   '{"es": "Té Verde", "en": "Green Tea"}'::jsonb, '{"es": "Té verde japonés caliente servido en taza tradicional.", "en": "Hot Japanese green tea served in a traditional cup."}'::jsonb, 249, true, false, 1),
+  ('d1000000-0000-0000-0000-000000000021', 'b0000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000003',
+   '{"es": "Ramune", "en": "Ramune Soda"}'::jsonb, '{"es": "Refresco japonés de botella con canica. Sabor original.", "en": "Japanese marble bottle soda. Original flavor."}'::jsonb, 399, true, true, 2),
+  ('d1000000-0000-0000-0000-000000000022', 'b0000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000003',
+   '{"es": "Agua", "en": "Water"}'::jsonb, '{"es": "Agua mineral natural.", "en": "Natural mineral water."}'::jsonb, 199, true, false, 3);
+
+-- ─── Customizations: Dragon Roll ────────────────────────────────────────────
+INSERT INTO customization_groups (id, menu_item_id, restaurant_id, name, required, max_selections, sort_order) VALUES
+  ('e1000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000003',
+   '{"es": "Tamaño", "en": "Size"}'::jsonb, true, 1, 1),
+  ('e1000000-0000-0000-0000-000000000002', 'd1000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000003',
+   '{"es": "Extras", "en": "Extras"}'::jsonb, false, 3, 2);
+
+-- Size options
+INSERT INTO customization_options (id, group_id, restaurant_id, name, price_modifier, sort_order) VALUES
+  ('f1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000003',
+   '{"es": "6 piezas", "en": "6 pieces"}'::jsonb, 0, 1),
+  ('f1000000-0000-0000-0000-000000000002', 'e1000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000003',
+   '{"es": "10 piezas", "en": "10 pieces"}'::jsonb, 400, 2);
+
+-- Extras options
+INSERT INTO customization_options (id, group_id, restaurant_id, name, price_modifier, sort_order) VALUES
+  ('f1000000-0000-0000-0000-000000000010', 'e1000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003',
+   '{"es": "Extra Aguacate", "en": "Extra Avocado"}'::jsonb, 149, 1),
+  ('f1000000-0000-0000-0000-000000000011', 'e1000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003',
+   '{"es": "Salsa Picante", "en": "Spicy Sauce"}'::jsonb, 0, 2),
+  ('f1000000-0000-0000-0000-000000000012', 'e1000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003',
+   '{"es": "Tempura Crunch", "en": "Tempura Crunch"}'::jsonb, 99, 3);
 
 
 -- ============================================================================
