@@ -99,6 +99,7 @@ export function PaymentScreen({ navigation }: ScreenProps<'Payment'>) {
           status: 'confirmed',
           transactionId: paymentResult.transactionId,
           createdAt: orderResult.createdAt,
+          fiscalData: orderResult.fiscalData,
         };
 
         orderStore.setCurrentOrder(order);

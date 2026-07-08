@@ -69,4 +69,5 @@ export interface Order {
   status: OrderStatus;
   transactionId: string | null;
   createdAt: string; // ISO timestamp
+  fiscalData?: any; // DGI invoices payload from edge function
 }

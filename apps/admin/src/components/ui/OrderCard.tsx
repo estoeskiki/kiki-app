@@ -12,6 +12,12 @@ interface OrderCardProps {
   onAdvance?: (orderId: string) => void;
 }
 
+const ORDER_TYPE_LABEL: Record<string, string> = {
+  'dine-in': 'Aquí',
+  takeaway: 'Llevar',
+  delivery: 'Delivery',
+};
+
 export function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
   const { colors, isDark } = useTheme();
   const itemCount = order.items.reduce((acc, item) => acc + item.quantity, 0);
@@ -69,10 +75,29 @@ export function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
           </Text>
           <View style={[styles.typePill, { backgroundColor: colors.surfaceHighlight }]}>
             <Text style={[styles.typeText, { color: colors.textSecondary }]}>
-              {order.orderType === 'dine-in' ? 'Aquí' : 'Llevar'}
+              {ORDER_TYPE_LABEL[order.orderType] ?? order.orderType}
             </Text>
           </View>
+          {order.channel === 'web' && (
+            <View style={[styles.typePill, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.typeText, { color: colors.onPrimary }]}>WEB</Text>
+            </View>
+          )}
+          {order.tableLabel && (
+            <View style={[styles.typePill, { backgroundColor: colors.surfaceHighlight }]}>
+              <Text style={[styles.typeText, { color: colors.textSecondary }]}>{order.tableLabel}</Text>
+            </View>
+          )}
         </View>
+
+        {order.channel === 'web' && order.paymentMethod && (
+          <Text style={[styles.detail, { color: colors.textMuted }]}>
+            {order.paymentMethod === 'cash_on_delivery' && 'Cobrar en efectivo'}
+            {order.paymentMethod === 'card_on_delivery' && 'Cobrar con tarjeta'}
+            {order.paymentMethod === 'yappy' && 'Yappy'}
+            {order.orderType === 'delivery' && order.deliveryAddress?.line1 ? ` · ${order.deliveryAddress.line1}` : ''}
+          </Text>
+        )}
 
         {/* Bottom row */}
         <View style={styles.bottomRow}>
