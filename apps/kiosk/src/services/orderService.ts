@@ -17,6 +17,7 @@ export interface CreateOrderResult {
   orderNumber: number;
   createdAt: string;
   customerName?: string;
+  fiscalData?: any; // The payload returned from the DGI edge function
 }
 
 /**
@@ -95,11 +96,15 @@ async function createStandaloneOrder(
   // 4. Insert order items linked to the sub-order
   await insertOrderItems(orderData.id, subOrderData.id, restaurantId, request.items);
 
+  // 5. Generate fiscal invoices synchronously before finishing
+  const fiscalData = await generateFiscalInvoices(orderData.id);
+
   return {
     orderId: orderData.id,
     orderNumber,
     createdAt: orderData.created_at,
     customerName: request.customerName,
+    fiscalData,
   };
 }
 
@@ -180,11 +185,15 @@ async function createFoodCourtOrder(
     await insertOrderItems(orderData.id, subOrderData.id, restaurantId, items);
   }
 
+  // 5. Generate fiscal invoices for all sub_orders simultaneously
+  const fiscalData = await generateFiscalInvoices(orderData.id);
+
   return {
     orderId: orderData.id,
     orderNumber,
     createdAt: orderData.created_at,
     customerName: request.customerName,
+    fiscalData,
   };
 }
 
@@ -238,5 +247,39 @@ async function insertOrderItems(
     if (customizationsToInsert.length > 0) {
       await supabase.from('order_item_customizations').insert(customizationsToInsert);
     }
+  }
+}
+
+// ─── FISCAL INTEGRATION ─────────────────────────────────────────────────────
+
+async function generateFiscalInvoices(orderId: string) {
+  try {
+    // [DEV ONLY] Bypassing real Edge Function call so local expo run doesn't fail
+    // while the DGI environment is not yet fully configured.
+    console.log('[DEV] Bypassing Fiscal Edge Function for Order:', orderId);
+    return {
+      success: true,
+      invoices: [
+        {
+          subOrderId: 'mock-sub-1',
+          restaurantName: 'Kiki Burger',
+          cufe: 'FE01234567890ABCDEF1234567890ABCDEF123456789',
+          qrContent: 'https://dgi-fep.mef.gob.pa/Consultas/FacturasPorCUFE?cufe=FE01234567890ABCDEF'
+        }
+      ]
+    };
+    
+    /*
+    const { data, error } = await supabase.functions.invoke('generate-fiscal-invoices', {
+      body: { orderId }
+    });
+    
+    if (error) throw error;
+    return data;
+    */
+  } catch (err) {
+    console.error('Error generating fiscal invoices via Edge Function:', err);
+    // Depending on requirements, we return null to proceed without crashing
+    return null;
   }
 }

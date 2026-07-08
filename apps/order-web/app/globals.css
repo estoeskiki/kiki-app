@@ -1,0 +1,98 @@
+@import '@kiki/ui-tokens/tailwind.css';
+@import 'tailwindcss';
+
+/* Wire the self-hosted next/font variables (set on <html> in app/layout.tsx)
+   into the brand's font-heading/font-body tokens from @kiki/ui-tokens. */
+@theme inline {
+  --font-heading: var(--font-space-grotesk), sans-serif;
+  --font-body: var(--font-syne), sans-serif;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Thank-you screen: checkmark draw-in + staggered reveals. */
+@keyframes check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes check-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.check-circle {
+  animation: check-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.check-path {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: check-draw 0.4s 0.35s ease-out forwards;
+}
+
+.fade-up-item {
+  opacity: 0;
+  animation: fade-up 0.5s ease-out forwards;
+}
+
+/* Tracker: pulsing "live" dot next to the polling indicator. */
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.live-dot {
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes step-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(204, 255, 0, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(204, 255, 0, 0);
+  }
+}
+
+.step-active {
+  animation: step-glow 1.8s ease-out infinite;
+}

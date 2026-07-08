@@ -1,0 +1,8 @@
+{
+  "name": "icod-printer",
+  "version": "1.0.0",
+  "description": "Native module wrapping the ICOD thermal printer SDK for the kiosk app",
+  "main": "index.ts",
+  "types": "index.ts",
+  "license": "UNLICENSED"
+}

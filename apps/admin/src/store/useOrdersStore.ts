@@ -3,9 +3,11 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from './useAuthStore';
 import { Order, OrderStatus } from '../data/types';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { printFiscalReceipt } from '../services/printerService';
 interface OrdersState {
   orders: Order[];
   isLoading: boolean;
+  fetchError: string | null;
   channel: RealtimeChannel | null;
   fetchOrders: () => Promise<void>;
   subscribeToOrders: () => void;
@@ -18,6 +20,7 @@ interface OrdersState {
 export const useOrdersStore = create<OrdersState>((set, get) => ({
   orders: [],
   isLoading: false,
+  fetchError: null,
   channel: null,
 
   fetchOrders: async () => {
@@ -36,28 +39,42 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
 
     if (error) {
       console.error('Error fetching orders:', error.message);
+      set({ fetchError: error.message, isLoading: false });
     } else if (data) {
-      // Keep it simple and map the relations to the app's internal Order type
-      const mappedOrders: Order[] = data.map((d: any) => ({
-        id: d.id,
-        orderNumber: d.order_number,
-        customerName: d.customer_name,
-        orderType: d.order_type,
-        status: d.status,
-        subtotal: d.subtotal,
-        tax: d.tax,
-        total: d.total,
-        createdAt: d.created_at,
-        transactionId: null,
-        items: d.order_items.map((oi: any) => ({
-          id: oi.id,
-          menuItem: { id: oi.menu_item_id, name: oi.item_name, price: oi.item_price } as any,
-          quantity: oi.quantity,
-          lineTotal: oi.line_total,
-          selectedCustomizations: {}, // we could parse order_item_customizations if needed
-        })),
-      }));
-      set({ orders: mappedOrders });
+      set({ fetchError: null });
+      try {
+        const mappedOrders: Order[] = data.map((d: any) => ({
+          id: d.id,
+          orderNumber: d.order_number,
+          customerName: d.customer_name,
+          customerPhone: d.customer_phone,
+          orderType: d.order_type,
+          status: d.status,
+          subtotal: d.subtotal,
+          tax: d.tax,
+          total: d.total,
+          createdAt: d.created_at,
+          transactionId: null,
+          fiscalInvoiceId: d.fiscal_invoice_id,
+          fiscalCufe: d.fiscal_cufe,
+          fiscalQrContent: d.fiscal_qr_content,
+          channel: d.channel,
+          paymentMethod: d.payment_method,
+          paymentStatus: d.payment_status,
+          tableLabel: d.table_label,
+          deliveryAddress: d.delivery_address,
+          items: d.order_items ? d.order_items.map((oi: any) => ({
+            id: oi.id,
+            menuItem: { id: oi.menu_item_id, name: oi.item_name, price: oi.item_price } as any,
+            quantity: oi.quantity,
+            lineTotal: oi.line_total,
+            selectedCustomizations: {},
+          })) : [],
+        }));
+        set({ orders: mappedOrders });
+      } catch (err) {
+        console.error('[DEV] Error mapping orders:', err);
+      }
     }
     set({ isLoading: false });
   },
@@ -114,9 +131,16 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
   markOrderReady: async (orderId) => {
     const { error } = await supabase.from('sub_orders').update({ status: 'ready' }).eq('id', orderId);
     if (!error) {
-      set((state) => ({
-        orders: state.orders.map((o) => (o.id === orderId ? { ...o, status: 'ready' } : o)),
-      }));
+      set((state) => {
+        const orderToPrint = state.orders.find((o) => o.id === orderId);
+        if (orderToPrint) {
+          // Fire and forget print (could await if we want to block UI)
+          printFiscalReceipt(orderToPrint);
+        }
+        return {
+          orders: state.orders.map((o) => (o.id === orderId ? { ...o, status: 'ready' } : o)),
+        };
+      });
     }
   },
 

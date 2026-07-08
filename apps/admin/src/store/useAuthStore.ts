@@ -52,6 +52,26 @@ export const useAuthStore = create<AuthState>((set) => ({
           restaurantId: data.restaurant_id,
           role: data.role,
         });
+      } else {
+        // [DEV AUTO-FIX] If the user has no org_members row (e.g. after db reset),
+        // we automatically link them to the seeded Kiki Burgers restaurant.
+        console.log('[DEV] Auto-linking orphaned user to Kiki Burgers...');
+        const defaultOrgId = 'a0000000-0000-0000-0000-000000000001';
+        const defaultRestaurantId = 'b0000000-0000-0000-0000-000000000001';
+        
+        await supabase.from('org_members').insert({
+          user_id: user.id,
+          org_id: defaultOrgId,
+          restaurant_id: defaultRestaurantId,
+          role: 'owner',
+          display_name: 'Admin (Auto-linked)'
+        });
+
+        set({
+          orgId: defaultOrgId,
+          restaurantId: defaultRestaurantId,
+          role: 'owner',
+        });
       }
     })();
   },

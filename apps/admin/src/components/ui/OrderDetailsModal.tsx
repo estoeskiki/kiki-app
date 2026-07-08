@@ -97,11 +97,34 @@ export function OrderDetailsModal({
               </Text>
               <View style={styles.headerMeta}>
                 <Text style={[styles.orderType, { color: colors.textSecondary }]}>
-                  {order.orderType === 'dine-in' ? 'Comer Aquí' : 'Para Llevar'}
+                  {order.orderType === 'dine-in' ? 'Comer Aquí' : order.orderType === 'delivery' ? 'Delivery' : 'Para Llevar'}
                 </Text>
                 <View style={[styles.dot, { backgroundColor: colors.border }]} />
                 <StatusBadge status={order.status} size="sm" />
+                {order.channel === 'web' && (
+                  <>
+                    <View style={[styles.dot, { backgroundColor: colors.border }]} />
+                    <Text style={[styles.orderType, { color: colors.primary }]}>WEB</Text>
+                  </>
+                )}
               </View>
+              {order.tableLabel && (
+                <Text style={[styles.orderType, { color: colors.textMuted }]}>{order.tableLabel}</Text>
+              )}
+              {order.orderType === 'delivery' && order.deliveryAddress && (
+                <Text style={[styles.orderType, { color: colors.textMuted }]}>
+                  {order.deliveryAddress.line1}
+                  {order.deliveryAddress.line2 ? `, ${order.deliveryAddress.line2}` : ''}
+                </Text>
+              )}
+              {order.channel === 'web' && order.paymentMethod && (
+                <Text style={[styles.orderType, { color: colors.textMuted }]}>
+                  {order.paymentMethod === 'cash_on_delivery' && 'Pago: Efectivo contra entrega'}
+                  {order.paymentMethod === 'card_on_delivery' && 'Pago: Tarjeta contra entrega'}
+                  {order.paymentMethod === 'yappy' && 'Pago: Yappy'}
+                  {order.customerPhone ? ` · ${order.customerPhone}` : ''}
+                </Text>
+              )}
             </View>
             <TouchableOpacity
               onPress={onClose}

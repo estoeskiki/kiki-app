@@ -45,7 +45,7 @@ export interface CartItem {
   lineTotal: number; // (base + modifiers) * qty, in cents
 }
 
-export type OrderType = 'dine-in' | 'takeaway';
+export type OrderType = 'dine-in' | 'takeaway' | 'delivery';
 
 export type OrderStatus =
   | 'idle'
@@ -56,10 +56,21 @@ export type OrderStatus =
   | 'completed'
   | 'failed';
 
+export type OrderChannel = 'kiosk' | 'web';
+export type PaymentMethod = 'yappy' | 'cash_on_delivery' | 'card_on_delivery';
+export type PaymentStatus = 'pending' | 'paid' | 'failed';
+
+export interface DeliveryAddress {
+  line1: string;
+  line2?: string;
+  instructions?: string;
+}
+
 export interface Order {
   id: string;
   orderNumber: number;
   customerName?: string;
+  customerPhone?: string;
   orderType: OrderType;
   items: CartItem[];
   subtotal: number; // cents
@@ -68,4 +79,13 @@ export interface Order {
   status: OrderStatus;
   transactionId: string | null;
   createdAt: string; // ISO timestamp
+  fiscalInvoiceId?: string;
+  fiscalCufe?: string;
+  fiscalQrContent?: string;
+  // Web ordering channel (apps/order-web) — absent/defaulted for kiosk orders.
+  channel?: OrderChannel;
+  paymentMethod?: PaymentMethod | null;
+  paymentStatus?: PaymentStatus;
+  tableLabel?: string | null;
+  deliveryAddress?: DeliveryAddress | null;
 }

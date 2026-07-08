@@ -1,3 +1,4 @@
+import { Alert, Platform } from 'react-native';
 import type { Order } from '@/data/types';
 import { config } from '@/constants/config';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -5,8 +6,23 @@ import { getLocalizedText } from '@/i18n/useTranslation';
 import { useLocaleStore } from '@/store/useLocaleStore';
 import { useAuthStore } from '@/store/useAuthStore';
 
+import { translations } from '@/i18n/translations';
+
+// Try to load the native module, gracefully fallback to null if it fails (e.g. on iOS/Web or without dev client)
+let IcodPrinter: any = null;
+let icodLoadError: string | null = null;
+try {
+  if (Platform.OS === 'android') {
+    IcodPrinter = require('../../modules/icod-printer');
+  }
+} catch (e: any) {
+  icodLoadError = e?.message ?? String(e);
+  console.log('[PRINTER] IcodPrinter Native Module not available. Using simulated console output.');
+}
+
 /**
  * Resolve a translatable text field to a plain string for printing.
+ * Prints in the language selected by the user.
  */
 function text(value: any): string {
   const lang = useLocaleStore.getState().language;
@@ -14,28 +30,53 @@ function text(value: any): string {
 }
 
 /**
- * Simulate printing a receipt for the given order.
- * Food court mode: groups items by restaurant with section headers.
- * Standalone mode: flat list (same as before).
+ * Print the receipt using the physical ICOD printer, or fallback to console simulation.
  */
 export async function printReceipt(order: Order): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, config.printDelay));
-
   const mode = useAuthStore.getState().mode;
-  const divider = '─'.repeat(40);
-  const doubleDivider = '═'.repeat(40);
+  const lang = useLocaleStore.getState().language;
+  const t = translations[lang];
 
-  const lines: string[] = [
-    '',
-    doubleDivider,
-    `  ${config.restaurantName}`,
-    `  ${config.tagline}`,
-    doubleDivider,
-    `  Order #${String(order.orderNumber).padStart(3, '0')}`,
-    `  Type: ${order.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'}`,
-    `  Date: ${new Date(order.createdAt).toLocaleString()}`,
-    divider,
-  ];
+  const divider = '─'.repeat(32);
+  const doubleDivider = '═'.repeat(32);
+  const lines: string[] = [];
+
+  // If using physical printer, try to initialize it
+  let useHardware = false;
+  if (IcodPrinter) {
+    try {
+      const initialized = await IcodPrinter.initPrinter();
+      if (initialized) {
+        useHardware = true;
+      } else {
+        Alert.alert('Printer', 'initPrinter() returned false — printer did not connect (check USB/power).');
+      }
+    } catch (e: any) {
+      console.warn('Failed to initialize physical printer', e);
+      Alert.alert('Printer error', String(e?.message ?? e));
+    }
+  } else if (icodLoadError) {
+    Alert.alert('Printer module not loaded', icodLoadError);
+  }
+
+  // Helper to print a line to hardware or save to array for simulation
+  const printLine = async (line: string) => {
+    if (useHardware) {
+      await IcodPrinter.printString(line + '\n');
+    } else {
+      lines.push(line);
+    }
+  };
+
+  await printLine('');
+  await printLine(doubleDivider);
+  await printLine(`  ${config.restaurantName}`);
+  await printLine(`  ${config.tagline}`);
+  await printLine(doubleDivider);
+  await printLine(`  Order #${String(order.orderNumber).padStart(3, '0')}`);
+  await printLine(`  ${lang === 'es' ? 'Tipo' : 'Type'}: ${order.orderType === 'dine-in' ? t.dineIn : t.takeaway}`);
+  await printLine(`  Date: ${new Date(order.createdAt).toLocaleString()}`);
+  await printLine(divider);
 
   if (mode === 'food_court') {
     // Group items by restaurant
@@ -48,11 +89,11 @@ export async function printReceipt(order: Order): Promise<void> {
     }
 
     for (const [, group] of grouped) {
-      lines.push(`  ┌ ${group.name.toUpperCase()}`);
-      lines.push(`  │`);
+      await printLine(`  ┌ ${group.name.toUpperCase()}`);
+      await printLine(`  │`);
 
       for (const item of group.items) {
-        lines.push(`  │ ${item.quantity}x ${text(item.menuItem.name)}`);
+        await printLine(`  │ ${item.quantity}x ${text(item.menuItem.name)}`);
 
         for (const cg of item.menuItem.customizations) {
           const selectedIds = item.selectedCustomizations[cg.id] ?? [];
@@ -61,20 +102,18 @@ export async function printReceipt(order: Order): Promise<void> {
               const mod = option.priceModifier !== 0
                 ? ` (${option.priceModifier > 0 ? '+' : ''}${formatCurrency(option.priceModifier)})`
                 : '';
-              lines.push(`  │    └ ${text(option.name)}${mod}`);
+              await printLine(`  │    └ ${text(option.name)}${mod}`);
             }
           }
         }
-
-        lines.push(`  │${formatCurrency(item.lineTotal).padStart(38)}`);
+        await printLine(`  │${formatCurrency(item.lineTotal).padStart(30)}`);
       }
-
-      lines.push(`  └${'─'.repeat(38)}`);
+      await printLine(`  └${'─'.repeat(30)}`);
     }
   } else {
     // Standalone: flat list
     for (const item of order.items) {
-      lines.push(`  ${item.quantity}x ${text(item.menuItem.name)}`);
+      await printLine(`  ${item.quantity}x ${text(item.menuItem.name)}`);
 
       for (const group of item.menuItem.customizations) {
         const selectedIds = item.selectedCustomizations[group.id] ?? [];
@@ -83,31 +122,43 @@ export async function printReceipt(order: Order): Promise<void> {
             const mod = option.priceModifier !== 0
               ? ` (${option.priceModifier > 0 ? '+' : ''}${formatCurrency(option.priceModifier)})`
               : '';
-            lines.push(`     └ ${text(option.name)}${mod}`);
+            await printLine(`     └ ${text(option.name)}${mod}`);
           }
         }
       }
-
-      lines.push(`${' '.repeat(30)}${formatCurrency(item.lineTotal).padStart(10)}`);
+      await printLine(`${' '.repeat(22)}${formatCurrency(item.lineTotal).padStart(10)}`);
     }
   }
 
-  lines.push(divider);
-  lines.push(`  Subtotal${formatCurrency(order.subtotal).padStart(30)}`);
-  lines.push(`  Tax (${(config.taxRate * 100).toFixed(0)}%)${formatCurrency(order.tax).padStart(28)}`);
-  lines.push(divider);
-  lines.push(`  TOTAL${formatCurrency(order.total).padStart(33)}`);
-  lines.push(doubleDivider);
+  await printLine(divider);
+  await printLine(`  ${t.subtotal}${formatCurrency(order.subtotal).padStart(32 - t.subtotal.length)}`);
+  await printLine(`  ${t.tax} (${(config.taxRate * 100).toFixed(0)}%)${formatCurrency(order.tax).padStart(28 - t.tax.length)}`);
+  await printLine(divider);
+  await printLine(`  ${t.total}${formatCurrency(order.total).padStart(32 - t.total.length)}`);
+  await printLine(doubleDivider);
 
   if (order.transactionId) {
-    lines.push(`  Transaction: ${order.transactionId}`);
+    await printLine(`  Transaction: ${order.transactionId}`);
   }
 
-  lines.push('');
-  lines.push(`  Thank you for choosing ${config.restaurantName}!`);
-  lines.push('');
-  lines.push(doubleDivider);
-  lines.push('');
+  await printLine('');
 
-  console.log(lines.join('\n'));
+  // If no fiscal data, print a generic thank you
+  await printLine(`  ${t.thankYou} ${config.restaurantName}!`);
+
+  await printLine('');
+  await printLine(`       Potenciado por kiki`);
+
+  await printLine('');
+  await printLine(doubleDivider);
+  await printLine('');
+
+  if (useHardware) {
+    await IcodPrinter.cutPaper();
+    try { await IcodPrinter.disconnect(); } catch (e) {}
+  } else {
+    // Simulate delay
+    await new Promise((resolve) => setTimeout(resolve, config.printDelay));
+    console.log('\n[SIMULATED KIOSK RECEIPT]\n' + lines.join('\n'));
+  }
 }
