@@ -1,14 +1,29 @@
 interface WelcomeProps {
   name: string;
+  bgUrl?: string | null;
   onStart: () => void;
 }
 
-export function Welcome({ name, onStart }: WelcomeProps) {
+export function Welcome({ name, bgUrl, onStart }: WelcomeProps) {
   return (
     <div className="relative flex min-h-dvh flex-col items-center justify-center gap-16 overflow-hidden bg-[#060e1d] px-8 text-center">
+      {bgUrl && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary
+              per-restaurant photo URLs, can't whitelist every domain for next/image */}
+          <img src={bgUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          {/* Same overlay values as the kiosk's WelcomeScreen media background,
+              for text legibility over a photo. */}
+          <div
+            className="absolute inset-0"
+            style={{ background: 'linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,0.65))' }}
+          />
+        </>
+      )}
+
       <div className="absolute inset-x-0 top-0 h-1 bg-primary" />
 
-      <div className="flex flex-col items-center gap-3">
+      <div className="relative flex flex-col items-center gap-3">
         <div className="flex flex-col items-center">
           <h1 className="font-heading text-6xl font-black tracking-tighter text-white sm:text-7xl">KIKI</h1>
           <div className="mt-2 h-1 w-12 rounded-full bg-primary" />
@@ -16,7 +31,7 @@ export function Welcome({ name, onStart }: WelcomeProps) {
         <p className="font-body text-sm uppercase tracking-[0.2em] text-white/70">{name}</p>
       </div>
 
-      <div className="flex flex-col items-center gap-3">
+      <div className="relative flex flex-col items-center gap-3">
         <button
           onClick={onStart}
           className="h-16 w-72 max-w-full rounded-xl bg-primary font-heading text-lg font-bold text-on-primary shadow-[0_8px_30px_-6px_rgba(204,255,0,0.6)] transition active:scale-[0.98]"

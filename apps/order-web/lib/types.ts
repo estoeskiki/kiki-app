@@ -57,6 +57,8 @@ export interface RestaurantSummary {
   isOpen: boolean;
   taxRate: number;
   currency?: string;
+  logoUrl?: string | null;
+  welcomeBgUrl?: string | null;
 }
 
 export interface FoodCourtSummary {
@@ -64,6 +66,7 @@ export interface FoodCourtSummary {
   slug: string;
   name: string;
   address: string | null;
+  welcomeBgUrl?: string | null;
 }
 
 export type StorefrontData =
