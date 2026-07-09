@@ -92,7 +92,7 @@ export default function CheckoutPage() {
   if (items.length === 0) {
     return (
       <div className="min-h-dvh">
-        <Header title="Pagar" backHref="/" showCart={false} />
+        <Header title="Pagar" showBack showCart={false} />
         <p className="p-10 text-center font-body text-text-muted">Tu carrito está vacío.</p>
       </div>
     );

@@ -73,19 +73,20 @@ export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }:
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={onClose}>
       <div
-        className="flex max-h-[75vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background sm:rounded-2xl"
+        className="relative flex max-h-[75vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
+        <button
+          onClick={onClose}
+          aria-label="Cerrar"
+          className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-surface text-text-primary shadow"
+        >
+          ✕
+        </button>
+
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="relative flex h-52 items-center justify-center" style={{ backgroundColor: getPlateColor(item.id) }}>
             <span className="font-heading text-8xl font-black text-text-secondary/20">{initial}</span>
-            <button
-              onClick={onClose}
-              aria-label="Cerrar"
-              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-surface text-text-primary shadow"
-            >
-              ✕
-            </button>
             {item.popular && (
               <span className="absolute bottom-3 left-4 rounded-full bg-primary px-3 py-1 text-xs font-bold text-on-primary">
                 ★ Popular
