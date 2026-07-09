@@ -35,6 +35,7 @@ interface CreateWebOrderBody {
   customerPhone?: string
   paymentMethod: PaymentMethod
   deliveryAddress?: Record<string, unknown>
+  notes?: string
   items: CartItemInput[]
 }
 
@@ -210,6 +211,7 @@ serve(async (req) => {
     })
     if (orderNumberError) return jsonResponse({ error: `order_number_failed:${orderNumberError.message}` }, 500)
     const orderNumber = parseInt(orderNumberData as unknown as string, 10) || 100
+    const notes = body.notes?.trim() || null
 
     // 7. Insert the parent order.
     const { data: order, error: orderError } = await supabaseAdmin
@@ -231,6 +233,7 @@ serve(async (req) => {
         table_id: tableId,
         table_label: tableLabel,
         delivery_address: body.deliveryAddress ?? null,
+        notes,
       })
       .select('id, created_at')
       .single()
@@ -257,6 +260,7 @@ serve(async (req) => {
           payment_status: 'pending',
           table_label: tableLabel,
           delivery_address: body.deliveryAddress ?? null,
+          notes,
         })
         .select('id')
         .single()

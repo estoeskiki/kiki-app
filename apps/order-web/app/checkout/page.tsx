@@ -31,11 +31,13 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash_on_delivery');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const groups = useMemo(() => getItemsByRestaurant(), [items, getItemsByRestaurant]);
+
   const { subtotal, tax } = useMemo(() => {
-    const groups = getItemsByRestaurant();
     let subtotal = 0;
     let tax = 0;
     for (const g of groups) {
@@ -44,9 +46,12 @@ export default function CheckoutPage() {
       tax += Math.round(groupSubtotal * getTaxRate(g.restaurantId));
     }
     return { subtotal, tax };
-  }, [items, getItemsByRestaurant, getTaxRate]);
+  }, [groups, getTaxRate]);
 
-  const canSubmit = items.length > 0 && customerName.trim().length > 0 && !isSubmitting;
+  const phoneDigits = customerPhone.replace(/\D/g, '');
+  const isPhoneValid = phoneDigits.length >= 8;
+
+  const canSubmit = items.length > 0 && customerName.trim().length > 0 && isPhoneValid && !isSubmitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -61,6 +66,7 @@ export default function CheckoutPage() {
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim() || undefined,
         paymentMethod,
+        notes: notes.trim() || undefined,
         items: items.map((item) => ({
           menuItemId: item.menuItem.id,
           restaurantId: item.restaurantId,
@@ -97,13 +103,20 @@ export default function CheckoutPage() {
       <Header title="Pagar" showBack showCart={false} />
 
       <div className="flex flex-col gap-6 px-4 py-4">
-        <section>
-          <h2 className="mb-2 font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Tu pedido</h2>
-          <div className="rounded-xl border border-border-light bg-surface px-4">
-            {items.map((item) => (
-              <CartItemRow key={item.id} item={item} />
-            ))}
-          </div>
+        <section className="flex flex-col gap-3">
+          <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Tu pedido</h2>
+          {groups.map((g) => (
+            <div key={g.restaurantId} className="rounded-xl border border-border-light bg-surface px-4">
+              {groups.length > 1 && (
+                <p className="border-b border-border-light py-2 font-heading text-xs font-bold uppercase tracking-wide text-text-secondary">
+                  {g.restaurantName}
+                </p>
+              )}
+              {g.items.map((item) => (
+                <CartItemRow key={item.id} item={item} />
+              ))}
+            </div>
+          ))}
         </section>
 
         <section>
@@ -118,29 +131,36 @@ export default function CheckoutPage() {
           <input
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="Nombre completo"
+            placeholder="Nombre"
             className="h-12 rounded-lg border border-border-light bg-surface px-4 font-body text-text-primary outline-none focus:border-primary"
           />
           <input
             value={customerPhone}
             onChange={(e) => setCustomerPhone(e.target.value)}
-            placeholder="Número de teléfono"
+            placeholder="61234567"
             type="tel"
             className="h-12 rounded-lg border border-border-light bg-surface px-4 font-body text-text-primary outline-none focus:border-primary"
+          />
+          {customerPhone.trim().length > 0 && !isPhoneValid && (
+            <p className="-mt-1 font-body text-xs text-error">Ingresa un número válido (mínimo 8 dígitos).</p>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Comentarios adicionales</h2>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Ej. sin cebolla, tocar el timbre, etc. (opcional)"
+            rows={3}
+            className="rounded-lg border border-border-light bg-surface px-4 py-3 font-body text-text-primary outline-none focus:border-primary"
           />
         </section>
 
         <section className="flex flex-col gap-2">
           <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Pago</h2>
-          <p className="font-body text-xs text-text-muted">Pagas en el restaurante al recoger tu pedido.</p>
-          <button
-            disabled
-            className="flex items-center justify-between rounded-lg border border-border-light bg-surface-container px-4 py-3 text-left opacity-50"
-          >
-            <span className="font-body text-sm font-semibold text-text-secondary">Yappy</span>
-            <span className="font-body text-xs text-text-muted">Próximamente</span>
-          </button>
-          {(['cash_on_delivery', 'card_on_delivery'] as const).map((method) => (
+          <p className="font-body text-xs text-text-muted">El pedido se paga cuando te lo entreguen.</p>
+          {(['card_on_delivery', 'cash_on_delivery'] as const).map((method) => (
             <button
               key={method}
               onClick={() => setPaymentMethod(method)}
@@ -149,7 +169,7 @@ export default function CheckoutPage() {
               }`}
             >
               <span className="font-body text-sm font-semibold text-text-primary">
-                {method === 'cash_on_delivery' ? 'Efectivo' : 'Tarjeta'}
+                {method === 'card_on_delivery' ? 'Tarjeta' : 'Efectivo'}
               </span>
               {paymentMethod === method && <span className="text-primary">✓</span>}
             </button>
