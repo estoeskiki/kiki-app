@@ -73,10 +73,10 @@ export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }:
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={onClose}>
       <div
-        className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background sm:rounded-2xl"
+        className="flex max-h-[75vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="relative flex h-52 items-center justify-center" style={{ backgroundColor: getPlateColor(item.id) }}>
             <span className="font-heading text-8xl font-black text-text-secondary/20">{initial}</span>
             <button
@@ -93,7 +93,7 @@ export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }:
             )}
           </div>
 
-          <div className="flex flex-col gap-2 px-5 pt-5">
+          <div className="flex flex-col gap-2 px-5 pb-8 pt-5">
             <h2 className="font-heading text-2xl font-bold tracking-tight text-text-primary">{localize(item.name)}</h2>
             <p className="font-body text-text-muted">{localize(item.description)}</p>
             <p className="font-heading text-xl font-bold text-text-primary">{formatCurrency(item.price)}</p>
