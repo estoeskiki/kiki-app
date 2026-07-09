@@ -16,16 +16,20 @@ export default function CheckoutPage() {
   const router = useRouter();
   const items = useCartStore((s) => s.items);
   const getItemsByRestaurant = useCartStore((s) => s.getItemsByRestaurant);
+  const clearCart = useCartStore((s) => s.clearCart);
   const setLastOrder = useLastOrderStore((s) => s.set);
 
   const mode = useSessionStore((s) => s.mode);
+  const slug = useSessionStore((s) => s.slug);
   const restaurantId = useSessionStore((s) => s.restaurantId);
   const foodCourtId = useSessionStore((s) => s.foodCourtId);
   const tableToken = useSessionStore((s) => s.tableToken);
   const tableLabel = useSessionStore((s) => s.tableLabel);
   // Chosen upfront on the Welcome/OrderType screens — falls back to takeaway
   // for a deep link that skipped that gate (e.g. a direct /mall/.../[restaurantId] visit).
+  // Still editable here (unless a table QR fixed it to dine-in) via setOrderType.
   const orderType = useSessionStore((s) => s.orderType) ?? 'takeaway';
+  const setOrderType = useSessionStore((s) => s.setOrderType);
   const getTaxRate = useSessionStore((s) => s.getTaxRate);
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash_on_delivery');
@@ -85,6 +89,11 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleClearCart = () => {
+    clearCart();
+    router.push(mode === 'food_court' ? `/mall/${slug}` : `/r/${slug}`);
+  };
+
   if (mode === null) {
     return <p className="p-10 text-center font-body text-text-muted">Tu sesión expiró — por favor escanea el código QR de nuevo.</p>;
   }
@@ -104,7 +113,12 @@ export default function CheckoutPage() {
 
       <div className="flex flex-col gap-6 px-4 py-4">
         <section className="flex flex-col gap-3">
-          <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Tu pedido</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Tu pedido</h2>
+            <button onClick={handleClearCart} className="font-body text-xs font-semibold text-error">
+              Vaciar carrito
+            </button>
+          </div>
           {groups.map((g) => (
             <div key={g.restaurantId} className="rounded-xl border border-border-light bg-surface px-4">
               {groups.length > 1 && (
@@ -121,9 +135,25 @@ export default function CheckoutPage() {
 
         <section>
           <h2 className="mb-2 font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Tipo de pedido</h2>
-          <div className="rounded-xl border border-primary bg-primary/10 px-4 py-3 font-body text-sm text-text-primary">
-            {orderType === 'dine-in' ? `Comer aquí${tableLabel ? ` — ${tableLabel}` : ''}` : 'Para llevar'}
-          </div>
+          {tableLabel ? (
+            <div className="rounded-xl border border-primary bg-primary/10 px-4 py-3 font-body text-sm text-text-primary">
+              Comer aquí — {tableLabel}
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              {(['dine-in', 'takeaway'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setOrderType(t)}
+                  className={`flex-1 rounded-lg border px-4 py-3 font-body text-sm font-semibold ${
+                    orderType === t ? 'border-primary bg-primary/10 text-text-primary' : 'border-border-light text-text-secondary'
+                  }`}
+                >
+                  {t === 'dine-in' ? 'Comer aquí' : 'Para llevar'}
+                </button>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="flex flex-col gap-3">

@@ -38,6 +38,7 @@ export async function getPublicStorefront(args: { slug?: string; tableToken?: st
         currency: result.restaurant.currency,
         logoUrl: result.restaurant.logo_url ?? null,
         welcomeBgUrl: result.restaurant.welcome_bg_url ?? null,
+        slogan: result.restaurant.slogan ?? null,
       },
       tableId: result.table_id ?? null,
       tableLabel: result.table_label ?? null,
@@ -52,6 +53,7 @@ export async function getPublicStorefront(args: { slug?: string; tableToken?: st
       name: result.food_court.name,
       address: result.food_court.address,
       welcomeBgUrl: result.food_court.welcome_bg_url ?? null,
+      slogan: result.food_court.slogan ?? null,
     },
     restaurants: (result.restaurants ?? []).map((r: any) => ({
       id: r.id,

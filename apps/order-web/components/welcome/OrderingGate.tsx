@@ -8,13 +8,14 @@ import { OrderTypeSelect } from './OrderTypeSelect';
 interface OrderingGateProps {
   name: string;
   bgUrl?: string | null;
+  slogan?: string | null;
   children: React.ReactNode;
 }
 
 // Mirrors the kiosk's Welcome -> OrderType -> Menu flow. Skips the OrderType
 // step when a table QR already told us this is dine-in (session.orderType is
 // preset by setFromStorefront in that case).
-export function OrderingGate({ name, bgUrl, children }: OrderingGateProps) {
+export function OrderingGate({ name, bgUrl, slogan, children }: OrderingGateProps) {
   const orderType = useSessionStore((s) => s.orderType);
   const setOrderType = useSessionStore((s) => s.setOrderType);
   const hasEnteredOrdering = useSessionStore((s) => s.hasEnteredOrdering);
@@ -26,6 +27,7 @@ export function OrderingGate({ name, bgUrl, children }: OrderingGateProps) {
       <Welcome
         name={name}
         bgUrl={bgUrl}
+        slogan={slogan}
         onStart={() => {
           setHasEnteredOrdering(true);
           setStep(orderType ? 'done' : 'orderType');

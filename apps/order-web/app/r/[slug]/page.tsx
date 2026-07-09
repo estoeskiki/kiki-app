@@ -11,13 +11,23 @@ export default function RestaurantStorefrontPage() {
   const { slug } = useParams<{ slug: string }>();
   const setFromStorefront = useSessionStore((s) => s.setFromStorefront);
   const [state, setState] = useState<'loading' | 'ready' | 'not_found'>('loading');
-  const [restaurant, setRestaurant] = useState<{ id: string; name: string; welcomeBgUrl?: string | null } | null>(null);
+  const [restaurant, setRestaurant] = useState<{
+    id: string;
+    name: string;
+    welcomeBgUrl?: string | null;
+    slogan?: string | null;
+  } | null>(null);
 
   useEffect(() => {
     getPublicStorefront({ slug }).then((data) => {
       if (data.type === 'restaurant') {
         setFromStorefront(slug, null, data);
-        setRestaurant({ id: data.restaurant.id, name: data.restaurant.name, welcomeBgUrl: data.restaurant.welcomeBgUrl });
+        setRestaurant({
+          id: data.restaurant.id,
+          name: data.restaurant.name,
+          welcomeBgUrl: data.restaurant.welcomeBgUrl,
+          slogan: data.restaurant.slogan,
+        });
         setState('ready');
       } else {
         setState('not_found');
@@ -33,7 +43,7 @@ export default function RestaurantStorefrontPage() {
   }
 
   return (
-    <OrderingGate name={restaurant.name} bgUrl={restaurant.welcomeBgUrl}>
+    <OrderingGate name={restaurant.name} bgUrl={restaurant.welcomeBgUrl} slogan={restaurant.slogan}>
       <StorefrontMenu restaurantId={restaurant.id} restaurantName={restaurant.name} />
     </OrderingGate>
   );

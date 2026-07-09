@@ -59,6 +59,7 @@ export interface RestaurantSummary {
   currency?: string;
   logoUrl?: string | null;
   welcomeBgUrl?: string | null;
+  slogan?: string | null;
 }
 
 export interface FoodCourtSummary {
@@ -67,6 +68,7 @@ export interface FoodCourtSummary {
   name: string;
   address: string | null;
   welcomeBgUrl?: string | null;
+  slogan?: string | null;
 }
 
 export type StorefrontData =

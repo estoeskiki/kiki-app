@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import type { CustomizationGroup, MenuItem } from '@/lib/types';
 import { formatCurrency, localize } from '@/lib/currency';
 import { getPlateColor } from '@/lib/plateColor';
@@ -86,7 +87,11 @@ export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }:
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="relative flex h-52 items-center justify-center" style={{ backgroundColor: getPlateColor(item.id) }}>
-            <span className="font-heading text-8xl font-black text-text-secondary/20">{initial}</span>
+            {item.image ? (
+              <Image src={item.image} alt="" fill sizes="(min-width: 640px) 512px, 100vw" className="object-cover" />
+            ) : (
+              <span className="font-heading text-8xl font-black text-text-secondary/20">{initial}</span>
+            )}
             {item.popular && (
               <span className="absolute bottom-3 left-4 rounded-full bg-primary px-3 py-1 text-xs font-bold text-on-primary">
                 ★ Popular

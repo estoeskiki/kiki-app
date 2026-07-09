@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { MenuItem } from '@/lib/types';
 import { formatCurrency, localize } from '@/lib/currency';
 import { getPlateColor } from '@/lib/plateColor';
@@ -19,7 +20,17 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
         className="relative flex h-28 items-center justify-center sm:h-36"
         style={{ backgroundColor: getPlateColor(item.id) }}
       >
-        <span className="font-heading text-6xl font-black text-text-secondary/20">{initial}</span>
+        {item.image ? (
+          <Image
+            src={item.image}
+            alt=""
+            fill
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+            className="object-cover"
+          />
+        ) : (
+          <span className="font-heading text-6xl font-black text-text-secondary/20">{initial}</span>
+        )}
         {item.popular && (
           <span className="absolute bottom-2 left-2 rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-on-primary">
             ★ Popular
