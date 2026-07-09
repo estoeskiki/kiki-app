@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from './useAuthStore';
 import { Order, OrderStatus } from '../data/types';
 import { RealtimeChannel } from '@supabase/supabase-js';
-import { printFiscalReceipt } from '../services/printerService';
 interface OrdersState {
   orders: Order[];
   isLoading: boolean;
@@ -131,16 +130,13 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
   markOrderReady: async (orderId) => {
     const { error } = await supabase.from('sub_orders').update({ status: 'ready' }).eq('id', orderId);
     if (!error) {
-      set((state) => {
-        const orderToPrint = state.orders.find((o) => o.id === orderId);
-        if (orderToPrint) {
-          // Fire and forget print (could await if we want to block UI)
-          printFiscalReceipt(orderToPrint);
-        }
-        return {
-          orders: state.orders.map((o) => (o.id === orderId ? { ...o, status: 'ready' } : o)),
-        };
-      });
+      // Fiscal receipt auto-print removed for now — restaurants don't have
+      // real fiscal_api_token values yet, so this was printing fake mock
+      // CUFE/QR data. Regular tickets still print via OrdersScreen's
+      // explicit print buttons (printTicket).
+      set((state) => ({
+        orders: state.orders.map((o) => (o.id === orderId ? { ...o, status: 'ready' } : o)),
+      }));
     }
   },
 
