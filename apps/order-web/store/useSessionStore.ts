@@ -17,8 +17,20 @@ interface SessionState {
   // Preset to 'dine-in' when a table QR was scanned — null means the
   // customer still needs to pick, same as the kiosk showing OrderTypeScreen.
   orderType: OrderType | null;
+<<<<<<< HEAD
   setFromStorefront: (slug: string | null, tableToken: string | null, data: StorefrontData) => void;
   setOrderType: (orderType: OrderType) => void;
+=======
+  // Whether the Welcome screen's CTA has already been tapped this storefront
+  // visit — lets OrderingGate skip straight past Welcome/OrderType on a
+  // re-mount (e.g. back-navigating from a restaurant to the food-court
+  // directory) instead of replaying them. Reset only when landing on a
+  // genuinely different restaurant/food court (see setFromStorefront).
+  hasEnteredOrdering: boolean;
+  setFromStorefront: (slug: string | null, tableToken: string | null, data: StorefrontData) => void;
+  setOrderType: (orderType: OrderType) => void;
+  setHasEnteredOrdering: (value: boolean) => void;
+>>>>>>> 3781059 (fix: back arrow takes you to welcome screen)
   getTaxRate: (restaurantId: string) => number;
   getRestaurantName: (restaurantId: string) => string;
   reset: () => void;
@@ -34,6 +46,10 @@ const initial = {
   tableId: null,
   tableLabel: null,
   orderType: null as OrderType | null,
+<<<<<<< HEAD
+=======
+  hasEnteredOrdering: false,
+>>>>>>> 3781059 (fix: back arrow takes you to welcome screen)
 };
 
 export const useSessionStore = create<SessionState>()(
@@ -42,7 +58,14 @@ export const useSessionStore = create<SessionState>()(
       ...initial,
 
       setFromStorefront: (slug, tableToken, data) => {
+<<<<<<< HEAD
         if (data.type === 'restaurant') {
+=======
+        const state = get();
+
+        if (data.type === 'restaurant') {
+          const isSameStorefront = state.mode === 'restaurant' && state.restaurantId === data.restaurant.id;
+>>>>>>> 3781059 (fix: back arrow takes you to welcome screen)
           set({
             mode: 'restaurant',
             slug,
@@ -52,9 +75,17 @@ export const useSessionStore = create<SessionState>()(
             tableToken,
             tableId: data.tableId,
             tableLabel: data.tableLabel,
+<<<<<<< HEAD
             orderType: data.tableLabel ? 'dine-in' : null,
           });
         } else if (data.type === 'food_court') {
+=======
+            orderType: data.tableLabel ? 'dine-in' : isSameStorefront ? state.orderType : null,
+            hasEnteredOrdering: isSameStorefront ? state.hasEnteredOrdering : false,
+          });
+        } else if (data.type === 'food_court') {
+          const isSameStorefront = state.mode === 'food_court' && state.foodCourtId === data.foodCourt.id;
+>>>>>>> 3781059 (fix: back arrow takes you to welcome screen)
           set({
             mode: 'food_court',
             slug,
@@ -64,13 +95,23 @@ export const useSessionStore = create<SessionState>()(
             tableToken,
             tableId: data.tableId,
             tableLabel: data.tableLabel,
+<<<<<<< HEAD
             orderType: data.tableLabel ? 'dine-in' : null,
+=======
+            orderType: data.tableLabel ? 'dine-in' : isSameStorefront ? state.orderType : null,
+            hasEnteredOrdering: isSameStorefront ? state.hasEnteredOrdering : false,
+>>>>>>> 3781059 (fix: back arrow takes you to welcome screen)
           });
         }
       },
 
       setOrderType: (orderType) => set({ orderType }),
 
+<<<<<<< HEAD
+=======
+      setHasEnteredOrdering: (value) => set({ hasEnteredOrdering: value }),
+
+>>>>>>> 3781059 (fix: back arrow takes you to welcome screen)
       getTaxRate: (restaurantId) => {
         return get().restaurants.find((r) => r.id === restaurantId)?.taxRate ?? 0.07;
       },

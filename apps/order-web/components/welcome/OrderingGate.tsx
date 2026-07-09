@@ -17,10 +17,21 @@ interface OrderingGateProps {
 export function OrderingGate({ name, bgUrl, children }: OrderingGateProps) {
   const orderType = useSessionStore((s) => s.orderType);
   const setOrderType = useSessionStore((s) => s.setOrderType);
-  const [step, setStep] = useState<'welcome' | 'orderType' | 'done'>('welcome');
+  const hasEnteredOrdering = useSessionStore((s) => s.hasEnteredOrdering);
+  const setHasEnteredOrdering = useSessionStore((s) => s.setHasEnteredOrdering);
+  const [step, setStep] = useState<'welcome' | 'orderType' | 'done'>(hasEnteredOrdering ? 'done' : 'welcome');
 
   if (step === 'welcome') {
-    return <Welcome name={name} bgUrl={bgUrl} onStart={() => setStep(orderType ? 'done' : 'orderType')} />;
+    return (
+      <Welcome
+        name={name}
+        bgUrl={bgUrl}
+        onStart={() => {
+          setHasEnteredOrdering(true);
+          setStep(orderType ? 'done' : 'orderType');
+        }}
+      />
+    );
   }
 
   if (step === 'orderType' && !orderType) {
