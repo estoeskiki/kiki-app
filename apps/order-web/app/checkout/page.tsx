@@ -137,7 +137,7 @@ export default function CheckoutPage() {
           <input
             value={customerPhone}
             onChange={(e) => setCustomerPhone(e.target.value)}
-            placeholder="61234567"
+            placeholder="Celular (ej. 61234567)"
             type="tel"
             className="h-12 rounded-lg border border-border-light bg-surface px-4 font-body text-text-primary outline-none focus:border-primary"
           />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CustomizationGroup, MenuItem } from '@/lib/types';
 import { formatCurrency, localize } from '@/lib/currency';
 import { getPlateColor } from '@/lib/plateColor';
@@ -21,6 +21,17 @@ export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }:
     return init;
   });
   const [quantity, setQuantity] = useState(1);
+
+  // Without this, the fixed-position overlay doesn't stop the page behind it
+  // from scrolling — on touch devices the drag gesture can hit the menu grid
+  // underneath instead of this modal's own scroll area.
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   const toggleOption = useCallback((group: CustomizationGroup, optionId: string) => {
     setSelected((prev) => {
