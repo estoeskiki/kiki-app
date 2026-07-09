@@ -34,7 +34,7 @@ export default function FoodCourtDirectoryPage() {
   if (state === 'not_found' || !foodCourt) return <p className="p-10 text-center font-body text-text-muted">No encontrado.</p>;
 
   return (
-    <OrderingGate name={foodCourt.name}>
+    <OrderingGate name={foodCourt.name} bgUrl={foodCourt.welcomeBgUrl}>
       <div className="min-h-dvh pb-24">
         <Header title={foodCourt.name} showCart />
         <p className="px-4 pb-2 font-body text-sm text-text-muted">Elige un restaurante para comenzar tu pedido. Puedes pedir de más de uno.</p>
