@@ -5,29 +5,38 @@ import { useParams } from 'next/navigation';
 import { getPublicStorefront } from '@/lib/api';
 import { useSessionStore } from '@/store/useSessionStore';
 import { StorefrontMenu } from '@/components/menu/StorefrontMenu';
+import { ScanQrBlocked } from '@/components/ui/ScanQrBlocked';
 
 export default function MallRestaurantPage() {
   const { slug, restaurantId } = useParams<{ slug: string; restaurantId: string }>();
   const setFromStorefront = useSessionStore((s) => s.setFromStorefront);
   const restaurants = useSessionStore((s) => s.restaurants);
+  const tableToken = useSessionStore((s) => s.tableToken);
   const cached = restaurants.find((r) => r.id === restaurantId);
   const [name, setName] = useState<string | null>(cached?.name ?? null);
   const [isOpen, setIsOpen] = useState<boolean>(cached?.isOpen ?? true);
   const [notFound, setNotFound] = useState(false);
 
+  // Reached normally via in-app navigation (tableToken already resolved) —
+  // only a cold/direct/shared visit with no token gets blocked in production.
+  const blocked = process.env.NODE_ENV !== 'development' && !tableToken;
+
   useEffect(() => {
-    if (name) return;
+    if (name || blocked) return;
     // Direct link / refresh without visiting the directory first — re-resolve.
-    getPublicStorefront({ slug }).then((data) => {
+    // Pass through any already-known table token so this refetch doesn't wipe
+    // the tableLabel/tableAllowsManualNumber a QR scan had already resolved.
+    getPublicStorefront({ slug, tableToken: tableToken ?? undefined }).then((data) => {
       if (data.type !== 'food_court') return setNotFound(true);
-      setFromStorefront(slug, null, data);
+      setFromStorefront(slug, tableToken, data);
       const match = data.restaurants.find((r) => r.id === restaurantId);
       if (!match) return setNotFound(true);
       setName(match.name);
       setIsOpen(match.isOpen);
     });
-  }, [slug, restaurantId, name, setFromStorefront]);
+  }, [slug, restaurantId, name, tableToken, blocked, setFromStorefront]);
 
+  if (blocked) return <ScanQrBlocked />;
   if (notFound) return <p className="p-10 text-center font-body text-text-muted">Restaurante no encontrado.</p>;
   if (!name) return <p className="p-10 text-center font-body text-text-muted">Cargando…</p>;
 

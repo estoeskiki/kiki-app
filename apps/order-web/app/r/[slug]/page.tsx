@@ -4,12 +4,17 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getPublicStorefront } from '@/lib/api';
 import { useSessionStore } from '@/store/useSessionStore';
-import { StorefrontMenu } from '@/components/menu/StorefrontMenu';
-import { OrderingGate } from '@/components/welcome/OrderingGate';
+import { RestaurantStorefrontView } from '@/components/menu/RestaurantStorefrontView';
+import { ScanQrBlocked } from '@/components/ui/ScanQrBlocked';
 
+// Dev/test-only fallback — production ordering always goes through /t/[token]
+// (the real QR entry point), which renders this same view without ever
+// exposing this bare, guessable slug URL. See ScanQrBlocked.
 export default function RestaurantStorefrontPage() {
   const { slug } = useParams<{ slug: string }>();
   const setFromStorefront = useSessionStore((s) => s.setFromStorefront);
+  // Already-resolved token from earlier in this session — preserved, not required.
+  const tableToken = useSessionStore((s) => s.tableToken);
   const [state, setState] = useState<'loading' | 'ready' | 'not_found'>('loading');
   const [restaurant, setRestaurant] = useState<{
     id: string;
@@ -19,10 +24,13 @@ export default function RestaurantStorefrontPage() {
     isOpen: boolean;
   } | null>(null);
 
+  const blocked = process.env.NODE_ENV !== 'development' && !tableToken;
+
   useEffect(() => {
-    getPublicStorefront({ slug }).then((data) => {
+    if (blocked) return;
+    getPublicStorefront({ slug, tableToken: tableToken ?? undefined }).then((data) => {
       if (data.type === 'restaurant') {
-        setFromStorefront(slug, null, data);
+        setFromStorefront(slug, tableToken, data);
         setRestaurant({
           id: data.restaurant.id,
           name: data.restaurant.name,
@@ -35,8 +43,9 @@ export default function RestaurantStorefrontPage() {
         setState('not_found');
       }
     });
-  }, [slug, setFromStorefront]);
+  }, [slug, tableToken, blocked, setFromStorefront]);
 
+  if (blocked) return <ScanQrBlocked />;
   if (state === 'loading') {
     return <p className="p-10 text-center font-body text-text-muted">Cargando…</p>;
   }
@@ -44,21 +53,5 @@ export default function RestaurantStorefrontPage() {
     return <p className="p-10 text-center font-body text-text-muted">Restaurante no encontrado.</p>;
   }
 
-  if (!restaurant.isOpen) {
-    return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 p-8 text-center">
-        <span className="text-5xl">🏪</span>
-        <p className="font-heading text-2xl font-bold text-text-primary">Cerrados al momento</p>
-        <p className="max-w-xs font-body text-sm text-text-secondary">
-          {restaurant.name} no está aceptando pedidos ahora mismo. Vuelve más tarde.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <OrderingGate name={restaurant.name} bgUrl={restaurant.welcomeBgUrl} slogan={restaurant.slogan}>
-      <StorefrontMenu restaurantId={restaurant.id} restaurantName={restaurant.name} />
-    </OrderingGate>
-  );
+  return <RestaurantStorefrontView restaurant={restaurant} />;
 }

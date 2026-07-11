@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { OrderType, RestaurantSummary, StorefrontData } from '@/lib/types';
+import type { OrderType, RestaurantSummary, StorefrontData, ZoneSummary } from '@/lib/types';
 
 export type OrderingMode = 'restaurant' | 'food_court' | null;
 
@@ -16,6 +16,10 @@ interface SessionState {
   // True for zones with many physical tables sharing one QR (e.g. "Sala VIP")
   // — the checkout shows an optional free-text table-number field when set.
   tableAllowsManualNumber: boolean;
+  // Every other zone/table sharing this food court/restaurant — lets the
+  // checkout offer a picker so the customer can correct a QR that got moved
+  // to the wrong physical spot (see setTable).
+  zones: ZoneSummary[];
   // Chosen once (Comer aquí / Para llevar), like the kiosk's OrderTypeScreen.
   // Preset to 'dine-in' when a table QR was scanned — null means the
   // customer still needs to pick, same as the kiosk showing OrderTypeScreen.
@@ -27,6 +31,9 @@ interface SessionState {
   // genuinely different restaurant/food court (see setFromStorefront).
   hasEnteredOrdering: boolean;
   setFromStorefront: (slug: string | null, tableToken: string | null, data: StorefrontData) => void;
+  // Customer correction at checkout — switches to a different zone from the
+  // `zones` list (e.g. Palco #1 -> Palco #2 because the QR card was moved).
+  setTable: (tableId: string) => void;
   setOrderType: (orderType: OrderType) => void;
   setHasEnteredOrdering: (value: boolean) => void;
   // "Empezar de nuevo" — lets the customer re-pick Comer aquí / Para llevar
@@ -49,6 +56,7 @@ const initial = {
   tableId: null,
   tableLabel: null,
   tableAllowsManualNumber: false,
+  zones: [] as ZoneSummary[],
   orderType: null as OrderType | null,
   hasEnteredOrdering: false,
 };
@@ -73,6 +81,7 @@ export const useSessionStore = create<SessionState>()(
             tableId: data.tableId,
             tableLabel: data.tableLabel,
             tableAllowsManualNumber: data.tableAllowsManualNumber,
+            zones: data.zones,
             orderType: data.tableLabel ? 'dine-in' : isSameStorefront ? state.orderType : null,
             hasEnteredOrdering: isSameStorefront ? state.hasEnteredOrdering : false,
           });
@@ -88,10 +97,17 @@ export const useSessionStore = create<SessionState>()(
             tableId: data.tableId,
             tableLabel: data.tableLabel,
             tableAllowsManualNumber: data.tableAllowsManualNumber,
+            zones: data.zones,
             orderType: data.tableLabel ? 'dine-in' : isSameStorefront ? state.orderType : null,
             hasEnteredOrdering: isSameStorefront ? state.hasEnteredOrdering : false,
           });
         }
+      },
+
+      setTable: (tableId) => {
+        const zone = get().zones.find((z) => z.id === tableId);
+        if (!zone) return;
+        set({ tableId: zone.id, tableLabel: zone.label, tableAllowsManualNumber: zone.allowsManualNumber });
       },
 
       setOrderType: (orderType) => set({ orderType }),

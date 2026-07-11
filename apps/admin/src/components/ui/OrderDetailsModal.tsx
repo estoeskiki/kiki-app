@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
-import { X, Phone } from 'lucide-react-native';
+import { X, Phone, MapPin } from 'lucide-react-native';
 import { Order } from '../../data/types';
 import { StatusBadge } from './StatusBadge';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -118,9 +118,12 @@ export function OrderDetailsModal({
                 )}
               </View>
               {order.tableLabel && (
-                <Text style={[styles.orderType, { color: colors.textMuted }]}>
-                  {order.tableLabel}{order.tableNumber ? ` · Mesa ${order.tableNumber}` : ''}
-                </Text>
+                <View style={[styles.locationChip, { backgroundColor: colors.surfaceHighlight, borderColor: colors.primary }]}>
+                  <MapPin color={colors.primary} size={14} strokeWidth={2.5} />
+                  <Text style={[styles.locationText, { color: colors.textPrimary }]}>
+                    {order.tableLabel}{order.tableNumber ? ` · Mesa ${order.tableNumber}` : ''}
+                  </Text>
+                </View>
               )}
               {order.orderType === 'delivery' && order.deliveryAddress && (
                 <Text style={[styles.orderType, { color: colors.textMuted }]}>
@@ -278,6 +281,22 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   phoneText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.sm,
+    letterSpacing: 0.2,
+  },
+  locationChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full,
+    borderWidth: 1.5,
+    marginTop: 2,
+  },
+  locationText: {
     fontFamily: fonts.bodyBold,
     fontSize: fontSizes.sm,
     letterSpacing: 0.2,

@@ -71,9 +71,18 @@ export interface FoodCourtSummary {
   slogan?: string | null;
 }
 
+// A zone/table QR destination — Palco #1, Palco #2, Sala VIP, or a regular
+// single-restaurant table. Listed alongside the resolved one so the customer
+// can correct it at checkout if a QR card got moved to the wrong spot.
+export interface ZoneSummary {
+  id: string;
+  label: string;
+  allowsManualNumber: boolean;
+}
+
 export type StorefrontData =
-  | { type: 'restaurant'; restaurant: RestaurantSummary; tableId: string | null; tableLabel: string | null; tableAllowsManualNumber: boolean }
-  | { type: 'food_court'; foodCourt: FoodCourtSummary; restaurants: RestaurantSummary[]; tableId: string | null; tableLabel: string | null; tableAllowsManualNumber: boolean }
+  | { type: 'restaurant'; restaurant: RestaurantSummary; tableId: string | null; tableLabel: string | null; tableAllowsManualNumber: boolean; zones: ZoneSummary[] }
+  | { type: 'food_court'; foodCourt: FoodCourtSummary; restaurants: RestaurantSummary[]; tableId: string | null; tableLabel: string | null; tableAllowsManualNumber: boolean; zones: ZoneSummary[] }
   | { type: 'error'; error: string };
 
 export interface OrderStatusSubOrder {

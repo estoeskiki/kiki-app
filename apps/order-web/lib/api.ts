@@ -7,7 +7,16 @@ import type {
   OrderType,
   PaymentMethod,
   StorefrontData,
+  ZoneSummary,
 } from './types';
+
+function mapZones(zones: any): ZoneSummary[] {
+  return (zones ?? []).map((z: any) => ({
+    id: z.id,
+    label: z.label,
+    allowsManualNumber: z.allows_manual_number ?? false,
+  }));
+}
 
 export async function getPublicStorefront(args: { slug?: string; tableToken?: string }): Promise<StorefrontData> {
   const timeout = new Promise<never>((_, reject) =>
@@ -43,6 +52,7 @@ export async function getPublicStorefront(args: { slug?: string; tableToken?: st
       tableId: result.table_id ?? null,
       tableLabel: result.table_label ?? null,
       tableAllowsManualNumber: result.table_allows_manual_number ?? false,
+      zones: mapZones(result.zones),
     };
   }
 
@@ -67,6 +77,7 @@ export async function getPublicStorefront(args: { slug?: string; tableToken?: st
     tableId: result.table_id ?? null,
     tableLabel: result.table_label ?? null,
     tableAllowsManualNumber: result.table_allows_manual_number ?? false,
+    zones: mapZones(result.zones),
   };
 }
 
@@ -126,6 +137,11 @@ export interface CreateWebOrderPayload {
   restaurantId?: string;
   foodCourtId?: string;
   tableToken?: string;
+  // Customer-confirmed zone, which may differ from tableToken's own zone if
+  // they corrected it at checkout (e.g. a QR card got moved). The server
+  // only honors this when it belongs to the same food court/restaurant the
+  // token resolved to.
+  tableId?: string;
   tableNumber?: string;
   orderType: OrderType;
   customerName: string;

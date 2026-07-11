@@ -30,6 +30,11 @@ interface CreateWebOrderBody {
   restaurantId?: string
   foodCourtId?: string
   tableToken?: string
+  // Customer-confirmed zone at checkout, which may differ from tableToken's
+  // own zone if they corrected it (e.g. a QR card got physically moved).
+  // Only honored when it belongs to the same food court/restaurant the
+  // token resolved to — see step 1 below.
+  tableId?: string
   tableNumber?: string
   orderType: OrderType
   customerName: string
@@ -112,7 +117,33 @@ serve(async (req) => {
       tableLabel = table.label
       restaurantId = table.restaurant_id
       foodCourtId = table.food_court_id
-      if (table.allows_manual_number) {
+      let allowsManualNumber = table.allows_manual_number
+
+      // Customer corrected the zone at checkout (e.g. QR moved from Palco #1
+      // to Palco #2) — only honor it if it's a sibling zone of the one the
+      // token actually resolved to, so a client can't jump to an unrelated
+      // restaurant/food court's table by sending an arbitrary id.
+      if (body.tableId && body.tableId !== table.id) {
+        const { data: override } = await supabaseAdmin
+          .from('tables')
+          .select('id, label, restaurant_id, food_court_id, allows_manual_number')
+          .eq('id', body.tableId)
+          .eq('is_active', true)
+          .single()
+
+        const sameScope = override && (
+          (foodCourtId && override.food_court_id === foodCourtId) ||
+          (restaurantId && override.restaurant_id === restaurantId)
+        )
+
+        if (sameScope) {
+          tableId = override.id
+          tableLabel = override.label
+          allowsManualNumber = override.allows_manual_number
+        }
+      }
+
+      if (allowsManualNumber) {
         tableNumber = body.tableNumber?.trim() || null
       }
     }

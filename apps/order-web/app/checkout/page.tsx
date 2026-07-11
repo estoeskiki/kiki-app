@@ -24,8 +24,11 @@ export default function CheckoutPage() {
   const restaurantId = useSessionStore((s) => s.restaurantId);
   const foodCourtId = useSessionStore((s) => s.foodCourtId);
   const tableToken = useSessionStore((s) => s.tableToken);
+  const tableId = useSessionStore((s) => s.tableId);
   const tableLabel = useSessionStore((s) => s.tableLabel);
   const tableAllowsManualNumber = useSessionStore((s) => s.tableAllowsManualNumber);
+  const zones = useSessionStore((s) => s.zones);
+  const setTable = useSessionStore((s) => s.setTable);
   // Chosen upfront on the Welcome/OrderType screens — falls back to takeaway
   // for a deep link that skipped that gate (e.g. a direct /mall/.../[restaurantId] visit).
   // Still editable here (unless a table QR fixed it to dine-in) via setOrderType.
@@ -68,6 +71,7 @@ export default function CheckoutPage() {
         restaurantId: restaurantId ?? undefined,
         foodCourtId: foodCourtId ?? undefined,
         tableToken: tableToken ?? undefined,
+        tableId: tableId ?? undefined,
         tableNumber: tableAllowsManualNumber ? tableNumber.trim() || undefined : undefined,
         orderType,
         customerName: customerName.trim(),
@@ -140,21 +144,9 @@ export default function CheckoutPage() {
           <h2 className="-mb-1 font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Tipo de pedido</h2>
           {tableLabel ? (
             <div className="rounded-xl border border-primary bg-primary/10 px-4 py-3 font-body text-sm text-text-primary">
-              Comer aquí — {tableLabel}
+              Comer aquí
             </div>
-          ) : null}
-          {tableAllowsManualNumber && (
-            <div className="flex flex-col gap-1">
-              <input
-                value={tableNumber}
-                onChange={(e) => setTableNumber(e.target.value)}
-                placeholder="Número de mesa (opcional)"
-                className="h-12 rounded-lg border border-border-light bg-surface px-4 font-body text-text-primary outline-none focus:border-primary"
-              />
-              <p className="font-body text-xs text-text-muted">Revisa el número en tu tarjeta QR — ayuda al mesero a encontrarte.</p>
-            </div>
-          )}
-          {!tableLabel && (
+          ) : (
             <div className="flex gap-2">
               {(['dine-in', 'takeaway'] as const).map((t) => (
                 <button
@@ -170,6 +162,37 @@ export default function CheckoutPage() {
             </div>
           )}
         </section>
+
+        {zones.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="-mb-1 font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Confirma tu ubicación</h2>
+            <p className="-mt-2 font-body text-xs text-text-muted">Escogimos esta según tu código QR — cámbiala si no es correcta.</p>
+            <div className="flex flex-wrap gap-2">
+              {zones.map((zone) => (
+                <button
+                  key={zone.id}
+                  onClick={() => setTable(zone.id)}
+                  className={`rounded-lg border px-4 py-3 font-body text-sm font-semibold ${
+                    tableId === zone.id ? 'border-primary bg-primary/10 text-text-primary' : 'border-border-light text-text-secondary'
+                  }`}
+                >
+                  {zone.label}
+                </button>
+              ))}
+            </div>
+            {tableAllowsManualNumber && (
+              <div className="flex flex-col gap-1">
+                <input
+                  value={tableNumber}
+                  onChange={(e) => setTableNumber(e.target.value)}
+                  placeholder="Número de mesa (opcional)"
+                  className="h-12 rounded-lg border border-border-light bg-surface px-4 font-body text-text-primary outline-none focus:border-primary"
+                />
+                <p className="font-body text-xs text-text-muted">Revisa el número en tu tarjeta QR — ayuda al mesero a encontrarte.</p>
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="flex flex-col gap-3">
           <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Tus datos</h2>
