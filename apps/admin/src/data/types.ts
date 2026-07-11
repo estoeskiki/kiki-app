@@ -54,6 +54,7 @@ export type OrderStatus =
   | 'preparing'
   | 'ready'
   | 'completed'
+  | 'cancelled'
   | 'failed';
 
 export type OrderChannel = 'kiosk' | 'web';
@@ -88,4 +89,5 @@ export interface Order {
   paymentStatus?: PaymentStatus;
   tableLabel?: string | null;
   deliveryAddress?: DeliveryAddress | null;
+  notes?: string | null;
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { fetchMenu } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import type { Category, MenuItem } from '@/lib/types';
+import { useSessionStore } from '@/store/useSessionStore';
 import { Header } from '@/components/layout/Header';
 import { CategoryTabs } from './CategoryTabs';
 import { MenuGrid } from './MenuGrid';
@@ -17,6 +18,7 @@ interface StorefrontMenuProps {
 }
 
 export function StorefrontMenu({ restaurantId, restaurantName, backHref }: StorefrontMenuProps) {
+  const restartOrdering = useSessionStore((s) => s.restartOrdering);
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export function StorefrontMenu({ restaurantId, restaurantName, backHref }: Store
 
   return (
     <div className="min-h-dvh pb-24">
-      <Header title={restaurantName} backHref={backHref} />
+      <Header title={restaurantName} backHref={backHref} onRestart={restartOrdering} />
       <CategoryTabs categories={categories} activeId={activeCategoryId} onSelect={setActiveCategoryId} />
       {isLoading ? (
         <p className="px-4 py-10 text-center font-body text-text-muted">Cargando menú…</p>

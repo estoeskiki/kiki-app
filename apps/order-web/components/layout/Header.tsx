@@ -10,9 +10,11 @@ interface HeaderProps {
   backHref?: string;
   showBack?: boolean;
   showCart?: boolean;
+  /** Shows a restart icon that re-triggers the Welcome/OrderType flow (see useSessionStore.restartOrdering). */
+  onRestart?: () => void;
 }
 
-export function Header({ title, backHref, showBack, showCart = true }: HeaderProps) {
+export function Header({ title, backHref, showBack, showCart = true, onRestart }: HeaderProps) {
   const router = useRouter();
   const itemCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
 
@@ -31,20 +33,32 @@ export function Header({ title, backHref, showBack, showCart = true }: HeaderPro
         <h1 className="truncate font-heading text-lg font-bold tracking-tight text-text-primary">{title}</h1>
       </div>
 
-      {showCart && (
-        <Link
-          href="/checkout"
-          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container text-text-primary"
-          aria-label="Carrito"
-        >
-          🛒
-          {itemCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-bold text-on-primary">
-              {itemCount}
-            </span>
-          )}
-        </Link>
-      )}
+      <div className="flex shrink-0 items-center gap-2">
+        {onRestart && (
+          <button
+            onClick={onRestart}
+            aria-label="Empezar de nuevo"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container text-text-primary"
+          >
+            ↺
+          </button>
+        )}
+
+        {showCart && (
+          <Link
+            href="/checkout"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full bg-surface-container text-text-primary"
+            aria-label="Carrito"
+          >
+            🛒
+            {itemCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-bold text-on-primary">
+                {itemCount}
+              </span>
+            )}
+          </Link>
+        )}
+      </div>
     </header>
   );
 }

@@ -31,28 +31,28 @@ export function Welcome({ name, bgUrl, slogan, onStart }: WelcomeProps) {
 
       <div className="absolute inset-x-0 top-0 h-1 bg-primary" />
 
-      <div className="relative flex flex-col items-center gap-4">
-        <p className="font-body text-xs font-bold uppercase tracking-[0.3em] text-primary">Bienvenido a</p>
+      <div className="fade-up-item relative flex flex-col items-center gap-4" style={{ animationDelay: '80ms' }}>
+        <p className="font-body text-xs font-bold uppercase tracking-[0.25em] text-primary">Bienvenido a</p>
         <div className="flex flex-col items-center">
-          <h1 className="font-heading text-4xl font-black leading-[1.05] tracking-tight text-white sm:text-5xl">
+          <h1 className="font-heading text-4xl font-black leading-[1.05] tracking-tighter text-white sm:text-5xl">
             {name}
           </h1>
           <div className="mt-3 h-1 w-12 rounded-full bg-primary" />
         </div>
-        {slogan && <p className="max-w-xs font-body text-base italic text-white/70">{slogan}</p>}
+        {slogan && <p className="max-w-xs font-body text-base italic tracking-tight text-white/70">{slogan}</p>}
       </div>
 
-      <div className="relative flex flex-col items-center">
+      <div className="fade-up-item relative flex flex-col items-center" style={{ animationDelay: '220ms' }}>
         <button
           onClick={onStart}
-          className="h-16 w-72 max-w-full rounded-xl bg-primary font-heading text-lg font-bold text-on-primary shadow-[0_8px_30px_-6px_rgba(204,255,0,0.6)] transition active:scale-[0.98]"
+          className="h-16 w-72 max-w-full rounded-xl bg-primary font-heading text-lg font-bold tracking-tight text-on-primary shadow-[0_8px_30px_-6px_rgba(204,255,0,0.6)] transition active:scale-[0.98]"
         >
           Comenzar pedido
         </button>
       </div>
 
-      <p className="absolute bottom-8 font-body text-xs tracking-wide text-white/50">
-        Powered by <span className="font-bold text-primary">kiki</span>
+      <p className="fade-up-item absolute bottom-8 font-body text-xs tracking-wide text-white/50" style={{ animationDelay: '320ms' }}>
+        Powered by <span className="font-heading font-bold tracking-tighter text-primary">kiki</span>
       </p>
     </div>
   );

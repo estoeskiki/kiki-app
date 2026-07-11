@@ -16,6 +16,7 @@ export default function RestaurantStorefrontPage() {
     name: string;
     welcomeBgUrl?: string | null;
     slogan?: string | null;
+    isOpen: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export default function RestaurantStorefrontPage() {
           name: data.restaurant.name,
           welcomeBgUrl: data.restaurant.welcomeBgUrl,
           slogan: data.restaurant.slogan,
+          isOpen: data.restaurant.isOpen,
         });
         setState('ready');
       } else {
@@ -40,6 +42,18 @@ export default function RestaurantStorefrontPage() {
   }
   if (state === 'not_found' || !restaurant) {
     return <p className="p-10 text-center font-body text-text-muted">Restaurante no encontrado.</p>;
+  }
+
+  if (!restaurant.isOpen) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 p-8 text-center">
+        <span className="text-5xl">🏪</span>
+        <p className="font-heading text-2xl font-bold text-text-primary">Cerrados al momento</p>
+        <p className="max-w-xs font-body text-sm text-text-secondary">
+          {restaurant.name} no está aceptando pedidos ahora mismo. Vuelve más tarde.
+        </p>
+      </div>
+    );
   }
 
   return (

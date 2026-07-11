@@ -6,11 +6,21 @@ import { useCartStore } from '@/store/useCartStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useLastOrderStore } from '@/store/useLastOrderStore';
 import { createWebOrder } from '@/lib/api';
+import { localize } from '@/lib/currency';
 import { Header } from '@/components/layout/Header';
 import { CartItemRow } from '@/components/cart/CartItemRow';
 import { CartSummary } from '@/components/cart/CartSummary';
 import { Button } from '@/components/ui/Button';
-import type { PaymentMethod } from '@/lib/types';
+import type { CartItem, PaymentMethod } from '@/lib/types';
+
+function customizationSummary(item: CartItem): string {
+  const parts: string[] = [];
+  for (const group of item.menuItem.customizations) {
+    const ids = item.selectedCustomizations[group.id] ?? [];
+    for (const opt of group.options) if (ids.includes(opt.id)) parts.push(localize(opt.name));
+  }
+  return parts.join(', ');
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -32,7 +42,7 @@ export default function CheckoutPage() {
   const setOrderType = useSessionStore((s) => s.setOrderType);
   const getTaxRate = useSessionStore((s) => s.getTaxRate);
 
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash_on_delivery');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card_on_delivery');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
@@ -81,7 +91,26 @@ export default function CheckoutPage() {
       // Cart is cleared on the thank-you screen's mount, not here — clearing
       // it before navigating away made this page's empty-cart state flash
       // for a frame while the route transition was still in flight.
-      setLastOrder({ orderId, orderNumber, customerName: customerName.trim() });
+      setLastOrder({
+        orderId,
+        orderNumber,
+        customerName: customerName.trim(),
+        orderType,
+        paymentMethod,
+        tableLabel,
+        groups: groups.map((g) => ({
+          restaurantName: g.restaurantName,
+          items: g.items.map((item) => ({
+            name: localize(item.menuItem.name),
+            quantity: item.quantity,
+            lineTotal: item.lineTotal,
+            customizationSummary: customizationSummary(item) || undefined,
+          })),
+        })),
+        subtotal,
+        tax,
+        total: subtotal + tax,
+      });
       router.replace(`/order/${orderId}/thank-you`);
     } catch (err: any) {
       setError(err.message ?? 'Algo salió mal al hacer tu pedido. Por favor intenta de nuevo.');
@@ -190,7 +219,7 @@ export default function CheckoutPage() {
         <section className="flex flex-col gap-2">
           <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Pago</h2>
           <p className="font-body text-xs text-text-muted">El pedido se paga cuando te lo entreguen.</p>
-          {(['card_on_delivery', 'cash_on_delivery'] as const).map((method) => (
+          {(['yappy', 'card_on_delivery'] as const).map((method) => (
             <button
               key={method}
               onClick={() => setPaymentMethod(method)}
@@ -199,7 +228,7 @@ export default function CheckoutPage() {
               }`}
             >
               <span className="font-body text-sm font-semibold text-text-primary">
-                {method === 'card_on_delivery' ? 'Tarjeta' : 'Efectivo'}
+                {method === 'yappy' ? 'Yappy (en entrega)' : 'Tarjeta (en entrega)'}
               </span>
               {paymentMethod === method && <span className="text-primary">✓</span>}
             </button>

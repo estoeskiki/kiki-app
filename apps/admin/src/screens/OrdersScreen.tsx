@@ -12,8 +12,10 @@ import { spacing } from '../theme/spacing';
 import { fonts, fontSizes } from '../theme/typography';
 
 export default function OrdersScreen() {
-  const { orders, fetchOrders, subscribeToOrders, unsubscribeFromOrders, acceptOrder, markOrderReady, markOrderCompleted } = useOrdersStore();
+  const { orders, fetchOrders, subscribeToOrders, unsubscribeFromOrders, acceptOrder, markOrderReady, markOrderCompleted, cancelOrder } = useOrdersStore();
   const restaurantId = useAuthStore((s) => s.restaurantId);
+  const restaurantName = useAuthStore((s) => s.restaurantName);
+  const foodCourtName = useAuthStore((s) => s.foodCourtName);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const { colors } = useTheme();
 
@@ -25,12 +27,12 @@ export default function OrdersScreen() {
     return () => { unsubscribeFromOrders(); };
   }, [restaurantId, fetchOrders, subscribeToOrders, unsubscribeFromOrders]);
 
-  const activeOrders = orders.filter(o => !['completed', 'failed'].includes(o.status));
+  const activeOrders = orders.filter(o => !['completed', 'cancelled', 'failed'].includes(o.status));
 
   const handleAccept = async (orderId: string) => {
     acceptOrder(orderId);
     if (selectedOrder?.id === orderId) {
-      printTicket(selectedOrder).then(() => {
+      printTicket(selectedOrder, restaurantName ?? undefined, foodCourtName).then(() => {
         Alert.alert('Impreso', `Ticket para Orden #${selectedOrder.orderNumber} impreso.`);
       });
       setSelectedOrder({ ...selectedOrder, status: 'preparing' });
@@ -47,13 +49,37 @@ export default function OrdersScreen() {
     if (selectedOrder?.id === orderId) setSelectedOrder(null);
   };
 
+  const handleCancel = (orderId: string) => {
+    Alert.alert(
+      'Cancelar pedido',
+      '¿Seguro que quieres cancelar este pedido? Esta acción no se puede deshacer.',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Sí, cancelar',
+          style: 'destructive',
+          onPress: () => {
+            cancelOrder(orderId);
+            if (selectedOrder?.id === orderId) setSelectedOrder(null);
+          },
+        },
+      ],
+    );
+  };
+
+  const handleReprint = (order: Order) => {
+    printTicket(order, restaurantName ?? undefined, foodCourtName).then(() => {
+      Alert.alert('Impreso', `Ticket para Orden #${order.orderNumber} impreso.`);
+    });
+  };
+
   const handleAdvance = (orderId: string) => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
     switch (order.status) {
       case 'confirmed':
         acceptOrder(orderId);
-        printTicket(order).then(() => Alert.alert('Impreso', `Ticket para Orden #${order.orderNumber} impreso.`));
+        printTicket(order, restaurantName ?? undefined, foodCourtName).then(() => Alert.alert('Impreso', `Ticket para Orden #${order.orderNumber} impreso.`));
         break;
       case 'preparing': markOrderReady(orderId); break;
       case 'ready': markOrderCompleted(orderId); break;
@@ -109,6 +135,8 @@ export default function OrdersScreen() {
         onAccept={handleAccept}
         onMarkReady={handleMarkReady}
         onComplete={handleComplete}
+        onCancel={handleCancel}
+        onReprint={handleReprint}
       />
     </ScreenWrapper>
   );

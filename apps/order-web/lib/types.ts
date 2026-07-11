@@ -79,7 +79,10 @@ export type StorefrontData =
 export interface OrderStatusSubOrder {
   restaurant_name: string;
   status: 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
-  items: { name: string; quantity: number }[];
+  subtotal: number; // cents
+  tax: number; // cents
+  total: number; // cents
+  items: { name: string; quantity: number; item_price: number; line_total: number }[];
 }
 
 export interface OrderStatusResult {
@@ -90,5 +93,8 @@ export interface OrderStatusResult {
   payment_method: PaymentMethod | null;
   payment_status: 'pending' | 'paid' | 'failed';
   created_at: string;
+  subtotal: number; // cents
+  tax: number; // cents
+  total: number; // cents
   sub_orders: OrderStatusSubOrder[];
 }

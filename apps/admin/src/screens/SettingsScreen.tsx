@@ -89,11 +89,15 @@ function CardGroup({ children }: { children: React.ReactNode }) {
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
-  const { kioskIsOpen, toggleKiosk } = useSystemStore();
+  const { kioskIsOpen, toggleKiosk, fetchKioskStatus } = useSystemStore();
   const { signOut, user, orgId, restaurantId } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
   const { colors } = useTheme();
   const [isGenerating, setIsGenerating] = useState(false);
+
+  React.useEffect(() => {
+    if (restaurantId) fetchKioskStatus(restaurantId);
+  }, [restaurantId, fetchKioskStatus]);
 
   const handleGenerateToken = async () => {
     if (!orgId || !restaurantId) {
@@ -148,7 +152,10 @@ export default function SettingsScreen() {
             right={
               <Switch
                 value={kioskIsOpen}
-                onValueChange={toggleKiosk}
+                onValueChange={() => {
+                  if (restaurantId) toggleKiosk(restaurantId);
+                }}
+                disabled={!restaurantId}
                 trackColor={{ false: colors.surfaceHighlight, true: colors.success }}
                 thumbColor={colors.surface}
                 ios_backgroundColor={colors.surfaceHighlight}

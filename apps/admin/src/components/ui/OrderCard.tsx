@@ -27,6 +27,7 @@ export function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
     preparing: colors.statusPreparingText,
     ready: colors.statusReadyText,
     completed: colors.textMuted,
+    cancelled: colors.error,
     failed: colors.error,
   };
 
@@ -99,6 +100,12 @@ export function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
           </Text>
         )}
 
+        {order.notes && (
+          <Text style={[styles.notes, { color: colors.textSecondary }]} numberOfLines={2}>
+            💬 {order.notes}
+          </Text>
+        )}
+
         {/* Bottom row */}
         <View style={styles.bottomRow}>
           <Text style={[styles.time, { color: colors.textMuted }]}>
@@ -158,6 +165,11 @@ const styles = StyleSheet.create({
   detail: {
     fontFamily: fonts.body,
     fontSize: fontSizes.sm,
+  },
+  notes: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.sm,
+    fontStyle: 'italic',
   },
   typePill: {
     paddingHorizontal: spacing.sm,

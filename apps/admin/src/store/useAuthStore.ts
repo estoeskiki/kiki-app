@@ -7,6 +7,8 @@ interface AuthState {
   user: User | null;
   orgId: string | null;
   restaurantId: string | null;
+  restaurantName: string | null;
+  foodCourtName: string | null;
   role: string | null;
   isLoading: boolean;
   setSession: (session: Session | null) => void;
@@ -14,17 +16,32 @@ interface AuthState {
   signOut: () => Promise<void>;
 }
 
+async function fetchRestaurantInfo(restaurantId: string): Promise<{ name: string | null; foodCourtName: string | null }> {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select('name, food_courts(name)')
+    .eq('id', restaurantId)
+    .single();
+  if (error) {
+    console.error('Error fetching restaurant info:', error.message);
+    return { name: null, foodCourtName: null };
+  }
+  return { name: data?.name ?? null, foodCourtName: (data as any)?.food_courts?.name ?? null };
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   session: null,
   user: null,
   orgId: null,
   restaurantId: null,
+  restaurantName: null,
+  foodCourtName: null,
   role: null,
   isLoading: true,
 
   setSession: (session) => {
     if (!session) {
-      set({ session: null, user: null, orgId: null, restaurantId: null, role: null });
+      set({ session: null, user: null, orgId: null, restaurantId: null, restaurantName: null, foodCourtName: null, role: null });
       return;
     }
 
@@ -52,13 +69,17 @@ export const useAuthStore = create<AuthState>((set) => ({
           restaurantId: data.restaurant_id,
           role: data.role,
         });
+        if (data.restaurant_id) {
+          const { name, foodCourtName } = await fetchRestaurantInfo(data.restaurant_id);
+          set({ restaurantName: name, foodCourtName });
+        }
       } else {
         // [DEV AUTO-FIX] If the user has no org_members row (e.g. after db reset),
         // we automatically link them to the seeded Kiki Burgers restaurant.
         console.log('[DEV] Auto-linking orphaned user to Kiki Burgers...');
         const defaultOrgId = 'a0000000-0000-0000-0000-000000000001';
         const defaultRestaurantId = 'b0000000-0000-0000-0000-000000000001';
-        
+
         await supabase.from('org_members').insert({
           user_id: user.id,
           org_id: defaultOrgId,
@@ -72,6 +93,8 @@ export const useAuthStore = create<AuthState>((set) => ({
           restaurantId: defaultRestaurantId,
           role: 'owner',
         });
+        const { name, foodCourtName } = await fetchRestaurantInfo(defaultRestaurantId);
+        set({ restaurantName: name, foodCourtName });
       }
     })();
   },
@@ -98,7 +121,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signOut: async () => {
     await supabase.auth.signOut();
-    set({ session: null, user: null, orgId: null, restaurantId: null, role: null });
+    set({ session: null, user: null, orgId: null, restaurantId: null, restaurantName: null, foodCourtName: null, role: null });
   },
 }));
 

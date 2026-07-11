@@ -45,15 +45,22 @@ function orderTypeLabel(type: string): string {
  * Intelligently routes the print job to either the physical Senraise thermal 
  * printer, or the terminal console if we are developing locally.
  */
-export const printTicket = async (order: Order): Promise<boolean> => {
+export const printTicket = async (order: Order, restaurantName: string = 'Kiki', foodCourtName?: string | null): Promise<boolean> => {
   return new Promise(async (resolve) => {
 
     // 1. GRACEFUL FALLBACK (Emulator/Mac Development)
     if (Platform.OS !== 'android' || !SenraisePrinter) {
       console.log(`\n========================================`);
-      console.log(`🖨️  [SIMULATED TICKET] Orden #${order.orderNumber}`);
+      if (foodCourtName) {
+        console.log(`🖨️  [SIMULATED TICKET] ${foodCourtName} · ${restaurantName} — Orden #${order.orderNumber}`);
+      } else {
+        console.log(`🖨️  [SIMULATED TICKET] ${restaurantName} — Orden #${order.orderNumber}`);
+      }
       if (order.customerName) {
         console.log(`Cliente: ${order.customerName}`);
+      }
+      if (order.customerPhone) {
+        console.log(`Teléfono: ${order.customerPhone}`);
       }
       console.log(`Tipo: ${orderTypeLabel(order.orderType)}`);
       console.log(`----------------------------------------`);
@@ -62,6 +69,10 @@ export const printTicket = async (order: Order): Promise<boolean> => {
       });
       console.log(`----------------------------------------`);
       console.log(`Total: ${formatCurrency(order.total)}`);
+      if (order.notes) {
+        console.log(`----------------------------------------`);
+        console.log(`Comentarios: ${order.notes}`);
+      }
       console.log(`----------------------------------------`);
       console.log(`Potenciado por kiki`);
       console.log(`========================================\n`);
@@ -72,11 +83,17 @@ export const printTicket = async (order: Order): Promise<boolean> => {
 
     // 2. REAL PHYSICAL HARDWARE (Senraise POS Android Device)
     try {
-      await SenraisePrinter.printText("KIKI BURGERS\n");
+      if (foodCourtName) {
+        await SenraisePrinter.printText(`${foodCourtName.toUpperCase()}\n`);
+      }
+      await SenraisePrinter.printText(`${restaurantName.toUpperCase()}\n`);
 
       await SenraisePrinter.printText(`Orden: #${order.orderNumber}\n`);
       if (order.customerName) {
         await SenraisePrinter.printText(`Cliente: ${order.customerName}\n`);
+      }
+      if (order.customerPhone) {
+        await SenraisePrinter.printText(`Teléfono: ${order.customerPhone}\n`);
       }
       await SenraisePrinter.printText(`Tipo: ${orderTypeLabel(order.orderType)}\n`);
       await SenraisePrinter.printText("--------------------------------\n");
@@ -87,6 +104,10 @@ export const printTicket = async (order: Order): Promise<boolean> => {
 
       await SenraisePrinter.printText("--------------------------------\n");
       await SenraisePrinter.printText(`TOTAL: ${formatCurrency(order.total)}\n`);
+      if (order.notes) {
+        await SenraisePrinter.printText("--------------------------------\n");
+        await SenraisePrinter.printText(`Comentarios:\n${order.notes}\n`);
+      }
       await SenraisePrinter.printText("--------------------------------\n");
       await SenraisePrinter.printText("Potenciado por kiki\n");
       await SenraisePrinter.printText("\n\n\n"); // Spool paper out to tear off

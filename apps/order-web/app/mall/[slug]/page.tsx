@@ -13,6 +13,7 @@ import type { FoodCourtSummary, RestaurantSummary } from '@/lib/types';
 export default function FoodCourtDirectoryPage() {
   const { slug } = useParams<{ slug: string }>();
   const setFromStorefront = useSessionStore((s) => s.setFromStorefront);
+  const restartOrdering = useSessionStore((s) => s.restartOrdering);
   const [state, setState] = useState<'loading' | 'ready' | 'not_found'>('loading');
   const [foodCourt, setFoodCourt] = useState<FoodCourtSummary | null>(null);
   const [restaurants, setRestaurants] = useState<RestaurantSummary[]>([]);
@@ -36,7 +37,7 @@ export default function FoodCourtDirectoryPage() {
   return (
     <OrderingGate name={foodCourt.name} bgUrl={foodCourt.welcomeBgUrl} slogan={foodCourt.slogan}>
       <div className="min-h-dvh pb-24">
-        <Header title={foodCourt.name} showCart />
+        <Header title={foodCourt.name} showCart onRestart={restartOrdering} />
 
         <div className="fade-up-item mx-4 mt-3 flex flex-col gap-1 rounded-xl border-l-4 border-primary bg-primary/10 px-4 py-3">
           <p className="font-body text-sm font-semibold text-text-primary">

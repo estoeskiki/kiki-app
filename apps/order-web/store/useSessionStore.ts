@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import type { OrderType, RestaurantSummary, StorefrontData } from '@/lib/types';
 
 export type OrderingMode = 'restaurant' | 'food_court' | null;
@@ -26,6 +26,11 @@ interface SessionState {
   setFromStorefront: (slug: string | null, tableToken: string | null, data: StorefrontData) => void;
   setOrderType: (orderType: OrderType) => void;
   setHasEnteredOrdering: (value: boolean) => void;
+  // "Empezar de nuevo" — lets the customer re-pick Comer aquí / Para llevar
+  // without losing their resolved restaurant/food-court/table/cart. Only
+  // clears orderType when it wasn't fixed by a table QR (dine-in via QR
+  // isn't a choice to redo).
+  restartOrdering: () => void;
   getTaxRate: (restaurantId: string) => number;
   getRestaurantName: (restaurantId: string) => string;
   reset: () => void;
@@ -87,6 +92,12 @@ export const useSessionStore = create<SessionState>()(
 
       setHasEnteredOrdering: (value) => set({ hasEnteredOrdering: value }),
 
+      restartOrdering: () =>
+        set((state) => ({
+          hasEnteredOrdering: false,
+          orderType: state.tableLabel ? 'dine-in' : null,
+        })),
+
       getTaxRate: (restaurantId) => {
         return get().restaurants.find((r) => r.id === restaurantId)?.taxRate ?? 0.07;
       },
@@ -97,6 +108,14 @@ export const useSessionStore = create<SessionState>()(
 
       reset: () => set(initial),
     }),
-    { name: 'kiki-order-web-session' },
+    {
+      name: 'kiki-order-web-session',
+      // sessionStorage (not localStorage): scopes hasEnteredOrdering/orderType
+      // to this browser tab's lifetime. With localStorage, completing the
+      // Welcome/OrderType flow once would skip it on every future visit to
+      // the same link — including from a fresh tab days later — which reads
+      // as the link "randomly" opening straight to the restaurant list.
+      storage: createJSONStorage(() => sessionStorage),
+    },
   ),
 );

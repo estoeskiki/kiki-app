@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getOrderStatus } from '@/lib/api';
+import { formatCurrency } from '@/lib/currency';
 import type { OrderStatusResult } from '@/lib/types';
 
 const STEPS = ['confirmed', 'preparing', 'ready', 'completed'] as const;
@@ -160,17 +161,39 @@ export default function OrderTrackingPage() {
                     <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/10 px-1.5 font-heading text-xs font-bold text-white">
                       {item.quantity}
                     </span>
-                    {item.name}
+                    <span className="flex-1">{item.name}</span>
+                    <span className="text-white/50">{formatCurrency(item.line_total)}</span>
                   </li>
                 ))}
               </ul>
+              {order.sub_orders.length > 1 && (
+                <div className="flex items-center justify-between border-t border-white/10 px-4 py-2 font-body text-xs text-white/50">
+                  <span>Subtotal {sub.restaurant_name}</span>
+                  <span>{formatCurrency(sub.total)}</span>
+                </div>
+              )}
             </div>
           ))}
+
+          <div className="flex flex-col gap-1 rounded-xl bg-white/[0.04] px-4 py-3">
+            <div className="flex items-center justify-between font-body text-xs text-white/50">
+              <span>Subtotal</span>
+              <span>{formatCurrency(order.subtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between font-body text-xs text-white/50">
+              <span>Impuesto</span>
+              <span>{formatCurrency(order.tax)}</span>
+            </div>
+            <div className="flex items-center justify-between font-heading text-base font-bold text-white">
+              <span>Total</span>
+              <span className="text-primary">{formatCurrency(order.total)}</span>
+            </div>
+          </div>
         </div>
 
-        {!isTerminal && (order.payment_method === 'cash_on_delivery' || order.payment_method === 'card_on_delivery') && (
+        {!isTerminal && (order.payment_method === 'yappy' || order.payment_method === 'card_on_delivery') && (
           <div className="fade-up-item rounded-xl bg-white/[0.04] px-4 py-3 text-center font-body text-xs text-white/60" style={{ animationDelay: '340ms' }}>
-            {order.payment_method === 'cash_on_delivery' ? 'Ten efectivo listo para cuando recojas tu pedido.' : 'Ten tu tarjeta lista para cuando recojas tu pedido.'}
+            {order.payment_method === 'yappy' ? 'Ten tu Yappy listo para cuando recojas tu pedido.' : 'Ten tu tarjeta lista para cuando recojas tu pedido.'}
           </div>
         )}
 

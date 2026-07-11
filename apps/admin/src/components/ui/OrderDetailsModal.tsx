@@ -23,6 +23,8 @@ interface OrderDetailsModalProps {
   onAccept: (orderId: string) => void;
   onMarkReady: (orderId: string) => void;
   onComplete: (orderId: string) => void;
+  onCancel: (orderId: string) => void;
+  onReprint: (order: Order) => void;
 }
 
 export function OrderDetailsModal({
@@ -32,10 +34,14 @@ export function OrderDetailsModal({
   onAccept,
   onMarkReady,
   onComplete,
+  onCancel,
+  onReprint,
 }: OrderDetailsModalProps) {
   const { colors } = useTheme();
 
   if (!order) return null;
+
+  const isCancellable = order.status === 'confirmed' || order.status === 'preparing' || order.status === 'ready';
 
   const renderActionButton = () => {
     switch (order.status) {
@@ -159,6 +165,15 @@ export function OrderDetailsModal({
                 </Text>
               </View>
             ))}
+
+            {order.notes && (
+              <>
+                <Text style={[styles.sectionLabel, { color: colors.textMuted, marginTop: spacing.md }]}>COMENTARIOS</Text>
+                <View style={[styles.notesBox, { backgroundColor: colors.surfaceHighlight }]}>
+                  <Text style={[styles.notesText, { color: colors.textPrimary }]}>{order.notes}</Text>
+                </View>
+              </>
+            )}
           </ScrollView>
 
           {/* Footer */}
@@ -170,6 +185,24 @@ export function OrderDetailsModal({
               </Text>
             </View>
             {renderActionButton()}
+            <View style={styles.secondaryRow}>
+              <TouchableOpacity
+                style={[styles.secondaryBtn, { borderColor: colors.borderLight }]}
+                onPress={() => onReprint(order)}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.secondaryBtnText, { color: colors.textSecondary }]}>Reimprimir ticket</Text>
+              </TouchableOpacity>
+              {isCancellable && (
+                <TouchableOpacity
+                  style={[styles.secondaryBtn, { borderColor: colors.error }]}
+                  onPress={() => onCancel(order.id)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.secondaryBtnText, { color: colors.error }]}>Cancelar pedido</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
       </View>
@@ -288,6 +321,31 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: fontSizes.sm,
     flexShrink: 0,
+  },
+  notesBox: {
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.base,
+  },
+  notesText: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.sm,
+    lineHeight: fontSizes.sm * 1.4,
+  },
+  secondaryRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  secondaryBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: borderRadius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+  },
+  secondaryBtnText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.sm,
   },
   footer: {
     padding: spacing.xl,

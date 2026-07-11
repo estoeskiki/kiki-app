@@ -18,6 +18,7 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
     preparing:  { bg: colors.statusPreparingBg,  text: colors.statusPreparingText,  label: 'EN COCINA' },
     ready:      { bg: colors.statusReadyBg,       text: colors.statusReadyText,      label: 'LISTO' },
     completed:  { bg: colors.statusCompletedBg,   text: colors.statusCompletedText,  label: 'COMPLETADO' },
+    cancelled:  { bg: 'rgba(239,68,68,0.12)',      text: colors.error,                label: 'CANCELADO' },
     failed:     { bg: 'rgba(239,68,68,0.12)',      text: colors.error,                label: 'FALLIDO' },
   };
 

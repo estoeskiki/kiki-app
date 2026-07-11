@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from './useAuthStore';
 import { Order, OrderStatus } from '../data/types';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { playNewOrderChime } from '../services/notificationSound';
 interface OrdersState {
   orders: Order[];
   isLoading: boolean;
@@ -14,6 +15,7 @@ interface OrdersState {
   acceptOrder: (orderId: string) => Promise<void>; // Moves to 'preparing'
   markOrderReady: (orderId: string) => Promise<void>; // Moves to 'ready'
   markOrderCompleted: (orderId: string) => Promise<void>; // Moves to 'completed'
+  cancelOrder: (orderId: string) => Promise<void>; // Moves to 'cancelled'
 }
 
 export const useOrdersStore = create<OrdersState>((set, get) => ({
@@ -62,6 +64,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
           paymentStatus: d.payment_status,
           tableLabel: d.table_label,
           deliveryAddress: d.delivery_address,
+          notes: d.notes,
           items: d.order_items ? d.order_items.map((oi: any) => ({
             id: oi.id,
             menuItem: { id: oi.menu_item_id, name: oi.item_name, price: oi.item_price } as any,
@@ -98,9 +101,11 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
           filter: `restaurant_id=eq.${restaurantId}`,
         },
         (payload) => {
-          // Because real-time only sends the root table (orders) payload,
-          // for an INSERT, we might need to re-fetch to get nested order_items.
-          // For simplicity in the demo, we just refetch all active orders on any change.
+          if (payload.eventType === 'INSERT') {
+            playNewOrderChime();
+          }
+          // Realtime only sends the sub_orders row itself, not nested
+          // order_items — refetch to get the full shape regardless of event type.
           get().fetchOrders();
         }
       )
@@ -142,6 +147,15 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
 
   markOrderCompleted: async (orderId) => {
     const { error } = await supabase.from('sub_orders').update({ status: 'completed' }).eq('id', orderId);
+    if (!error) {
+      set((state) => ({
+        orders: state.orders.filter((o) => o.id !== orderId),
+      }));
+    }
+  },
+
+  cancelOrder: async (orderId) => {
+    const { error } = await supabase.from('sub_orders').update({ status: 'cancelled' }).eq('id', orderId);
     if (!error) {
       set((state) => ({
         orders: state.orders.filter((o) => o.id !== orderId),
