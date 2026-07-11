@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getOrderStatus } from '@/lib/api';
 import { formatCurrency } from '@/lib/currency';
+import { useSessionStore } from '@/store/useSessionStore';
 import type { OrderStatusResult } from '@/lib/types';
 
 const STEPS = ['confirmed', 'preparing', 'ready', 'completed'] as const;
@@ -18,17 +19,23 @@ const ORDER_TYPE_LABELS: Record<string, string> = {
   takeaway: 'Para llevar',
 };
 
-const STATUS_CHIP: Record<string, string> = {
-  confirmed: 'bg-white/10 text-white/70',
-  preparing: 'bg-warning/20 text-warning',
-  ready: 'bg-primary text-on-primary',
-  completed: 'bg-success/20 text-success',
-  cancelled: 'bg-error/20 text-error',
-};
-
 function stepIndex(status: string) {
   const i = STEPS.indexOf(status as (typeof STEPS)[number]);
   return i === -1 ? 0 : i;
+}
+
+// Whether the order overall is cancelled/done — computed from the
+// sub_orders themselves, not the parent orders.status column. A DB trigger
+// (sync_parent_order_status()) only ever advances that to
+// 'preparing'/'ready' and never to 'completed', so relying on it would poll
+// forever and never show the order as done. An order counts as cancelled
+// only when every restaurant is; otherwise cancelled sub_orders are ignored
+// when checking whether the rest have all completed.
+function computeProgress(order: OrderStatusResult) {
+  const activeSubOrders = order.sub_orders.filter((s) => s.status !== 'cancelled');
+  const isCancelled = activeSubOrders.length === 0;
+  const isTerminal = isCancelled || (activeSubOrders.length > 0 && activeSubOrders.every((s) => s.status === 'completed'));
+  return { isCancelled, isTerminal };
 }
 
 export default function OrderTrackingPage() {
@@ -36,6 +43,17 @@ export default function OrderTrackingPage() {
   const [order, setOrder] = useState<OrderStatusResult | null>(null);
   const [notFound, setNotFound] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // "Nueva orden" reopens the same storefront in a fresh tab — a new tab has
+  // its own sessionStorage, so OrderingGate always starts at Welcome there
+  // regardless of this tab's ordering state. Falls back to "/" (scan-the-QR
+  // copy) if session data isn't available, e.g. someone else opened this
+  // tracking link cold, on a different device.
+  const mode = useSessionStore((s) => s.mode);
+  const slug = useSessionStore((s) => s.slug);
+  const newOrderHref = slug ? (mode === 'food_court' ? `/mall/${slug}` : `/r/${slug}`) : '/';
+
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,7 +66,7 @@ export default function OrderTrackingPage() {
         return;
       }
       setOrder(result);
-      if (result.status === 'completed' || result.status === 'cancelled') {
+      if (computeProgress(result).isTerminal) {
         if (timer.current) clearInterval(timer.current);
       }
     }
@@ -76,23 +94,39 @@ export default function OrderTrackingPage() {
     );
   }
 
-  const current = stepIndex(order.status);
-  const isCancelled = order.status === 'cancelled';
-  const isTerminal = order.status === 'completed' || isCancelled;
-  const progressPct = (current / (STEPS.length - 1)) * 100;
+  const { isCancelled, isTerminal } = computeProgress(order);
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const shareData = { title: `Pedido #${order.order_number}`, text: 'Sigue mi pedido en KIKI', url };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // User closed the native share sheet without picking anything — not an error.
+      }
+      return;
+    }
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <div className="relative min-h-dvh overflow-hidden bg-[#060e1d]">
       <div className="absolute inset-x-0 top-0 h-1 bg-primary" />
 
       <div className="relative mx-auto flex max-w-lg flex-col gap-8 px-4 py-10">
-        <div className="fade-up-item flex flex-col items-center gap-3 text-center" style={{ animationDelay: '60ms' }}>
+        <div className="fade-up-item flex flex-col items-center gap-3 text-center" style={{ animationDelay: '20ms' }}>
           <div className="flex items-center gap-2">
             {!isTerminal && <span className="live-dot h-1.5 w-1.5 rounded-full bg-primary" />}
             <p className="font-body text-xs font-bold uppercase tracking-[0.2em] text-white/50">
-              {isTerminal ? 'Pedido' : 'Seguimiento en vivo'}
+              {isTerminal ? 'Pedido' : 'Live tracker'}
             </p>
           </div>
+          <p className="font-body text-xs uppercase tracking-[0.2em] text-white/40">Orden</p>
           <p className="font-heading text-5xl font-black tracking-tight text-primary">#{order.order_number}</p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="rounded-full border border-white/15 px-3 py-1 font-body text-xs font-semibold text-white/70">
@@ -101,90 +135,103 @@ export default function OrderTrackingPage() {
             {order.table_label && (
               <span className="rounded-full border border-white/15 px-3 py-1 font-body text-xs font-semibold text-white/70">
                 {order.table_label}
+                {order.table_number ? ` · Mesa ${order.table_number}` : ''}
               </span>
             )}
           </div>
         </div>
 
-        {isCancelled ? (
+        {isCancelled && (
           <div className="fade-up-item rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-center font-body text-sm font-semibold text-error" style={{ animationDelay: '160ms' }}>
             Este pedido fue cancelado.
-          </div>
-        ) : (
-          <div className="fade-up-item flex flex-col gap-4" style={{ animationDelay: '160ms' }}>
-            <div className="relative pt-1">
-              <div className="absolute left-[10%] right-[10%] top-[19px] h-0.5 bg-white/10" />
-              <div
-                className="absolute left-[10%] top-[19px] h-0.5 bg-primary transition-all duration-700 ease-out"
-                style={{ width: `${progressPct * 0.8}%` }}
-              />
-              <div className="relative flex items-start justify-between">
-                {STEPS.map((step, i) => (
-                  <div key={step} className="flex flex-1 flex-col items-center gap-2">
-                    <div
-                      className={`flex h-9 w-9 items-center justify-center rounded-full font-heading text-sm font-bold transition-colors duration-500 ${
-                        i < current
-                          ? 'bg-primary text-on-primary'
-                          : i === current
-                            ? 'step-active bg-primary text-on-primary'
-                            : 'bg-white/10 text-white/40'
-                      }`}
-                    >
-                      {i + 1}
-                    </div>
-                    <span
-                      className={`text-center font-body text-xs ${i <= current ? 'font-semibold text-white' : 'text-white/40'}`}
-                    >
-                      {STEP_LABELS[step]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {!isTerminal && <p className="text-center font-body text-xs text-white/50">Tiempo estimado: 15–25 minutos</p>}
           </div>
         )}
 
         <div className="fade-up-item flex flex-col gap-3" style={{ animationDelay: '260ms' }}>
-          {order.sub_orders.map((sub, i) => (
-            <div key={i} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
-              <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-4 py-3">
-                <p className="font-heading text-sm font-bold text-white">{sub.restaurant_name}</p>
-                <span className={`rounded-full px-3 py-1 font-body text-xs font-bold ${STATUS_CHIP[sub.status] ?? STATUS_CHIP.confirmed}`}>
-                  {STEP_LABELS[sub.status as keyof typeof STEP_LABELS] ?? sub.status}
-                </span>
-              </div>
-              <ul className="flex flex-col divide-y divide-white/10">
-                {sub.items.map((item, j) => (
-                  <li key={j} className="flex items-center gap-3 px-4 py-2.5 font-body text-sm text-white/70">
-                    <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/10 px-1.5 font-heading text-xs font-bold text-white">
-                      {item.quantity}
-                    </span>
-                    <span className="flex-1">{item.name}</span>
-                    <span className="text-white/50">{formatCurrency(item.line_total)}</span>
-                  </li>
-                ))}
-              </ul>
-              {order.sub_orders.length > 1 && (
-                <div className="flex items-center justify-between border-t border-white/10 px-4 py-2 font-body text-xs text-white/50">
-                  <span>Subtotal {sub.restaurant_name}</span>
-                  <span>{formatCurrency(sub.total)}</span>
-                </div>
-              )}
-            </div>
-          ))}
+          {order.sub_orders.map((sub, i) => {
+            const subCancelled = sub.status === 'cancelled';
+            const subTerminal = sub.status === 'completed' || subCancelled;
+            const subCurrent = stepIndex(sub.status);
+            const subProgressPct = (subCurrent / (STEPS.length - 1)) * 100;
+            return (
+              <div key={i} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
+                <div className="flex flex-col gap-3 border-b border-white/10 bg-white/[0.03] px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    {!subTerminal && <span className="live-dot h-1.5 w-1.5 rounded-full bg-primary" />}
+                    <p className="font-heading text-sm font-bold text-white">{sub.restaurant_name}</p>
+                  </div>
 
-          <div className="flex flex-col gap-1 rounded-xl bg-white/[0.04] px-4 py-3">
-            <div className="flex items-center justify-between font-body text-xs text-white/50">
-              <span>Subtotal</span>
-              <span>{formatCurrency(order.subtotal)}</span>
+                  {subCancelled ? (
+                    <span className="w-fit rounded-full bg-error/20 px-3 py-1 font-body text-xs font-bold text-error">Cancelado</span>
+                  ) : (
+                    <div className="relative pt-1">
+                      <div className="absolute left-[10%] right-[10%] top-[15px] h-0.5 bg-white/10" />
+                      <div
+                        className="absolute left-[10%] top-[15px] h-0.5 bg-primary transition-all duration-700 ease-out"
+                        style={{ width: `${subProgressPct * 0.8}%` }}
+                      />
+                      <div className="relative flex items-start justify-between">
+                        {STEPS.map((step, j) => (
+                          <div key={step} className="flex flex-1 flex-col items-center gap-1.5">
+                            <div
+                              className={`flex h-7 w-7 items-center justify-center rounded-full font-heading text-xs font-bold transition-colors duration-500 ${
+                                j < subCurrent
+                                  ? 'bg-primary text-on-primary'
+                                  : j === subCurrent
+                                    ? 'step-active bg-primary text-on-primary'
+                                    : 'bg-white/10 text-white/40'
+                              }`}
+                            >
+                              {j + 1}
+                            </div>
+                            <span
+                              className={`text-center font-body text-[10px] ${j <= subCurrent ? 'font-semibold text-white' : 'text-white/40'}`}
+                            >
+                              {STEP_LABELS[step]}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <ul className="flex flex-col divide-y divide-white/10">
+                  {sub.items.map((item, j) => (
+                    <li key={j} className="flex items-start gap-3 px-4 py-2.5 font-body text-sm text-white/70">
+                      <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/10 px-1.5 font-heading text-xs font-bold text-white">
+                        {item.quantity}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p>{item.name}</p>
+                        {item.customizations && item.customizations.length > 0 && (
+                          <p className="mt-0.5 font-body text-xs text-white/40">{item.customizations.join(', ')}</p>
+                        )}
+                      </div>
+                      <span className="shrink-0 text-white/50">{formatCurrency(item.line_total)}</span>
+                    </li>
+                  ))}
+                </ul>
+                {order.sub_orders.length > 1 && (
+                  <div className="flex items-center justify-between border-t border-white/10 bg-white/[0.03] px-4 py-2.5 font-body text-sm">
+                    <span className="font-semibold text-white/70">Subtotal {sub.restaurant_name}</span>
+                    <span className="font-bold text-white">{formatCurrency(sub.total)}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <div className="flex flex-col gap-2 rounded-xl bg-white/[0.04] px-4 py-3">
+            <div className="flex items-center justify-between font-body text-sm">
+              <span className="font-semibold text-white/70">Subtotal</span>
+              <span className="font-bold text-white">{formatCurrency(order.subtotal)}</span>
             </div>
-            <div className="flex items-center justify-between font-body text-xs text-white/50">
-              <span>Impuesto</span>
-              <span>{formatCurrency(order.tax)}</span>
+            <div className="flex items-center justify-between font-body text-sm">
+              <span className="font-semibold text-white/70">Impuesto</span>
+              <span className="font-bold text-white">{formatCurrency(order.tax)}</span>
             </div>
-            <div className="flex items-center justify-between font-heading text-base font-bold text-white">
+            <div className="my-0.5 h-px bg-white/10" />
+            <div className="flex items-center justify-between font-heading text-lg font-bold text-white">
               <span>Total</span>
               <span className="text-primary">{formatCurrency(order.total)}</span>
             </div>
@@ -197,11 +244,38 @@ export default function OrderTrackingPage() {
           </div>
         )}
 
-        {order.status === 'completed' && (
+        {isTerminal && !isCancelled && (
           <div className="fade-up-item rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-center font-body text-sm font-semibold text-success" style={{ animationDelay: '340ms' }}>
             ¡Disfruta tu pedido!
           </div>
         )}
+
+        <div className="fade-up-item flex gap-2" style={{ animationDelay: '420ms' }}>
+          <button
+            onClick={handleShare}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3 font-body text-sm font-semibold text-white/80 transition active:scale-[0.98]"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="18" cy="5" r="3" stroke="currentColor" strokeWidth="2" />
+              <circle cx="6" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+              <circle cx="18" cy="19" r="3" stroke="currentColor" strokeWidth="2" />
+              <line x1="8.59" y1="10.51" x2="15.42" y2="6.51" stroke="currentColor" strokeWidth="2" />
+              <line x1="8.59" y1="13.49" x2="15.42" y2="17.49" stroke="currentColor" strokeWidth="2" />
+            </svg>
+            {copied ? '¡Enlace copiado!' : 'Compartir'}
+          </button>
+          <a
+            href={newOrderHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-body text-sm font-bold text-on-primary shadow-[0_4px_20px_-6px_rgba(204,255,0,0.5)] transition active:scale-[0.98]"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            Nueva orden
+          </a>
+        </div>
       </div>
     </div>
   );

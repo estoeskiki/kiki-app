@@ -63,6 +63,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
           paymentMethod: d.payment_method,
           paymentStatus: d.payment_status,
           tableLabel: d.table_label,
+          tableNumber: d.table_number,
           deliveryAddress: d.delivery_address,
           notes: d.notes,
           items: d.order_items ? d.order_items.map((oi: any) => ({
@@ -71,6 +72,9 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
             quantity: oi.quantity,
             lineTotal: oi.line_total,
             selectedCustomizations: {},
+            customizations: oi.order_item_customizations
+              ? oi.order_item_customizations.map((c: any) => c.option_name)
+              : [],
           })) : [],
         }));
         set({ orders: mappedOrders });

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, Text, Alert } from 'react-native';
+import { View, StyleSheet, FlatList, Text, Alert, RefreshControl, TouchableOpacity } from 'react-native';
+import { RefreshCw } from 'lucide-react-native';
 import { ScreenWrapper } from '../components/layout/ScreenWrapper';
 import { OrderCard } from '../components/ui/OrderCard';
 import { OrderDetailsModal } from '../components/ui/OrderDetailsModal';
@@ -8,11 +9,11 @@ import { useAuthStore } from '../store/useAuthStore';
 import { printTicket } from '../services/printerService';
 import { Order } from '../data/types';
 import { useTheme } from '../theme/useTheme';
-import { spacing } from '../theme/spacing';
+import { spacing, borderRadius } from '../theme/spacing';
 import { fonts, fontSizes } from '../theme/typography';
 
 export default function OrdersScreen() {
-  const { orders, fetchOrders, subscribeToOrders, unsubscribeFromOrders, acceptOrder, markOrderReady, markOrderCompleted, cancelOrder } = useOrdersStore();
+  const { orders, isLoading, fetchOrders, subscribeToOrders, unsubscribeFromOrders, acceptOrder, markOrderReady, markOrderCompleted, cancelOrder } = useOrdersStore();
   const restaurantId = useAuthStore((s) => s.restaurantId);
   const restaurantName = useAuthStore((s) => s.restaurantName);
   const foodCourtName = useAuthStore((s) => s.foodCourtName);
@@ -98,13 +99,24 @@ export default function OrdersScreen() {
             </Text>
           )}
         </View>
-        {activeOrders.length > 0 && (
-          <View style={[styles.countBadge, { backgroundColor: colors.statusConfirmedBg }]}>
-            <Text style={[styles.countText, { color: colors.statusConfirmedText }]}>
-              {activeOrders.length}
-            </Text>
-          </View>
-        )}
+        <View style={styles.headerRight}>
+          {activeOrders.length > 0 && (
+            <View style={[styles.countBadge, { backgroundColor: colors.statusConfirmedBg }]}>
+              <Text style={[styles.countText, { color: colors.statusConfirmedText }]}>
+                {activeOrders.length}
+              </Text>
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={() => fetchOrders()}
+            disabled={isLoading}
+            style={[styles.refreshBtn, { backgroundColor: colors.surfaceContainer }]}
+            activeOpacity={0.7}
+          >
+            <RefreshCw color={colors.textPrimary} size={16} strokeWidth={2} />
+            <Text style={[styles.refreshBtnText, { color: colors.textPrimary }]}>Refrescar</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -115,6 +127,9 @@ export default function OrdersScreen() {
         )}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={() => fetchOrders()} tintColor={colors.primary} colors={[colors.primary]} />
+        }
         ListEmptyComponent={
           <View style={styles.empty}>
             <View style={[styles.emptyIcon, { backgroundColor: colors.surfaceContainer }]}>
@@ -162,12 +177,29 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xs,
     marginTop: 2,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   countBadge: {
     width: 32,
     height: 32,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  refreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+  },
+  refreshBtnText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.xs,
   },
   countText: {
     fontFamily: fonts.bodyBold,

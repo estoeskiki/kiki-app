@@ -13,6 +13,9 @@ interface SessionState {
   tableToken: string | null;
   tableId: string | null;
   tableLabel: string | null; // e.g. "Table 12" — set only when reached via QR
+  // True for zones with many physical tables sharing one QR (e.g. "Sala VIP")
+  // — the checkout shows an optional free-text table-number field when set.
+  tableAllowsManualNumber: boolean;
   // Chosen once (Comer aquí / Para llevar), like the kiosk's OrderTypeScreen.
   // Preset to 'dine-in' when a table QR was scanned — null means the
   // customer still needs to pick, same as the kiosk showing OrderTypeScreen.
@@ -45,6 +48,7 @@ const initial = {
   tableToken: null,
   tableId: null,
   tableLabel: null,
+  tableAllowsManualNumber: false,
   orderType: null as OrderType | null,
   hasEnteredOrdering: false,
 };
@@ -68,6 +72,7 @@ export const useSessionStore = create<SessionState>()(
             tableToken,
             tableId: data.tableId,
             tableLabel: data.tableLabel,
+            tableAllowsManualNumber: data.tableAllowsManualNumber,
             orderType: data.tableLabel ? 'dine-in' : isSameStorefront ? state.orderType : null,
             hasEnteredOrdering: isSameStorefront ? state.hasEnteredOrdering : false,
           });
@@ -82,6 +87,7 @@ export const useSessionStore = create<SessionState>()(
             tableToken,
             tableId: data.tableId,
             tableLabel: data.tableLabel,
+            tableAllowsManualNumber: data.tableAllowsManualNumber,
             orderType: data.tableLabel ? 'dine-in' : isSameStorefront ? state.orderType : null,
             hasEnteredOrdering: isSameStorefront ? state.hasEnteredOrdering : false,
           });

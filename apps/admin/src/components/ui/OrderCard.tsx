@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Order } from '../../data/types';
 import { StatusBadge } from './StatusBadge';
+import { paymentMethodLabel } from '../../utils/orderLabels';
 import { useTheme } from '../../theme/useTheme';
 import { fonts, fontSizes } from '../../theme/typography';
 import { spacing, borderRadius } from '../../theme/spacing';
@@ -79,25 +80,28 @@ export function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
               {ORDER_TYPE_LABEL[order.orderType] ?? order.orderType}
             </Text>
           </View>
-          {order.channel === 'web' && (
+          {order.paymentMethod && (
             <View style={[styles.typePill, { backgroundColor: colors.primary }]}>
-              <Text style={[styles.typeText, { color: colors.onPrimary }]}>WEB</Text>
+              <Text style={[styles.typeText, { color: colors.onPrimary }]}>
+                {paymentMethodLabel(order.paymentMethod)}
+              </Text>
             </View>
           )}
           {order.tableLabel && (
             <View style={[styles.typePill, { backgroundColor: colors.surfaceHighlight }]}>
-              <Text style={[styles.typeText, { color: colors.textSecondary }]}>{order.tableLabel}</Text>
+              <Text style={[styles.typeText, { color: colors.textSecondary }]}>
+                {order.tableLabel}{order.tableNumber ? ` · Mesa ${order.tableNumber}` : ''}
+              </Text>
             </View>
           )}
         </View>
 
-        {order.channel === 'web' && order.paymentMethod && (
-          <Text style={[styles.detail, { color: colors.textMuted }]}>
-            {order.paymentMethod === 'cash_on_delivery' && 'Cobrar en efectivo'}
-            {order.paymentMethod === 'card_on_delivery' && 'Cobrar con tarjeta'}
-            {order.paymentMethod === 'yappy' && 'Yappy'}
-            {order.orderType === 'delivery' && order.deliveryAddress?.line1 ? ` · ${order.deliveryAddress.line1}` : ''}
-          </Text>
+        {order.orderType === 'delivery' && order.deliveryAddress?.line1 && (
+          <Text style={[styles.detail, { color: colors.textMuted }]}>{order.deliveryAddress.line1}</Text>
+        )}
+
+        {order.customerPhone && (
+          <Text style={[styles.phone, { color: colors.textPrimary }]}>📞 {order.customerPhone}</Text>
         )}
 
         {order.notes && (
@@ -170,6 +174,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: fontSizes.sm,
     fontStyle: 'italic',
+  },
+  phone: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.sm,
   },
   typePill: {
     paddingHorizontal: spacing.sm,

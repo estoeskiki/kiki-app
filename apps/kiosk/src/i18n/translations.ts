@@ -3,7 +3,7 @@ export const translations = {
     // Welcome Screen
     welcome: 'Bienvenido',
     startOrder: 'Comenzar Orden',
-    poweredBy: 'Potenciado por ',
+    poweredBy: 'Powered by ',
     selectLanguage: 'Seleccionar Idioma',
 
     // Order Type Screen

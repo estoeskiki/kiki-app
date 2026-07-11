@@ -170,7 +170,7 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
       >
         <Text style={[styles.footerText, { color: mutedColor }]}>
           {t('poweredBy')}
-          <Text style={{ color: colors.primary, fontFamily: fonts.bodyBold }}>
+          <Text style={{ color: colors.primary, fontFamily: fonts.heading, letterSpacing: -0.4 }}>
             kiki
           </Text>
         </Text>

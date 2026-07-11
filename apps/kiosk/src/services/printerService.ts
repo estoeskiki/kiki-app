@@ -147,7 +147,7 @@ export async function printReceipt(order: Order): Promise<void> {
   await printLine(`  ${t.thankYou} ${config.restaurantName}!`);
 
   await printLine('');
-  await printLine(`       Potenciado por kiki`);
+  await printLine(`       Powered by kiki`);
 
   await printLine('');
   await printLine(doubleDivider);

@@ -72,8 +72,8 @@ export interface FoodCourtSummary {
 }
 
 export type StorefrontData =
-  | { type: 'restaurant'; restaurant: RestaurantSummary; tableId: string | null; tableLabel: string | null }
-  | { type: 'food_court'; foodCourt: FoodCourtSummary; restaurants: RestaurantSummary[]; tableId: string | null; tableLabel: string | null }
+  | { type: 'restaurant'; restaurant: RestaurantSummary; tableId: string | null; tableLabel: string | null; tableAllowsManualNumber: boolean }
+  | { type: 'food_court'; foodCourt: FoodCourtSummary; restaurants: RestaurantSummary[]; tableId: string | null; tableLabel: string | null; tableAllowsManualNumber: boolean }
   | { type: 'error'; error: string };
 
 export interface OrderStatusSubOrder {
@@ -82,7 +82,7 @@ export interface OrderStatusSubOrder {
   subtotal: number; // cents
   tax: number; // cents
   total: number; // cents
-  items: { name: string; quantity: number; item_price: number; line_total: number }[];
+  items: { name: string; quantity: number; item_price: number; line_total: number; customizations: string[] | null }[];
 }
 
 export interface OrderStatusResult {
@@ -90,6 +90,7 @@ export interface OrderStatusResult {
   status: 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
   order_type: OrderType;
   table_label: string | null;
+  table_number: string | null;
   payment_method: PaymentMethod | null;
   payment_status: 'pending' | 'paid' | 'failed';
   created_at: string;

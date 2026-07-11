@@ -42,6 +42,18 @@ function orderTypeLabel(type: string): string {
 }
 
 /**
+ * Translate payment method to Spanish.
+ */
+function paymentMethodLabel(method?: string | null): string {
+  switch (method) {
+    case 'yappy': return 'Yappy';
+    case 'cash_on_delivery': return 'Efectivo';
+    case 'card_on_delivery': return 'Tarjeta';
+    default: return '';
+  }
+}
+
+/**
  * Intelligently routes the print job to either the physical Senraise thermal 
  * printer, or the terminal console if we are developing locally.
  */
@@ -63,9 +75,16 @@ export const printTicket = async (order: Order, restaurantName: string = 'Kiki',
         console.log(`Teléfono: ${order.customerPhone}`);
       }
       console.log(`Tipo: ${orderTypeLabel(order.orderType)}`);
+      if (order.tableLabel) {
+        console.log(`Ubicación: ${order.tableLabel}${order.tableNumber ? ` · Mesa ${order.tableNumber}` : ''}`);
+      }
+      if (order.paymentMethod) {
+        console.log(`Pago: ${paymentMethodLabel(order.paymentMethod)}`);
+      }
       console.log(`----------------------------------------`);
       order.items.forEach(item => {
         console.log(`${item.quantity}x ${esText(item.menuItem.name)}   ${formatCurrency(item.lineTotal)}`);
+        (item.customizations ?? []).forEach((c) => console.log(`   + ${c}`));
       });
       console.log(`----------------------------------------`);
       console.log(`Total: ${formatCurrency(order.total)}`);
@@ -74,7 +93,7 @@ export const printTicket = async (order: Order, restaurantName: string = 'Kiki',
         console.log(`Comentarios: ${order.notes}`);
       }
       console.log(`----------------------------------------`);
-      console.log(`Potenciado por kiki`);
+      console.log(`Powered by kiki`);
       console.log(`========================================\n`);
 
       setTimeout(() => resolve(true), 1000);
@@ -96,10 +115,19 @@ export const printTicket = async (order: Order, restaurantName: string = 'Kiki',
         await SenraisePrinter.printText(`Teléfono: ${order.customerPhone}\n`);
       }
       await SenraisePrinter.printText(`Tipo: ${orderTypeLabel(order.orderType)}\n`);
+      if (order.tableLabel) {
+        await SenraisePrinter.printText(`Ubicación: ${order.tableLabel}${order.tableNumber ? ` · Mesa ${order.tableNumber}` : ''}\n`);
+      }
+      if (order.paymentMethod) {
+        await SenraisePrinter.printText(`Pago: ${paymentMethodLabel(order.paymentMethod)}\n`);
+      }
       await SenraisePrinter.printText("--------------------------------\n");
 
       for (const item of order.items) {
         await SenraisePrinter.printText(`${item.quantity}x ${esText(item.menuItem.name)}   ${formatCurrency(item.lineTotal)}\n`);
+        for (const c of (item.customizations ?? [])) {
+          await SenraisePrinter.printText(`   + ${c}\n`);
+        }
       }
 
       await SenraisePrinter.printText("--------------------------------\n");
@@ -109,7 +137,7 @@ export const printTicket = async (order: Order, restaurantName: string = 'Kiki',
         await SenraisePrinter.printText(`Comentarios:\n${order.notes}\n`);
       }
       await SenraisePrinter.printText("--------------------------------\n");
-      await SenraisePrinter.printText("Potenciado por kiki\n");
+      await SenraisePrinter.printText("Powered by kiki\n");
       await SenraisePrinter.printText("\n\n\n"); // Spool paper out to tear off
 
       resolve(true);
@@ -169,7 +197,7 @@ export const printFiscalReceipt = async (order: Order, restaurantName: string = 
         console.log(`[QR CODE: ${qr}]`);
       }
       console.log(`Puede consultar la validez del documento escaneando el codigo QR.`);
-      console.log(`Potenciado por kiki`);
+      console.log(`Powered by kiki`);
       console.log(`========================================\n`);
 
       setTimeout(() => resolve(true), 1000);
@@ -220,7 +248,7 @@ export const printFiscalReceipt = async (order: Order, restaurantName: string = 
       }
 
       await SenraisePrinter.printText(`\nPuede consultar la validez del documento escaneando el codigo QR.\n\n`);
-      await SenraisePrinter.printText(`Potenciado por kiki\n`);
+      await SenraisePrinter.printText(`Powered by kiki\n`);
       await SenraisePrinter.printText("\n\n\n"); // Spool paper
 
       resolve(true);

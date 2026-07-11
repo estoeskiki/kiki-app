@@ -42,6 +42,7 @@ export interface CartItem {
   menuItem: MenuItem;
   quantity: number;
   selectedCustomizations: Record<string, string[]>; // groupId -> optionId[]
+  customizations?: string[] | null; // resolved display names, populated when mapping a fetched order
   lineTotal: number; // (base + modifiers) * qty, in cents
 }
 
@@ -88,6 +89,7 @@ export interface Order {
   paymentMethod?: PaymentMethod | null;
   paymentStatus?: PaymentStatus;
   tableLabel?: string | null;
+  tableNumber?: string | null;
   deliveryAddress?: DeliveryAddress | null;
   notes?: string | null;
 }

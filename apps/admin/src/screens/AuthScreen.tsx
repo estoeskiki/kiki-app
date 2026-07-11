@@ -94,7 +94,7 @@ export function AuthScreen() {
 
       {/* Footer */}
       <Text style={[styles.footer, { color: colors.textMuted }]}>
-        Potenciado por <Text style={{ color: colors.primary, fontFamily: fonts.bodyBold }}>kiki</Text>
+        Powered by <Text style={{ color: colors.primary, fontFamily: fonts.heading, letterSpacing: -0.4 }}>kiki</Text>
       </Text>
     </KeyboardAvoidingView>
   );

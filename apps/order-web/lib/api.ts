@@ -42,6 +42,7 @@ export async function getPublicStorefront(args: { slug?: string; tableToken?: st
       },
       tableId: result.table_id ?? null,
       tableLabel: result.table_label ?? null,
+      tableAllowsManualNumber: result.table_allows_manual_number ?? false,
     };
   }
 
@@ -65,6 +66,7 @@ export async function getPublicStorefront(args: { slug?: string; tableToken?: st
     })),
     tableId: result.table_id ?? null,
     tableLabel: result.table_label ?? null,
+    tableAllowsManualNumber: result.table_allows_manual_number ?? false,
   };
 }
 
@@ -124,6 +126,7 @@ export interface CreateWebOrderPayload {
   restaurantId?: string;
   foodCourtId?: string;
   tableToken?: string;
+  tableNumber?: string;
   orderType: OrderType;
   customerName: string;
   customerPhone?: string;

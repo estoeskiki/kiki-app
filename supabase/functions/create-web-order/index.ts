@@ -30,6 +30,7 @@ interface CreateWebOrderBody {
   restaurantId?: string
   foodCourtId?: string
   tableToken?: string
+  tableNumber?: string
   orderType: OrderType
   customerName: string
   customerPhone?: string
@@ -92,13 +93,14 @@ serve(async (req) => {
     // restaurant/food-court scope when present, not whatever the client sends.
     let tableId: string | null = null
     let tableLabel: string | null = null
+    let tableNumber: string | null = null
     let restaurantId = body.restaurantId ?? null
     let foodCourtId = body.foodCourtId ?? null
 
     if (body.tableToken) {
       const { data: table, error: tableError } = await supabaseAdmin
         .from('tables')
-        .select('id, label, restaurant_id, food_court_id')
+        .select('id, label, restaurant_id, food_court_id, allows_manual_number')
         .eq('qr_token', body.tableToken)
         .eq('is_active', true)
         .single()
@@ -110,6 +112,9 @@ serve(async (req) => {
       tableLabel = table.label
       restaurantId = table.restaurant_id
       foodCourtId = table.food_court_id
+      if (table.allows_manual_number) {
+        tableNumber = body.tableNumber?.trim() || null
+      }
     }
 
     if (!restaurantId && !foodCourtId) {
@@ -232,6 +237,7 @@ serve(async (req) => {
         payment_status: 'pending',
         table_id: tableId,
         table_label: tableLabel,
+        table_number: tableNumber,
         delivery_address: body.deliveryAddress ?? null,
         notes,
       })
@@ -259,6 +265,7 @@ serve(async (req) => {
           payment_method: body.paymentMethod,
           payment_status: 'pending',
           table_label: tableLabel,
+          table_number: tableNumber,
           delivery_address: body.deliveryAddress ?? null,
           notes,
         })

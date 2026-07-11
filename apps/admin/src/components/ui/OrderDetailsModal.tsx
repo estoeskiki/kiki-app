@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
-import { X } from 'lucide-react-native';
+import { X, Phone } from 'lucide-react-native';
 import { Order } from '../../data/types';
 import { StatusBadge } from './StatusBadge';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { paymentMethodLabel } from '../../utils/orderLabels';
 import { useTheme } from '../../theme/useTheme';
 import { fonts, fontSizes } from '../../theme/typography';
 import { spacing, borderRadius } from '../../theme/spacing';
@@ -107,15 +108,19 @@ export function OrderDetailsModal({
                 </Text>
                 <View style={[styles.dot, { backgroundColor: colors.border }]} />
                 <StatusBadge status={order.status} size="sm" />
-                {order.channel === 'web' && (
+                {order.paymentMethod && (
                   <>
                     <View style={[styles.dot, { backgroundColor: colors.border }]} />
-                    <Text style={[styles.orderType, { color: colors.primary }]}>WEB</Text>
+                    <Text style={[styles.orderType, { color: colors.primary }]}>
+                      {paymentMethodLabel(order.paymentMethod)}
+                    </Text>
                   </>
                 )}
               </View>
               {order.tableLabel && (
-                <Text style={[styles.orderType, { color: colors.textMuted }]}>{order.tableLabel}</Text>
+                <Text style={[styles.orderType, { color: colors.textMuted }]}>
+                  {order.tableLabel}{order.tableNumber ? ` · Mesa ${order.tableNumber}` : ''}
+                </Text>
               )}
               {order.orderType === 'delivery' && order.deliveryAddress && (
                 <Text style={[styles.orderType, { color: colors.textMuted }]}>
@@ -123,13 +128,11 @@ export function OrderDetailsModal({
                   {order.deliveryAddress.line2 ? `, ${order.deliveryAddress.line2}` : ''}
                 </Text>
               )}
-              {order.channel === 'web' && order.paymentMethod && (
-                <Text style={[styles.orderType, { color: colors.textMuted }]}>
-                  {order.paymentMethod === 'cash_on_delivery' && 'Pago: Efectivo contra entrega'}
-                  {order.paymentMethod === 'card_on_delivery' && 'Pago: Tarjeta contra entrega'}
-                  {order.paymentMethod === 'yappy' && 'Pago: Yappy'}
-                  {order.customerPhone ? ` · ${order.customerPhone}` : ''}
-                </Text>
+              {order.customerPhone && (
+                <View style={[styles.phoneChip, { backgroundColor: colors.surfaceHighlight }]}>
+                  <Phone color={colors.primary} size={13} strokeWidth={2.5} />
+                  <Text style={[styles.phoneText, { color: colors.textPrimary }]}>{order.customerPhone}</Text>
+                </View>
               )}
             </View>
             <TouchableOpacity
@@ -154,10 +157,11 @@ export function OrderDetailsModal({
                 </View>
                 <View style={styles.itemInfo}>
                   <Text style={[styles.itemName, { color: colors.textPrimary }]}>{t(item.menuItem.name)}</Text>
-                  {Object.values(item.selectedCustomizations).flat().map((opt, idx) => (
-                    <Text key={idx} style={[styles.customization, { color: colors.textMuted }]}>
-                      + {opt}
-                    </Text>
+                  {(item.customizations ?? []).map((opt, idx) => (
+                    <View key={idx} style={styles.customizationRow}>
+                      <View style={[styles.customizationDot, { backgroundColor: colors.primary }]} />
+                      <Text style={[styles.customization, { color: colors.textSecondary }]}>{opt}</Text>
+                    </View>
                   ))}
                 </View>
                 <Text style={[styles.itemPrice, { color: colors.textSecondary }]}>
@@ -263,6 +267,21 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 1.5,
   },
+  phoneChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full,
+    marginTop: 2,
+  },
+  phoneText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.sm,
+    letterSpacing: 0.2,
+  },
   closeBtn: {
     width: 36,
     height: 36,
@@ -312,10 +331,21 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.md,
     marginBottom: 2,
   },
+  customizationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 3,
+  },
+  customizationDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    flexShrink: 0,
+  },
   customization: {
-    fontFamily: fonts.body,
-    fontSize: fontSizes.xs,
-    marginBottom: 1,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.sm,
   },
   itemPrice: {
     fontFamily: fonts.body,

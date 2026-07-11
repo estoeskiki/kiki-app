@@ -6,21 +6,11 @@ import { useCartStore } from '@/store/useCartStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useLastOrderStore } from '@/store/useLastOrderStore';
 import { createWebOrder } from '@/lib/api';
-import { localize } from '@/lib/currency';
 import { Header } from '@/components/layout/Header';
 import { CartItemRow } from '@/components/cart/CartItemRow';
 import { CartSummary } from '@/components/cart/CartSummary';
 import { Button } from '@/components/ui/Button';
-import type { CartItem, PaymentMethod } from '@/lib/types';
-
-function customizationSummary(item: CartItem): string {
-  const parts: string[] = [];
-  for (const group of item.menuItem.customizations) {
-    const ids = item.selectedCustomizations[group.id] ?? [];
-    for (const opt of group.options) if (ids.includes(opt.id)) parts.push(localize(opt.name));
-  }
-  return parts.join(', ');
-}
+import type { PaymentMethod } from '@/lib/types';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -35,6 +25,7 @@ export default function CheckoutPage() {
   const foodCourtId = useSessionStore((s) => s.foodCourtId);
   const tableToken = useSessionStore((s) => s.tableToken);
   const tableLabel = useSessionStore((s) => s.tableLabel);
+  const tableAllowsManualNumber = useSessionStore((s) => s.tableAllowsManualNumber);
   // Chosen upfront on the Welcome/OrderType screens — falls back to takeaway
   // for a deep link that skipped that gate (e.g. a direct /mall/.../[restaurantId] visit).
   // Still editable here (unless a table QR fixed it to dine-in) via setOrderType.
@@ -45,6 +36,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card_on_delivery');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [tableNumber, setTableNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +68,7 @@ export default function CheckoutPage() {
         restaurantId: restaurantId ?? undefined,
         foodCourtId: foodCourtId ?? undefined,
         tableToken: tableToken ?? undefined,
+        tableNumber: tableAllowsManualNumber ? tableNumber.trim() || undefined : undefined,
         orderType,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim() || undefined,
@@ -88,29 +81,10 @@ export default function CheckoutPage() {
           selectedOptionIds: Object.values(item.selectedCustomizations).flat(),
         })),
       });
-      // Cart is cleared on the thank-you screen's mount, not here — clearing
-      // it before navigating away made this page's empty-cart state flash
-      // for a frame while the route transition was still in flight.
-      setLastOrder({
-        orderId,
-        orderNumber,
-        customerName: customerName.trim(),
-        orderType,
-        paymentMethod,
-        tableLabel,
-        groups: groups.map((g) => ({
-          restaurantName: g.restaurantName,
-          items: g.items.map((item) => ({
-            name: localize(item.menuItem.name),
-            quantity: item.quantity,
-            lineTotal: item.lineTotal,
-            customizationSummary: customizationSummary(item) || undefined,
-          })),
-        })),
-        subtotal,
-        tax,
-        total: subtotal + tax,
-      });
+      // Cart is cleared on the thank-you bridge screen's mount, not here — so
+      // this page's empty-cart state doesn't flash for a frame while the
+      // route transition is in flight.
+      setLastOrder({ orderId, orderNumber, customerName: customerName.trim() });
       router.replace(`/order/${orderId}/thank-you`);
     } catch (err: any) {
       setError(err.message ?? 'Algo salió mal al hacer tu pedido. Por favor intenta de nuevo.');
@@ -162,13 +136,25 @@ export default function CheckoutPage() {
           ))}
         </section>
 
-        <section>
-          <h2 className="mb-2 font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Tipo de pedido</h2>
+        <section className="flex flex-col gap-3">
+          <h2 className="-mb-1 font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Tipo de pedido</h2>
           {tableLabel ? (
             <div className="rounded-xl border border-primary bg-primary/10 px-4 py-3 font-body text-sm text-text-primary">
               Comer aquí — {tableLabel}
             </div>
-          ) : (
+          ) : null}
+          {tableAllowsManualNumber && (
+            <div className="flex flex-col gap-1">
+              <input
+                value={tableNumber}
+                onChange={(e) => setTableNumber(e.target.value)}
+                placeholder="Número de mesa (opcional)"
+                className="h-12 rounded-lg border border-border-light bg-surface px-4 font-body text-text-primary outline-none focus:border-primary"
+              />
+              <p className="font-body text-xs text-text-muted">Revisa el número en tu tarjeta QR — ayuda al mesero a encontrarte.</p>
+            </div>
+          )}
+          {!tableLabel && (
             <div className="flex gap-2">
               {(['dine-in', 'takeaway'] as const).map((t) => (
                 <button
