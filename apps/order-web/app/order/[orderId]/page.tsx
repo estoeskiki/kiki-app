@@ -46,12 +46,19 @@ export default function OrderTrackingPage() {
 
   // "Nueva orden" reopens the same storefront in a fresh tab — a new tab has
   // its own sessionStorage, so OrderingGate always starts at Welcome there
-  // regardless of this tab's ordering state. Falls back to "/" (scan-the-QR
-  // copy) if session data isn't available, e.g. someone else opened this
-  // tracking link cold, on a different device.
+  // regardless of this tab's ordering state. Prefer /t/<token> (self-contained,
+  // re-resolves the zone from scratch) since bare /mall or /r now requires a
+  // token in production — a fresh tab never has one from sessionStorage alone.
+  // Falls back to "/" (scan-the-QR copy) if no session data is available at
+  // all, e.g. someone else opened this tracking link cold, on a different device.
   const mode = useSessionStore((s) => s.mode);
   const slug = useSessionStore((s) => s.slug);
-  const newOrderHref = slug ? (mode === 'food_court' ? `/mall/${slug}` : `/r/${slug}`) : '/';
+  const tableToken = useSessionStore((s) => s.tableToken);
+  const newOrderHref = tableToken
+    ? `/t/${tableToken}`
+    : slug
+      ? (mode === 'food_court' ? `/mall/${slug}` : `/r/${slug}`)
+      : '/';
 
   const [copied, setCopied] = useState(false);
 

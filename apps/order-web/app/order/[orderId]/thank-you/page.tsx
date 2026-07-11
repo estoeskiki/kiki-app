@@ -23,7 +23,7 @@ export default function ThankYouPage() {
       return;
     }
     clearCart();
-    const timer = setTimeout(() => router.replace(`/order/${orderId}`), 4000);
+    const timer = setTimeout(() => router.replace(`/order/${orderId}`), 2800);
     return () => clearTimeout(timer);
   }, [isFreshOrder, orderId, router, clearCart]);
 
