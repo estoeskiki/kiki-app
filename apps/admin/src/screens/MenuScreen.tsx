@@ -420,13 +420,20 @@ export default function MenuScreen() {
           <Text style={[styles.cardPrice, { color: colors.textPrimary }]}>
             {formatCurrency(item.price)}
           </Text>
-          <Switch
-            value={item.available}
-            onValueChange={() => toggleItemAvailability(item.id, item.available)}
-            trackColor={{ false: colors.surfaceHighlight, true: colors.success }}
-            thumbColor={item.available ? colors.surface : colors.textMuted}
-            style={styles.cardSwitch}
-          />
+          <TouchableOpacity
+            onPress={() => toggleItemAvailability(item.id, item.available)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
+            <Switch
+              value={item.available}
+              onValueChange={() => toggleItemAvailability(item.id, item.available)}
+              trackColor={{ false: colors.surfaceHighlight, true: colors.success }}
+              thumbColor={item.available ? colors.surface : colors.textMuted}
+              style={styles.cardSwitch}
+              pointerEvents="none"
+            />
+          </TouchableOpacity>
         </View>
 
         {item.customizations.length > 0 && (
@@ -1025,7 +1032,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   cardSwitch: {
-    transform: [{ scale: 0.8 }],
+    transform: [{ scale: 1.15 }],
   },
   cardAddons: {
     fontFamily: fonts.body,

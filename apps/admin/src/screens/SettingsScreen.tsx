@@ -7,7 +7,6 @@ import {
   Store, Smartphone, LogOut, Moon, Sun, ChevronRight, Copy,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../components/layout/ScreenWrapper';
-import { TablesSection } from '../components/settings/TablesSection';
 import { useSystemStore } from '../store/useSystemStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useThemeStore } from '../store/useThemeStore';
@@ -180,10 +179,6 @@ export default function SettingsScreen() {
             onPress={isGenerating ? undefined : handleGenerateToken}
           />
         </CardGroup>
-
-        {/* ── Mesas (QR para ordenar desde la web) ── */}
-        <SectionLabel label="MESAS" />
-        <TablesSection />
 
         {/* ── Apariencia ── */}
         <SectionLabel label="APARIENCIA" />

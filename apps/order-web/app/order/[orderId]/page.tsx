@@ -169,7 +169,12 @@ export default function OrderTrackingPage() {
                   </div>
 
                   {subCancelled ? (
-                    <span className="w-fit rounded-full bg-error/20 px-3 py-1 font-body text-xs font-bold text-error">Cancelado</span>
+                    <div className="flex flex-col items-start gap-1.5">
+                      <span className="w-fit rounded-full bg-error/20 px-3 py-1 font-body text-xs font-bold text-error">Cancelado</span>
+                      {sub.cancellation_reason && (
+                        <p className="font-body text-xs text-white/50">{sub.cancellation_reason}</p>
+                      )}
+                    </div>
                   ) : (
                     <div className="relative pt-1">
                       <div className="absolute left-[10%] right-[10%] top-[15px] h-0.5 bg-white/10" />

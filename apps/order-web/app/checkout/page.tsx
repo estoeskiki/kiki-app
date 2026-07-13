@@ -40,7 +40,10 @@ export default function CheckoutPage() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [tableNumber, setTableNumber] = useState('');
-  const [notes, setNotes] = useState('');
+  // Keyed by restaurantId — each restaurant in the cart gets its own note,
+  // since a global comment doesn't make sense once an order can span
+  // multiple restaurants (food court mode).
+  const [notesByRestaurant, setNotesByRestaurant] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,7 +80,11 @@ export default function CheckoutPage() {
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim() || undefined,
         paymentMethod,
-        notes: notes.trim() || undefined,
+        notes: Object.fromEntries(
+          Object.entries(notesByRestaurant)
+            .map(([rid, text]) => [rid, text.trim()])
+            .filter(([, text]) => text.length > 0),
+        ),
         items: items.map((item) => ({
           menuItemId: item.menuItem.id,
           restaurantId: item.restaurantId,
@@ -136,6 +143,13 @@ export default function CheckoutPage() {
               {g.items.map((item) => (
                 <CartItemRow key={item.id} item={item} />
               ))}
+              <textarea
+                value={notesByRestaurant[g.restaurantId] ?? ''}
+                onChange={(e) => setNotesByRestaurant((prev) => ({ ...prev, [g.restaurantId]: e.target.value }))}
+                placeholder={`Comentarios para ${g.restaurantName} (ej. sin cebolla) — opcional`}
+                rows={2}
+                className="mb-3 w-full rounded-lg border border-border-light bg-surface-container px-3 py-2 font-body text-xs text-text-primary outline-none focus:border-primary"
+              />
             </div>
           ))}
         </section>
@@ -212,17 +226,6 @@ export default function CheckoutPage() {
           {customerPhone.trim().length > 0 && !isPhoneValid && (
             <p className="-mt-1 font-body text-xs text-error">Ingresa un número válido (mínimo 8 dígitos).</p>
           )}
-        </section>
-
-        <section className="flex flex-col gap-2">
-          <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Comentarios adicionales</h2>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Ej. sin cebolla, tocar el timbre, etc. (opcional)"
-            rows={3}
-            className="rounded-lg border border-border-light bg-surface px-4 py-3 font-body text-text-primary outline-none focus:border-primary"
-          />
         </section>
 
         <section className="flex flex-col gap-2">

@@ -41,7 +41,8 @@ interface CreateWebOrderBody {
   customerPhone?: string
   paymentMethod: PaymentMethod
   deliveryAddress?: Record<string, unknown>
-  notes?: string
+  // Keyed by restaurantId — each restaurant in the cart gets its own note.
+  notes?: Record<string, string>
   items: CartItemInput[]
 }
 
@@ -247,9 +248,9 @@ serve(async (req) => {
     })
     if (orderNumberError) return jsonResponse({ error: `order_number_failed:${orderNumberError.message}` }, 500)
     const orderNumber = parseInt(orderNumberData as unknown as string, 10) || 100
-    const notes = body.notes?.trim() || null
 
-    // 7. Insert the parent order.
+    // 7. Insert the parent order. No single `notes` value makes sense here
+    // anymore — each restaurant's note lives on its own sub_order instead.
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
       .insert({
@@ -270,7 +271,7 @@ serve(async (req) => {
         table_label: tableLabel,
         table_number: tableNumber,
         delivery_address: body.deliveryAddress ?? null,
-        notes,
+        notes: null,
       })
       .select('id, created_at')
       .single()
@@ -298,7 +299,7 @@ serve(async (req) => {
           table_label: tableLabel,
           table_number: tableNumber,
           delivery_address: body.deliveryAddress ?? null,
-          notes,
+          notes: body.notes?.[plan.restaurantId]?.trim() || null,
         })
         .select('id')
         .single()
@@ -308,10 +309,17 @@ serve(async (req) => {
         continue
       }
 
-      for (const line of plan.lines) {
-        const { data: orderItem, error: orderItemError } = await supabaseAdmin
-          .from('order_items')
-          .insert({
+      // Batch-insert every line in one call instead of looping one-by-one —
+      // admin's realtime subscription refetches the instant the sub_orders
+      // row above commits, and looped awaited inserts left a real window
+      // where that refetch could land after only some order_items existed
+      // (subtotal/total were still correct since those live on sub_orders
+      // itself, but the item list stayed permanently short since nothing
+      // re-triggers a fetch once the rest land).
+      const { data: insertedItems, error: itemsError } = await supabaseAdmin
+        .from('order_items')
+        .insert(
+          plan.lines.map((line) => ({
             order_id: order.id,
             sub_order_id: subOrder.id,
             restaurant_id: plan.restaurantId,
@@ -320,26 +328,27 @@ serve(async (req) => {
             item_price: line.itemPrice,
             quantity: line.quantity,
             line_total: line.lineTotal,
-          })
-          .select('id')
-          .single()
+          })),
+        )
+        .select('id')
 
-        if (orderItemError || !orderItem) {
-          console.error('Failed to insert order item', line.itemName, orderItemError)
-          continue
-        }
+      if (itemsError || !insertedItems) {
+        console.error(`Failed to insert order items for sub-order ${subOrder.id}:`, itemsError)
+        continue
+      }
 
-        if (line.customizations.length > 0) {
-          await supabaseAdmin.from('order_item_customizations').insert(
-            line.customizations.map((c) => ({
-              order_item_id: orderItem.id,
-              restaurant_id: plan.restaurantId,
-              group_name: c.groupName,
-              option_name: c.optionName,
-              price_modifier: c.priceModifier,
-            })),
-          )
-        }
+      const allCustomizations = plan.lines.flatMap((line, idx) =>
+        line.customizations.map((c) => ({
+          order_item_id: insertedItems[idx].id,
+          restaurant_id: plan.restaurantId,
+          group_name: c.groupName,
+          option_name: c.optionName,
+          price_modifier: c.priceModifier,
+        })),
+      )
+
+      if (allCustomizations.length > 0) {
+        await supabaseAdmin.from('order_item_customizations').insert(allCustomizations)
       }
     }
 

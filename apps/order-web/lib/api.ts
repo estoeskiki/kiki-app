@@ -147,7 +147,8 @@ export interface CreateWebOrderPayload {
   customerName: string;
   customerPhone?: string;
   paymentMethod: PaymentMethod;
-  notes?: string;
+  // Keyed by restaurantId — each restaurant in a food-court cart gets its own note.
+  notes?: Record<string, string>;
   items: { menuItemId: string; restaurantId?: string; quantity: number; selectedOptionIds: string[] }[];
 }
 

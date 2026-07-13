@@ -205,10 +205,16 @@ async function insertOrderItems(
   restaurantId: string,
   items: CartItem[],
 ) {
-  for (const item of items) {
-    const { data: orderItemData, error: orderItemError } = await supabase
-      .from('order_items')
-      .insert({
+  // Batch-insert every line in one call instead of looping one-by-one — the
+  // admin app's realtime subscription refetches the instant the sub_orders
+  // row (created just before this) commits, and looped awaited inserts left
+  // a real window where that refetch could land after only some order_items
+  // existed, permanently showing a short item list (nothing re-triggers a
+  // fetch once the rest land, since only sub_orders changes are subscribed to).
+  const { data: insertedItems, error: itemsError } = await supabase
+    .from('order_items')
+    .insert(
+      items.map((item) => ({
         order_id: orderId,
         restaurant_id: restaurantId,
         sub_order_id: subOrderId,
@@ -217,24 +223,24 @@ async function insertOrderItems(
         item_price: item.menuItem.price,
         quantity: item.quantity,
         line_total: item.lineTotal,
-      })
-      .select('id')
-      .single();
+      })),
+    )
+    .select('id');
 
-    if (orderItemError || !orderItemData) {
-      console.error('Failed to insert order item', item.menuItem.name, orderItemError);
-      continue;
-    }
+  if (itemsError || !insertedItems) {
+    console.error('Failed to insert order items', itemsError);
+    return;
+  }
 
-    // Insert customizations for this item
-    const customizationsToInsert = [];
+  const customizationsToInsert = items.flatMap((item, idx) => {
+    const rows = [];
     for (const group of item.menuItem.customizations) {
       const selectedOptionIds = item.selectedCustomizations[group.id] || [];
       for (const optId of selectedOptionIds) {
         const option = group.options.find(o => o.id === optId);
         if (option) {
-          customizationsToInsert.push({
-            order_item_id: orderItemData.id,
+          rows.push({
+            order_item_id: insertedItems[idx].id,
             restaurant_id: restaurantId,
             group_name: group.name,
             option_name: option.name,
@@ -243,10 +249,11 @@ async function insertOrderItems(
         }
       }
     }
+    return rows;
+  });
 
-    if (customizationsToInsert.length > 0) {
-      await supabase.from('order_item_customizations').insert(customizationsToInsert);
-    }
+  if (customizationsToInsert.length > 0) {
+    await supabase.from('order_item_customizations').insert(customizationsToInsert);
   }
 }
 

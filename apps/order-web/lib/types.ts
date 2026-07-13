@@ -88,6 +88,7 @@ export type StorefrontData =
 export interface OrderStatusSubOrder {
   restaurant_name: string;
   status: 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+  cancellation_reason: string | null;
   subtotal: number; // cents
   tax: number; // cents
   total: number; // cents

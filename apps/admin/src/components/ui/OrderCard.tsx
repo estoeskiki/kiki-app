@@ -198,12 +198,15 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xs,
   },
   advanceBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 4,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderRadius: borderRadius.md,
   },
   advanceText: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSizes.sm,
+    fontSize: fontSizes.md,
   },
 });

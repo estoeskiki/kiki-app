@@ -4,6 +4,7 @@ import { RefreshCw } from 'lucide-react-native';
 import { ScreenWrapper } from '../components/layout/ScreenWrapper';
 import { OrderCard } from '../components/ui/OrderCard';
 import { OrderDetailsModal } from '../components/ui/OrderDetailsModal';
+import { CancelOrderModal } from '../components/ui/CancelOrderModal';
 import { useOrdersStore } from '../store/useOrdersStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { printTicket } from '../services/printerService';
@@ -18,6 +19,7 @@ export default function OrdersScreen() {
   const restaurantName = useAuthStore((s) => s.restaurantName);
   const foodCourtName = useAuthStore((s) => s.foodCourtName);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
   const { colors } = useTheme();
 
   // Re-fetch when restaurantId becomes available (async after login)
@@ -51,21 +53,15 @@ export default function OrdersScreen() {
   };
 
   const handleCancel = (orderId: string) => {
-    Alert.alert(
-      'Cancelar pedido',
-      '¿Seguro que quieres cancelar este pedido? Esta acción no se puede deshacer.',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Sí, cancelar',
-          style: 'destructive',
-          onPress: () => {
-            cancelOrder(orderId);
-            if (selectedOrder?.id === orderId) setSelectedOrder(null);
-          },
-        },
-      ],
-    );
+    const order = orders.find((o) => o.id === orderId);
+    if (order) setCancelTarget(order);
+  };
+
+  const handleConfirmCancel = (reason: string) => {
+    if (!cancelTarget) return;
+    cancelOrder(cancelTarget.id, reason);
+    if (selectedOrder?.id === cancelTarget.id) setSelectedOrder(null);
+    setCancelTarget(null);
   };
 
   const handleReprint = (order: Order) => {
@@ -152,6 +148,13 @@ export default function OrdersScreen() {
         onComplete={handleComplete}
         onCancel={handleCancel}
         onReprint={handleReprint}
+      />
+
+      <CancelOrderModal
+        visible={!!cancelTarget}
+        orderNumber={cancelTarget?.orderNumber}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={handleConfirmCancel}
       />
     </ScreenWrapper>
   );

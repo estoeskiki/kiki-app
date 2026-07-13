@@ -15,7 +15,7 @@ interface OrdersState {
   acceptOrder: (orderId: string) => Promise<void>; // Moves to 'preparing'
   markOrderReady: (orderId: string) => Promise<void>; // Moves to 'ready'
   markOrderCompleted: (orderId: string) => Promise<void>; // Moves to 'completed'
-  cancelOrder: (orderId: string) => Promise<void>; // Moves to 'cancelled'
+  cancelOrder: (orderId: string, reason: string) => Promise<void>; // Moves to 'cancelled'
 }
 
 export const useOrdersStore = create<OrdersState>((set, get) => ({
@@ -113,6 +113,21 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
           get().fetchOrders();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'order_items',
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        () => {
+          // Safety net: order_items for a new sub_order are inserted right
+          // after it, in a separate statement — this catches up the item
+          // list if the sub_orders-triggered fetch above raced ahead of them.
+          get().fetchOrders();
+        }
+      )
       .subscribe();
 
     set({ channel });
@@ -158,8 +173,11 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
     }
   },
 
-  cancelOrder: async (orderId) => {
-    const { error } = await supabase.from('sub_orders').update({ status: 'cancelled' }).eq('id', orderId);
+  cancelOrder: async (orderId, reason) => {
+    const { error } = await supabase
+      .from('sub_orders')
+      .update({ status: 'cancelled', cancellation_reason: reason })
+      .eq('id', orderId);
     if (!error) {
       set((state) => ({
         orders: state.orders.filter((o) => o.id !== orderId),
