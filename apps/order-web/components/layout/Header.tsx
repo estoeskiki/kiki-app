@@ -10,11 +10,9 @@ interface HeaderProps {
   backHref?: string;
   showBack?: boolean;
   showCart?: boolean;
-  /** Shows a restart icon that re-triggers the Welcome/OrderType flow (see useSessionStore.restartOrdering). */
-  onRestart?: () => void;
 }
 
-export function Header({ title, backHref, showBack, showCart = true, onRestart }: HeaderProps) {
+export function Header({ title, backHref, showBack, showCart = true }: HeaderProps) {
   const router = useRouter();
   const itemCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
 
@@ -34,16 +32,6 @@ export function Header({ title, backHref, showBack, showCart = true, onRestart }
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        {onRestart && (
-          <button
-            onClick={onRestart}
-            aria-label="Empezar de nuevo"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container text-text-primary"
-          >
-            ↺
-          </button>
-        )}
-
         {showCart && (
           <Link
             href="/checkout"

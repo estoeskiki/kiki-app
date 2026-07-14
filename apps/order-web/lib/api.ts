@@ -152,15 +152,60 @@ export interface CreateWebOrderPayload {
   items: { menuItemId: string; restaurantId?: string; quantity: number; selectedOptionIds: string[] }[];
 }
 
+// The cart couldn't be ordered right now — a restaurant closed or an item
+// went unavailable between browse and submit. Carries the offending ids so
+// checkout can banner exactly what's wrong and offer a one-tap fix.
+export class CartInvalidError extends Error {
+  closedRestaurantIds: string[];
+  unavailableItemIds: string[];
+  constructor(closedRestaurantIds: string[], unavailableItemIds: string[]) {
+    super('cart_invalid');
+    this.name = 'CartInvalidError';
+    this.closedRestaurantIds = closedRestaurantIds;
+    this.unavailableItemIds = unavailableItemIds;
+  }
+}
+
+export interface CartValidity {
+  closedRestaurantIds: string[];
+  unavailableItemIds: string[];
+}
+
+// Soft pre-check at cart/checkout open — surfaces closed restaurants /
+// unavailable items before the user commits. Not authoritative (the edge
+// function re-checks at submit); best-effort, so it fails open on error.
+export async function validateCart(
+  items: { restaurantId: string; menuItemId: string }[],
+): Promise<CartValidity> {
+  // Cast: get_cart_validity isn't in the generated RPC type union yet.
+  const { data, error } = await (supabase.rpc as any)('get_cart_validity', {
+    p_items: items.map((i) => ({ restaurant_id: i.restaurantId, menu_item_id: i.menuItemId })),
+  });
+  if (error || !data) return { closedRestaurantIds: [], unavailableItemIds: [] };
+  const d = data as any;
+  return {
+    closedRestaurantIds: d.closed_restaurant_ids ?? [],
+    unavailableItemIds: d.unavailable_item_ids ?? [],
+  };
+}
+
 export async function createWebOrder(payload: CreateWebOrderPayload): Promise<{ orderId: string; orderNumber: number }> {
   const { data, error } = await supabase.functions.invoke('create-web-order', { body: payload });
   if (error) throw new Error(error.message);
+  if (data?.error === 'cart_invalid') {
+    throw new CartInvalidError(data.closedRestaurantIds ?? [], data.unavailableItemIds ?? []);
+  }
   if (data?.error) throw new Error(data.error);
   return { orderId: data.orderId, orderNumber: data.orderNumber };
 }
 
+// Distinguishes a transient/transport failure (throws — the caller should
+// retry, not give up) from a genuine "no such order" (returns null). Collapsing
+// both into null made the tracker latch its not-found screen whenever a poll
+// fired mid-hiccup, e.g. the queued poll right after the phone wakes from lock.
 export async function getOrderStatus(orderId: string): Promise<OrderStatusResult | null> {
   const { data, error } = await supabase.rpc('get_order_status_public', { p_order_id: orderId });
-  if (error || !data) return null;
+  if (error) throw new Error(error.message);
+  if (!data) return null;
   return data as unknown as OrderStatusResult;
 }

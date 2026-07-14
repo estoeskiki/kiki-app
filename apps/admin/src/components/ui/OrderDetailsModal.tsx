@@ -5,6 +5,7 @@ import { Order } from '../../data/types';
 import { StatusBadge } from './StatusBadge';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { paymentMethodLabel } from '../../utils/orderLabels';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/useTheme';
 import { fonts, fontSizes } from '../../theme/typography';
 import { spacing, borderRadius } from '../../theme/spacing';
@@ -39,6 +40,7 @@ export function OrderDetailsModal({
   onReprint,
 }: OrderDetailsModalProps) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   if (!order) return null;
 
@@ -183,8 +185,17 @@ export function OrderDetailsModal({
             )}
           </ScrollView>
 
-          {/* Footer */}
-          <View style={[styles.footer, { borderTopColor: colors.borderLight }]}>
+          {/* Footer — pinned to bottom, always on screen */}
+          <View
+            style={[
+              styles.footer,
+              {
+                borderTopColor: colors.borderLight,
+                backgroundColor: colors.surface,
+                paddingBottom: spacing.xl + insets.bottom,
+              },
+            ]}
+          >
             <View style={styles.totalRow}>
               <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>Total</Text>
               <Text style={[styles.totalAmount, { color: colors.textPrimary }]}>
@@ -400,6 +411,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: spacing.md,
+    flexShrink: 0,
   },
   totalRow: {
     flexDirection: 'row',

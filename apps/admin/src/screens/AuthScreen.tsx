@@ -94,7 +94,7 @@ export function AuthScreen() {
 
       {/* Footer */}
       <Text style={[styles.footer, { color: colors.textMuted }]}>
-        Powered by <Text style={{ color: colors.primary, fontFamily: fonts.heading, letterSpacing: -0.4 }}>kiki</Text>
+        powered by <Text style={{ color: colors.primary, fontFamily: fonts.heading, letterSpacing: -0.4 }}>kiki</Text>
       </Text>
     </KeyboardAvoidingView>
   );
@@ -120,9 +120,9 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   footer: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.bodyBold,
     fontSize: fontSizes.xs,
-    letterSpacing: 0.5,
+    letterSpacing: -0.22,
     textAlign: 'center',
   },
   title: {

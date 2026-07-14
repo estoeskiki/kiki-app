@@ -11,15 +11,22 @@ function customizationSummary(item: CartItem): string {
   return parts.join(', ');
 }
 
-export function CartItemRow({ item }: { item: CartItem }) {
+export function CartItemRow({ item, unavailable = false }: { item: CartItem; unavailable?: boolean }) {
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
   const summary = customizationSummary(item);
 
   return (
-    <div className="flex items-start gap-3 border-b border-border-light py-3 last:border-0">
+    <div className={`flex items-start gap-3 border-b border-border-light py-3 last:border-0 ${unavailable ? 'opacity-60' : ''}`}>
       <div className="flex-1">
-        <p className="font-heading text-sm font-bold text-text-primary">{localize(item.menuItem.name)}</p>
+        <p className={`font-heading text-sm font-bold text-text-primary ${unavailable ? 'line-through' : ''}`}>
+          {localize(item.menuItem.name)}
+        </p>
+        {unavailable && (
+          <span className="mt-0.5 inline-block rounded-full bg-error/15 px-2 py-0.5 font-body text-[10px] font-bold uppercase tracking-wide text-error">
+            Ya no disponible
+          </span>
+        )}
         {summary && <p className="font-body text-xs text-text-muted">{summary}</p>}
         <button onClick={() => removeItem(item.id)} className="mt-1 font-body text-xs text-error">
           Quitar

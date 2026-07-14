@@ -155,8 +155,8 @@ serve(async (req) => {
 
     // 2. Load the restaurant(s) in scope (source of truth for tax_rate + name)
     const { data: restaurants, error: restaurantsError } = foodCourtId
-      ? await supabaseAdmin.from('restaurants').select('id, name, tax_rate').eq('food_court_id', foodCourtId)
-      : await supabaseAdmin.from('restaurants').select('id, name, tax_rate').eq('id', restaurantId)
+      ? await supabaseAdmin.from('restaurants').select('id, name, tax_rate, is_open').eq('food_court_id', foodCourtId)
+      : await supabaseAdmin.from('restaurants').select('id, name, tax_rate, is_open').eq('id', restaurantId)
 
     if (restaurantsError || !restaurants?.length) {
       return jsonResponse({ error: 'restaurant_not_found' }, 404)
@@ -176,11 +176,17 @@ serve(async (req) => {
     const menuItemById = new Map(menuItems.map((m) => [m.id, m]))
 
     // 4. Reprice every line server-side. Never trust client-sent prices/totals.
+    // Unavailable items are collected (not rejected one-by-one) so the client
+    // can banner every problem at once and offer a single recovery action.
     const pricedLines: PricedLine[] = []
+    const unavailableItemIds: string[] = []
     for (const cartItem of body.items) {
       const menuItem = menuItemById.get(cartItem.menuItemId)
       if (!menuItem) return jsonResponse({ error: `menu_item_not_found:${cartItem.menuItemId}` }, 400)
-      if (!menuItem.available) return jsonResponse({ error: `menu_item_unavailable:${cartItem.menuItemId}` }, 400)
+      if (!menuItem.available) {
+        unavailableItemIds.push(cartItem.menuItemId)
+        continue
+      }
 
       const lineRestaurantId = foodCourtId ? cartItem.restaurantId : restaurantId
       if (!lineRestaurantId || !restaurantById.has(lineRestaurantId)) {
@@ -228,6 +234,18 @@ serve(async (req) => {
     for (const line of pricedLines) {
       if (!linesByRestaurant.has(line.restaurantId)) linesByRestaurant.set(line.restaurantId, [])
       linesByRestaurant.get(line.restaurantId)!.push(line)
+    }
+
+    // Transactional gate: reject BEFORE any insert if a restaurant in the cart
+    // has since closed or any item has since gone unavailable. Returned as
+    // HTTP 200 with a structured body (not a 4xx) so the client can reliably
+    // read closed/unavailable ids and render targeted banners + recovery,
+    // instead of choking on supabase-js's opaque non-2xx error wrapping.
+    const closedRestaurantIds = [...linesByRestaurant.keys()].filter(
+      (rid) => restaurantById.get(rid)?.is_open === false,
+    )
+    if (unavailableItemIds.length > 0 || closedRestaurantIds.length > 0) {
+      return jsonResponse({ error: 'cart_invalid', unavailableItemIds, closedRestaurantIds })
     }
 
     const subOrderPlans = [...linesByRestaurant.entries()].map(([rId, lines]) => {

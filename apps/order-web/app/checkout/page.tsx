@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/store/useCartStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useLastOrderStore } from '@/store/useLastOrderStore';
-import { createWebOrder } from '@/lib/api';
+import { createWebOrder, validateCart, CartInvalidError } from '@/lib/api';
 import { Header } from '@/components/layout/Header';
 import { CartItemRow } from '@/components/cart/CartItemRow';
 import { CartSummary } from '@/components/cart/CartSummary';
@@ -17,6 +17,7 @@ export default function CheckoutPage() {
   const items = useCartStore((s) => s.items);
   const getItemsByRestaurant = useCartStore((s) => s.getItemsByRestaurant);
   const clearCart = useCartStore((s) => s.clearCart);
+  const removeItem = useCartStore((s) => s.removeItem);
   const setLastOrder = useLastOrderStore((s) => s.set);
 
   const mode = useSessionStore((s) => s.mode);
@@ -25,14 +26,12 @@ export default function CheckoutPage() {
   const foodCourtId = useSessionStore((s) => s.foodCourtId);
   const tableToken = useSessionStore((s) => s.tableToken);
   const tableId = useSessionStore((s) => s.tableId);
-  const tableLabel = useSessionStore((s) => s.tableLabel);
   const tableAllowsManualNumber = useSessionStore((s) => s.tableAllowsManualNumber);
   const zones = useSessionStore((s) => s.zones);
   const setTable = useSessionStore((s) => s.setTable);
-  // Chosen upfront on the Welcome/OrderType screens — falls back to takeaway
-  // for a deep link that skipped that gate (e.g. a direct /mall/.../[restaurantId] visit).
-  // Still editable here (unless a table QR fixed it to dine-in) via setOrderType.
-  const orderType = useSessionStore((s) => s.orderType) ?? 'takeaway';
+  // Defaults to 'dine-in', always editable here regardless of how the
+  // customer arrived (a scanned table QR no longer locks this).
+  const orderType = useSessionStore((s) => s.orderType);
   const setOrderType = useSessionStore((s) => s.setOrderType);
   const getTaxRate = useSessionStore((s) => s.getTaxRate);
 
@@ -46,8 +45,47 @@ export default function CheckoutPage() {
   const [notesByRestaurant, setNotesByRestaurant] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Restaurants that closed / items that went unavailable since browsing.
+  // Populated by the soft pre-check on mount and by a submit-time rejection.
+  const [closedRestaurantIds, setClosedRestaurantIds] = useState<string[]>([]);
+  const [unavailableItemIds, setUnavailableItemIds] = useState<string[]>([]);
 
   const groups = useMemo(() => getItemsByRestaurant(), [items, getItemsByRestaurant]);
+
+  const closedSet = useMemo(() => new Set(closedRestaurantIds), [closedRestaurantIds]);
+  const unavailableSet = useMemo(() => new Set(unavailableItemIds), [unavailableItemIds]);
+  const hasBlocked = useMemo(
+    () =>
+      items.some((it) => closedSet.has(it.restaurantId) || unavailableSet.has(it.menuItem.id)),
+    [items, closedSet, unavailableSet],
+  );
+
+  // Soft pre-check: re-validate whenever the cart composition changes (mount,
+  // manual edits, recovery). Best-effort — the edge function is authoritative
+  // at submit; this just surfaces problems early. Keyed on the item signature
+  // so it doesn't refire on every unrelated render.
+  const cartSignature = items.map((it) => `${it.restaurantId}:${it.menuItem.id}`).join('|');
+  useEffect(() => {
+    if (items.length === 0) return;
+    let cancelled = false;
+    validateCart(items.map((it) => ({ restaurantId: it.restaurantId, menuItemId: it.menuItem.id }))).then((v) => {
+      if (cancelled) return;
+      setClosedRestaurantIds(v.closedRestaurantIds);
+      setUnavailableItemIds(v.unavailableItemIds);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartSignature]);
+
+  const removeBlocked = () => {
+    for (const it of items) {
+      if (closedSet.has(it.restaurantId) || unavailableSet.has(it.menuItem.id)) removeItem(it.id);
+    }
+    setClosedRestaurantIds([]);
+    setUnavailableItemIds([]);
+  };
 
   const { subtotal, tax } = useMemo(() => {
     let subtotal = 0;
@@ -63,7 +101,7 @@ export default function CheckoutPage() {
   const phoneDigits = customerPhone.replace(/\D/g, '');
   const isPhoneValid = phoneDigits.length >= 8;
 
-  const canSubmit = items.length > 0 && customerName.trim().length > 0 && isPhoneValid && !isSubmitting;
+  const canSubmit = items.length > 0 && customerName.trim().length > 0 && isPhoneValid && !isSubmitting && !hasBlocked;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -98,7 +136,15 @@ export default function CheckoutPage() {
       setLastOrder({ orderId, orderNumber, customerName: customerName.trim() });
       router.replace(`/order/${orderId}/thank-you`);
     } catch (err: any) {
-      setError(err.message ?? 'Algo salió mal al hacer tu pedido. Por favor intenta de nuevo.');
+      // A last-second race (closed/unavailable between our pre-check and submit)
+      // comes back structured — surface it as banners, not a raw error string.
+      if (err instanceof CartInvalidError) {
+        setClosedRestaurantIds(err.closedRestaurantIds);
+        setUnavailableItemIds(err.unavailableItemIds);
+        setError(null);
+      } else {
+        setError(err.message ?? 'Algo salió mal al hacer tu pedido. Por favor intenta de nuevo.');
+      }
       setIsSubmitting(false);
     }
   };
@@ -126,6 +172,25 @@ export default function CheckoutPage() {
       <Header title="Pagar" showBack showCart={false} />
 
       <div className="flex flex-col gap-6 px-4 py-4">
+        {hasBlocked && (
+          <div className="flex flex-col gap-2 rounded-xl border border-error/40 bg-error/10 px-4 py-3">
+            <p className="font-body text-sm font-semibold text-error">
+              {closedRestaurantIds.length > 0 && unavailableItemIds.length > 0
+                ? 'Un restaurante cerró y algunos platos ya no están disponibles.'
+                : closedRestaurantIds.length > 0
+                  ? 'Un restaurante cerró mientras hacías tu pedido.'
+                  : 'Algunos platos ya no están disponibles.'}
+            </p>
+            <p className="font-body text-xs text-text-secondary">Quítalos para continuar con el resto de tu pedido.</p>
+            <button
+              onClick={removeBlocked}
+              className="mt-1 self-start rounded-lg bg-error px-4 py-2 font-body text-sm font-bold text-white transition active:scale-[0.98]"
+            >
+              Quitar y continuar
+            </button>
+          </div>
+        )}
+
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Tu pedido</h2>
@@ -134,46 +199,59 @@ export default function CheckoutPage() {
             </button>
           </div>
           {groups.map((g) => (
-            <div key={g.restaurantId} className="rounded-xl border border-border-light bg-surface px-4">
+            <div
+              key={g.restaurantId}
+              className={`rounded-xl border bg-surface px-4 ${closedSet.has(g.restaurantId) ? 'border-error/40' : 'border-border-light'}`}
+            >
               {groups.length > 1 && (
                 <p className="border-b border-border-light py-2 font-heading text-xs font-bold uppercase tracking-wide text-text-secondary">
                   {g.restaurantName}
                 </p>
               )}
+              {closedSet.has(g.restaurantId) && (
+                <p className="border-b border-error/20 py-2 font-body text-xs font-bold text-error">
+                  ⛔ Este restaurante cerró — no puedes ordenar de aquí ahora.
+                </p>
+              )}
               {g.items.map((item) => (
-                <CartItemRow key={item.id} item={item} />
+                <CartItemRow
+                  key={item.id}
+                  item={item}
+                  unavailable={unavailableSet.has(item.menuItem.id) || closedSet.has(g.restaurantId)}
+                />
               ))}
-              <textarea
-                value={notesByRestaurant[g.restaurantId] ?? ''}
-                onChange={(e) => setNotesByRestaurant((prev) => ({ ...prev, [g.restaurantId]: e.target.value }))}
-                placeholder={`Comentarios para ${g.restaurantName} (ej. sin cebolla) — opcional`}
-                rows={2}
-                className="mb-3 w-full rounded-lg border border-border-light bg-surface-container px-3 py-2 font-body text-xs text-text-primary outline-none focus:border-primary"
-              />
+              <div className="mb-3 mt-3 flex flex-col gap-1.5">
+                <p className="font-body text-[11px] font-bold uppercase tracking-wide text-text-muted">
+                  {groups.length > 1 ? `Notas para ${g.restaurantName}` : 'Notas del pedido'}
+                </p>
+                <textarea
+                  value={notesByRestaurant[g.restaurantId] ?? ''}
+                  onChange={(e) => setNotesByRestaurant((prev) => ({ ...prev, [g.restaurantId]: e.target.value }))}
+                  placeholder="Ej. sin cebolla, salsa aparte… (opcional)"
+                  rows={2}
+                  className="w-full rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 font-body text-xs text-text-primary outline-none placeholder:text-text-muted focus:border-primary"
+                />
+              </div>
             </div>
           ))}
         </section>
 
         <section className="flex flex-col gap-3">
           <h2 className="-mb-1 font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Tipo de pedido</h2>
-          {tableLabel ? (
-            <div className="rounded-xl border border-primary bg-primary/10 px-4 py-3 font-body text-sm text-text-primary">
-              Comer aquí
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              {(['dine-in', 'takeaway'] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setOrderType(t)}
-                  className={`flex-1 rounded-lg border px-4 py-3 font-body text-sm font-semibold ${
-                    orderType === t ? 'border-primary bg-primary/10 text-text-primary' : 'border-border-light text-text-secondary'
+          <div className="flex gap-2">
+            {(['dine-in', 'takeaway'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setOrderType(t)}
+                className={`flex-1 rounded-lg border px-4 py-3 font-body text-sm font-semibold ${orderType === t ? 'border-primary bg-primary/10 text-text-primary' : 'border-border-light text-text-secondary'
                   }`}
-                >
-                  {t === 'dine-in' ? 'Comer aquí' : 'Para llevar'}
-                </button>
-              ))}
-            </div>
+              >
+                {t === 'dine-in' ? 'Comer aquí' : 'Para llevar'}
+              </button>
+            ))}
+          </div>
+          {orderType === 'takeaway' && (
+            <p className="-mt-1 font-body text-xs text-text-muted">Te lo empacamos para que te lo lleves a casa.</p>
           )}
         </section>
 
@@ -186,9 +264,8 @@ export default function CheckoutPage() {
                 <button
                   key={zone.id}
                   onClick={() => setTable(zone.id)}
-                  className={`rounded-lg border px-4 py-3 font-body text-sm font-semibold ${
-                    tableId === zone.id ? 'border-primary bg-primary/10 text-text-primary' : 'border-border-light text-text-secondary'
-                  }`}
+                  className={`rounded-lg border px-4 py-3 font-body text-sm font-semibold ${tableId === zone.id ? 'border-primary bg-primary/10 text-text-primary' : 'border-border-light text-text-secondary'
+                    }`}
                 >
                   {zone.label}
                 </button>
@@ -235,9 +312,8 @@ export default function CheckoutPage() {
             <button
               key={method}
               onClick={() => setPaymentMethod(method)}
-              className={`flex items-center justify-between rounded-lg border px-4 py-3 text-left ${
-                paymentMethod === method ? 'border-primary bg-primary/10' : 'border-border-light bg-surface'
-              }`}
+              className={`flex items-center justify-between rounded-lg border px-4 py-3 text-left ${paymentMethod === method ? 'border-primary bg-primary/10' : 'border-border-light bg-surface'
+                }`}
             >
               <span className="font-body text-sm font-semibold text-text-primary">
                 {method === 'yappy' ? 'Yappy (en entrega)' : 'Tarjeta (en entrega)'}

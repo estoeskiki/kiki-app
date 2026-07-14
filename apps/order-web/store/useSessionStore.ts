@@ -20,15 +20,15 @@ interface SessionState {
   // checkout offer a picker so the customer can correct a QR that got moved
   // to the wrong physical spot (see setTable).
   zones: ZoneSummary[];
-  // Chosen once (Comer aquí / Para llevar), like the kiosk's OrderTypeScreen.
-  // Preset to 'dine-in' when a table QR was scanned — null means the
-  // customer still needs to pick, same as the kiosk showing OrderTypeScreen.
-  orderType: OrderType | null;
+  // Defaults to 'dine-in' the moment a storefront resolves — there's no
+  // upfront picker screen anymore. Always editable at checkout (Aquí / Para
+  // llevar), regardless of whether a table QR was scanned.
+  orderType: OrderType;
   // Whether the Welcome screen's CTA has already been tapped this storefront
-  // visit — lets OrderingGate skip straight past Welcome/OrderType on a
-  // re-mount (e.g. back-navigating from a restaurant to the food-court
-  // directory) instead of replaying them. Reset only when landing on a
-  // genuinely different restaurant/food court (see setFromStorefront).
+  // visit — lets OrderingGate skip straight past Welcome on a re-mount (e.g.
+  // back-navigating from a restaurant to the food-court directory) instead
+  // of replaying it. Reset only when landing on a genuinely different
+  // restaurant/food court (see setFromStorefront).
   hasEnteredOrdering: boolean;
   setFromStorefront: (slug: string | null, tableToken: string | null, data: StorefrontData) => void;
   // Customer correction at checkout — switches to a different zone from the
@@ -36,11 +36,6 @@ interface SessionState {
   setTable: (tableId: string) => void;
   setOrderType: (orderType: OrderType) => void;
   setHasEnteredOrdering: (value: boolean) => void;
-  // "Empezar de nuevo" — lets the customer re-pick Comer aquí / Para llevar
-  // without losing their resolved restaurant/food-court/table/cart. Only
-  // clears orderType when it wasn't fixed by a table QR (dine-in via QR
-  // isn't a choice to redo).
-  restartOrdering: () => void;
   getTaxRate: (restaurantId: string) => number;
   getRestaurantName: (restaurantId: string) => string;
   reset: () => void;
@@ -57,7 +52,7 @@ const initial = {
   tableLabel: null,
   tableAllowsManualNumber: false,
   zones: [] as ZoneSummary[],
-  orderType: null as OrderType | null,
+  orderType: 'dine-in' as OrderType,
   hasEnteredOrdering: false,
 };
 
@@ -82,7 +77,7 @@ export const useSessionStore = create<SessionState>()(
             tableLabel: data.tableLabel,
             tableAllowsManualNumber: data.tableAllowsManualNumber,
             zones: data.zones,
-            orderType: data.tableLabel ? 'dine-in' : isSameStorefront ? state.orderType : null,
+            orderType: isSameStorefront ? state.orderType : 'dine-in',
             hasEnteredOrdering: isSameStorefront ? state.hasEnteredOrdering : false,
           });
         } else if (data.type === 'food_court') {
@@ -98,7 +93,7 @@ export const useSessionStore = create<SessionState>()(
             tableLabel: data.tableLabel,
             tableAllowsManualNumber: data.tableAllowsManualNumber,
             zones: data.zones,
-            orderType: data.tableLabel ? 'dine-in' : isSameStorefront ? state.orderType : null,
+            orderType: isSameStorefront ? state.orderType : 'dine-in',
             hasEnteredOrdering: isSameStorefront ? state.hasEnteredOrdering : false,
           });
         }
@@ -113,12 +108,6 @@ export const useSessionStore = create<SessionState>()(
       setOrderType: (orderType) => set({ orderType }),
 
       setHasEnteredOrdering: (value) => set({ hasEnteredOrdering: value }),
-
-      restartOrdering: () =>
-        set((state) => ({
-          hasEnteredOrdering: false,
-          orderType: state.tableLabel ? 'dine-in' : null,
-        })),
 
       getTaxRate: (restaurantId) => {
         return get().restaurants.find((r) => r.id === restaurantId)?.taxRate ?? 0.07;

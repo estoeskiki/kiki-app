@@ -66,23 +66,41 @@ export default function OrderTrackingPage() {
     let cancelled = false;
 
     async function poll() {
-      const result = await getOrderStatus(orderId);
-      if (cancelled) return;
-      if (!result) {
-        setNotFound(true);
-        return;
-      }
-      setOrder(result);
-      if (computeProgress(result).isTerminal) {
-        if (timer.current) clearInterval(timer.current);
+      try {
+        const result = await getOrderStatus(orderId);
+        if (cancelled) return;
+        if (!result) {
+          setNotFound(true);
+          return;
+        }
+        // A good result clears the not-found screen instead of leaving it
+        // latched — otherwise one bad poll would strand the page until refresh.
+        setNotFound(false);
+        setOrder(result);
+        if (computeProgress(result).isTerminal) {
+          if (timer.current) clearInterval(timer.current);
+        }
+      } catch {
+        // Transient network/transport failure — common when the tab resumes
+        // after the phone wakes from lock and fires a queued poll before the
+        // radio is back. Keep the last good state and let the interval retry.
       }
     }
 
     poll();
     timer.current = setInterval(poll, 5000);
+
+    // Re-poll the instant the page becomes visible again so a returning user
+    // sees fresh status right away rather than waiting up to 5s for the tick.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') poll();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
     return () => {
       cancelled = true;
       if (timer.current) clearInterval(timer.current);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [orderId]);
 
@@ -105,7 +123,7 @@ export default function OrderTrackingPage() {
 
   const handleShare = async () => {
     const url = window.location.href;
-    const shareData = { title: `Pedido #${order.order_number}`, text: 'Sigue mi pedido en KIKI', url };
+    const shareData = { title: `Pedido #${order.order_number}`, text: 'Sigue mi pedido en kiki', url };
     if (navigator.share) {
       try {
         await navigator.share(shareData);
@@ -186,13 +204,12 @@ export default function OrderTrackingPage() {
                         {STEPS.map((step, j) => (
                           <div key={step} className="flex flex-1 flex-col items-center gap-1.5">
                             <div
-                              className={`flex h-7 w-7 items-center justify-center rounded-full font-heading text-xs font-bold transition-colors duration-500 ${
-                                j < subCurrent
+                              className={`flex h-7 w-7 items-center justify-center rounded-full font-heading text-xs font-bold transition-colors duration-500 ${j < subCurrent
                                   ? 'bg-primary text-on-primary'
                                   : j === subCurrent
                                     ? 'step-active bg-primary text-on-primary'
                                     : 'bg-white/10 text-white/40'
-                              }`}
+                                }`}
                             >
                               {j + 1}
                             </div>
@@ -226,7 +243,7 @@ export default function OrderTrackingPage() {
                 {order.sub_orders.length > 1 && (
                   <div className="flex items-center justify-between border-t border-white/10 bg-white/[0.03] px-4 py-2.5 font-body text-sm">
                     <span className="font-semibold text-white/70">Subtotal {sub.restaurant_name}</span>
-                    <span className="font-bold text-white">{formatCurrency(sub.total)}</span>
+                    <span className="font-bold text-primary">{formatCurrency(sub.total)}</span>
                   </div>
                 )}
               </div>
@@ -236,7 +253,7 @@ export default function OrderTrackingPage() {
           <div className="flex flex-col gap-2 rounded-xl bg-white/[0.04] px-4 py-3">
             <div className="flex items-center justify-between font-body text-sm">
               <span className="font-semibold text-white/70">Subtotal</span>
-              <span className="font-bold text-white">{formatCurrency(order.subtotal)}</span>
+              <span className="font-bold text-primary">{formatCurrency(order.subtotal)}</span>
             </div>
             <div className="flex items-center justify-between font-body text-sm">
               <span className="font-semibold text-white/70">Impuesto</span>
@@ -288,6 +305,10 @@ export default function OrderTrackingPage() {
             Nueva orden
           </a>
         </div>
+
+        <p className="fade-up-item text-center font-body font-bold text-xs tracking-[-0.02em] text-white/50" style={{ animationDelay: '480ms' }}>
+          powered by <span className="font-heading font-bold tracking-[-0.036em] text-primary">kiki</span>
+        </p>
       </div>
     </div>
   );

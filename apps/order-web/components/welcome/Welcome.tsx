@@ -51,8 +51,8 @@ export function Welcome({ name, bgUrl, slogan, onStart }: WelcomeProps) {
         </button>
       </div>
 
-      <p className="fade-up-item absolute bottom-8 font-body text-xs tracking-wide text-white/50" style={{ animationDelay: '320ms' }}>
-        Powered by <span className="font-heading font-bold tracking-tighter text-primary">kiki</span>
+      <p className="fade-up-item absolute bottom-8 font-body font-bold text-xs tracking-[-0.02em] text-white/50" style={{ animationDelay: '320ms' }}>
+        powered by <span className="font-heading font-bold tracking-[-0.036em] text-primary">kiki</span>
       </p>
     </div>
   );

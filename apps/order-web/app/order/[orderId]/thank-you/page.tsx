@@ -58,6 +58,10 @@ export default function ThankYouPage() {
         <p className="font-body text-xs uppercase tracking-[0.25em] text-white/50">Orden</p>
         <p className="font-heading text-6xl font-black tracking-tight text-primary">#{lastOrder.orderNumber}</p>
       </div>
+
+      <p className="absolute bottom-8 font-body font-bold text-xs tracking-[-0.02em] text-white/50">
+        powered by <span className="font-heading font-bold tracking-[-0.036em] text-primary">kiki</span>
+      </p>
     </div>
   );
 }

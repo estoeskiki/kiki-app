@@ -89,7 +89,7 @@ function CardGroup({ children }: { children: React.ReactNode }) {
 
 export default function SettingsScreen() {
   const { kioskIsOpen, toggleKiosk, fetchKioskStatus } = useSystemStore();
-  const { signOut, user, orgId, restaurantId } = useAuthStore();
+  const { signOut, user, orgId, restaurantId, restaurantName, foodCourtName } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
   const { colors } = useTheme();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -134,6 +134,16 @@ export default function SettingsScreen() {
         {/* Page title */}
         <View style={[styles.pageHeader, { borderBottomColor: colors.borderLight }]}>
           <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>Ajustes</Text>
+          {(restaurantName || foodCourtName) && (
+            <View style={styles.identity}>
+              {foodCourtName && (
+                <Text style={[styles.identityFoodCourt, { color: colors.primary }]}>{foodCourtName}</Text>
+              )}
+              {restaurantName && (
+                <Text style={[styles.identityRestaurant, { color: colors.textPrimary }]}>{restaurantName}</Text>
+              )}
+            </View>
+          )}
           <Text style={[styles.pageSubtitle, { color: colors.textMuted }]}>
             {user?.email}
           </Text>
@@ -241,10 +251,25 @@ const styles = StyleSheet.create({
     fontSize: fontSizes['2xl'],
     letterSpacing: -0.5,
   },
+  identity: {
+    marginTop: spacing.sm,
+  },
+  identityFoodCourt: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.xs,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  identityRestaurant: {
+    fontFamily: fonts.heading,
+    fontSize: fontSizes.lg,
+    letterSpacing: -0.3,
+    marginTop: 2,
+  },
   pageSubtitle: {
     fontFamily: fonts.body,
     fontSize: fontSizes.xs,
-    marginTop: 3,
+    marginTop: spacing.sm,
   },
   version: {
     fontFamily: fonts.body,

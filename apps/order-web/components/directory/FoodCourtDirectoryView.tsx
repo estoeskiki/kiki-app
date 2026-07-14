@@ -1,6 +1,5 @@
 'use client';
 
-import { useSessionStore } from '@/store/useSessionStore';
 import { Header } from '@/components/layout/Header';
 import { RestaurantGrid } from './RestaurantGrid';
 import { CartFAB } from '@/components/cart/CartFAB';
@@ -16,12 +15,10 @@ interface FoodCourtDirectoryViewProps {
 // Shared by /t/[token] (the real QR entry point) and /mall/[slug] (kept as a
 // dev/test-only fallback — see that page for the production block).
 export function FoodCourtDirectoryView({ slug, foodCourt, restaurants }: FoodCourtDirectoryViewProps) {
-  const restartOrdering = useSessionStore((s) => s.restartOrdering);
-
   return (
     <OrderingGate name={foodCourt.name} bgUrl={foodCourt.welcomeBgUrl} slogan={foodCourt.slogan}>
       <div className="min-h-dvh pb-24">
-        <Header title={foodCourt.name} showCart onRestart={restartOrdering} />
+        <Header title={foodCourt.name} showCart />
 
         <div className="fade-up-item mx-4 mt-3 flex flex-col gap-1 rounded-xl border-l-4 border-primary bg-primary/10 px-4 py-3">
           <p className="font-body text-sm font-semibold text-text-primary">
@@ -36,6 +33,11 @@ export function FoodCourtDirectoryView({ slug, foodCourt, restaurants }: FoodCou
         </div>
 
         <RestaurantGrid slug={slug} restaurants={restaurants} />
+
+        <p className="mt-6 text-center font-body font-bold text-xs tracking-[-0.02em] text-text-muted">
+          powered by <span className="font-heading font-bold tracking-[-0.036em] text-primary">kiki</span>
+        </p>
+
         <CartFAB />
       </div>
     </OrderingGate>

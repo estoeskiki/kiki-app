@@ -15,8 +15,8 @@ const syne = Syne({
 });
 
 export const metadata: Metadata = {
-  title: 'KIKI — Pide en línea',
-  description: 'Pide desde tu mesa o a domicilio — con tecnología de KIKI.',
+  title: 'kiki — La forma inteligente de pedir.',
+  description: '¿Qué se te antoja hoy?',
 };
 
 export const viewport: Viewport = {

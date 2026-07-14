@@ -29,6 +29,11 @@ out/
 # Build outputs
 build/
 
+# Gradle / Android
+.gradle/
+.cxx/
+local.properties
+
 # OS
 .DS_Store
 *.pem
