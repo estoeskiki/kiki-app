@@ -22,7 +22,7 @@ export function FoodCourtDirectoryView({ slug, foodCourt, restaurants }: FoodCou
 
         <div className="fade-up-item mx-4 mt-3 flex flex-col gap-1 rounded-xl border-l-4 border-primary bg-primary/10 px-4 py-3">
           <p className="font-body text-sm font-semibold text-text-primary">
-            Escoge los platos que más te gusten de los diferentes restaurantes y haz un solo pedido.
+            Combina tus platos favoritos de diferentes restaurantes en un solo pedido.
           </p>
           <p className="font-body text-xs text-text-secondary">Pagas tu pedido en la entrega.</p>
         </div>

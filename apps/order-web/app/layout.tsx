@@ -15,7 +15,7 @@ const syne = Syne({
 });
 
 export const metadata: Metadata = {
-  title: 'kiki — La forma inteligente de pedir.',
+  title: 'kiki — La forma inteligente de pedir',
   description: '¿Qué se te antoja hoy?',
 };
 
