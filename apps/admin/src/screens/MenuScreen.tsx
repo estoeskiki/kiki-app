@@ -28,6 +28,11 @@ import { fonts, fontSizes } from '../theme/typography';
 const t = (val: any) => val?.es || val || '';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+// A concrete pixel height makes the edit sheet definite regardless of its
+// parent chain, so the inner ScrollView is bounded and actually scrolls to the
+// bottom (categories + add-ons) instead of clipping past the sheet's max.
+const EDIT_SHEET_HEIGHT = SCREEN_HEIGHT * 0.9;
 const CARD_GAP = spacing.sm;
 const CARD_WIDTH = (SCREEN_WIDTH - spacing.base * 2 - CARD_GAP) / 2;
 
@@ -628,7 +633,7 @@ export default function MenuScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.modalWrapper}
           >
-            <View style={[styles.modalContent, { backgroundColor: colors.background, borderColor: colors.borderLight }]}>
+            <View style={[styles.modalContent, { height: EDIT_SHEET_HEIGHT, backgroundColor: colors.background, borderColor: colors.borderLight }]}>
               {/* Handle */}
               <View style={styles.modalHandle}>
                 <View style={[styles.handleBar, { backgroundColor: colors.border }]} />
