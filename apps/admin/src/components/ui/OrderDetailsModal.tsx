@@ -68,7 +68,7 @@ export function OrderDetailsModal({
             activeOpacity={0.85}
           >
             <Text style={[styles.actionBtnText, { color: '#fff' }]}>
-              Marcar como Listo
+              Marcar Listo
             </Text>
           </TouchableOpacity>
         );
@@ -98,62 +98,64 @@ export function OrderDetailsModal({
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
           </View>
 
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerLeft}>
-              <Text style={[styles.orderNumber, { color: colors.textPrimary }]}>
-                Orden #{order.orderNumber}{order.customerName ? ` — ${order.customerName}` : ''}
-              </Text>
-              <View style={styles.headerMeta}>
-                <Text style={[styles.orderType, { color: colors.textSecondary }]}>
-                  {order.orderType === 'dine-in' ? 'Comer Aquí' : order.orderType === 'delivery' ? 'Delivery' : 'Para Llevar'}
+          {/* Close button — pinned top-right, always reachable */}
+          <TouchableOpacity
+            onPress={onClose}
+            style={[styles.closeBtn, { backgroundColor: colors.surfaceHighlight }]}
+            activeOpacity={0.7}
+          >
+            <X color={colors.textPrimary} size={18} strokeWidth={2} />
+          </TouchableOpacity>
+
+          {/* Scrollable content — header scrolls so footer stays pinned */}
+          <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.headerLeft}>
+                <Text style={[styles.orderNumber, { color: colors.textPrimary }]}>
+                  Orden #{order.orderNumber}{order.customerName ? ` — ${order.customerName}` : ''}
                 </Text>
-                <View style={[styles.dot, { backgroundColor: colors.border }]} />
-                <StatusBadge status={order.status} size="sm" />
-                {order.paymentMethod && (
-                  <>
-                    <View style={[styles.dot, { backgroundColor: colors.border }]} />
-                    <Text style={[styles.orderType, { color: colors.primary }]}>
-                      {paymentMethodLabel(order.paymentMethod)}
+                <View style={styles.headerMeta}>
+                  <Text style={[styles.orderType, { color: colors.textSecondary }]}>
+                    {order.orderType === 'dine-in' ? 'Comer Aquí' : order.orderType === 'delivery' ? 'Delivery' : 'Para Llevar'}
+                  </Text>
+                  <View style={[styles.dot, { backgroundColor: colors.border }]} />
+                  <StatusBadge status={order.status} size="sm" />
+                  {order.paymentMethod && (
+                    <>
+                      <View style={[styles.dot, { backgroundColor: colors.border }]} />
+                      <Text style={[styles.orderType, { color: colors.primary }]}>
+                        {paymentMethodLabel(order.paymentMethod)}
+                      </Text>
+                    </>
+                  )}
+                </View>
+                {order.tableLabel && (
+                  <View style={[styles.locationChip, { backgroundColor: colors.surfaceHighlight, borderColor: colors.primary }]}>
+                    <MapPin color={colors.primary} size={14} strokeWidth={2.5} />
+                    <Text style={[styles.locationText, { color: colors.textPrimary }]}>
+                      {order.tableLabel}{order.tableNumber ? ` · Mesa ${order.tableNumber}` : ''}
                     </Text>
-                  </>
+                  </View>
+                )}
+                {order.orderType === 'delivery' && order.deliveryAddress && (
+                  <Text style={[styles.orderType, { color: colors.textMuted }]}>
+                    {order.deliveryAddress.line1}
+                    {order.deliveryAddress.line2 ? `, ${order.deliveryAddress.line2}` : ''}
+                  </Text>
+                )}
+                {order.customerPhone && (
+                  <View style={[styles.phoneChip, { backgroundColor: colors.surfaceHighlight }]}>
+                    <Phone color={colors.primary} size={13} strokeWidth={2.5} />
+                    <Text style={[styles.phoneText, { color: colors.textPrimary }]}>{order.customerPhone}</Text>
+                  </View>
                 )}
               </View>
-              {order.tableLabel && (
-                <View style={[styles.locationChip, { backgroundColor: colors.surfaceHighlight, borderColor: colors.primary }]}>
-                  <MapPin color={colors.primary} size={14} strokeWidth={2.5} />
-                  <Text style={[styles.locationText, { color: colors.textPrimary }]}>
-                    {order.tableLabel}{order.tableNumber ? ` · Mesa ${order.tableNumber}` : ''}
-                  </Text>
-                </View>
-              )}
-              {order.orderType === 'delivery' && order.deliveryAddress && (
-                <Text style={[styles.orderType, { color: colors.textMuted }]}>
-                  {order.deliveryAddress.line1}
-                  {order.deliveryAddress.line2 ? `, ${order.deliveryAddress.line2}` : ''}
-                </Text>
-              )}
-              {order.customerPhone && (
-                <View style={[styles.phoneChip, { backgroundColor: colors.surfaceHighlight }]}>
-                  <Phone color={colors.primary} size={13} strokeWidth={2.5} />
-                  <Text style={[styles.phoneText, { color: colors.textPrimary }]}>{order.customerPhone}</Text>
-                </View>
-              )}
             </View>
-            <TouchableOpacity
-              onPress={onClose}
-              style={[styles.closeBtn, { backgroundColor: colors.surfaceHighlight }]}
-              activeOpacity={0.7}
-            >
-              <X color={colors.textPrimary} size={18} strokeWidth={2} />
-            </TouchableOpacity>
-          </View>
 
-          {/* Divider */}
-          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+            {/* Divider */}
+            <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
-          {/* Items */}
-          <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
             <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>ARTÍCULOS</Text>
             {order.items.map((item) => (
               <View key={item.id} style={styles.itemRow}>
@@ -255,8 +257,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: spacing.xl,
     paddingBottom: spacing.base,
+    paddingRight: 44,
   },
   headerLeft: {
     flex: 1,
@@ -313,16 +315,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   closeBtn: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.xl,
+    zIndex: 10,
+    elevation: 10,
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: spacing.base,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginHorizontal: spacing.xl,
     marginBottom: spacing.base,
   },
   scrollArea: {

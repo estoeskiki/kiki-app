@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { Plus, X, Trash2, Star, Wand2, Loader2 } from 'lucide-react-native';
 import { supabase, supabaseAnonKey } from '../lib/supabase';
@@ -32,12 +33,20 @@ const CARD_WIDTH = (SCREEN_WIDTH - spacing.base * 2 - CARD_GAP) / 2;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+// Editing shape keeps the numeric caps as strings while they're being typed.
+type EditingSelectionRule = {
+  driverGroupId: string;
+  byOption: Record<string, string>; // driver optionId -> max (string)
+  defaultMax: string;
+};
+
 type EditingCustomization = {
   id: string;
   name: { es: string; en: string };
   required: boolean;
   maxSelections: number;
   options: { id: string; name: { es: string; en: string }; priceModifier: string }[];
+  selectionRule: EditingSelectionRule | null;
 };
 
 type EditingItem = {
@@ -82,8 +91,15 @@ export default function MenuScreen() {
   React.useEffect(() => { fetchMenu(); }, [fetchMenu]);
 
   React.useEffect(() => {
-    if (!selectedCategoryId && categories.length > 0) setSelectedCategoryId(categories[0].id);
-  }, [categories, selectedCategoryId]);
+    if (categories.length === 0) return;
+    // Keep the current selection if it still points to an existing category
+    // (lets the user intentionally view an empty category to add items).
+    if (categories.some((c) => c.id === selectedCategoryId)) return;
+    // Otherwise (first load, or the selected category was deleted) prefer the
+    // first category that actually has items so we don't land on an empty view.
+    const firstWithItems = categories.find((c) => items.some((i) => i.categoryId === c.id));
+    setSelectedCategoryId((firstWithItems ?? categories[0]).id);
+  }, [categories, items, selectedCategoryId]);
 
   const filteredItems = useMemo(
     () => items.filter((i) => i.categoryId === selectedCategoryId),
@@ -112,6 +128,15 @@ export default function MenuScreen() {
         name: { es: t(cg.name), en: (cg.name as any)?.en || '' },
         required: cg.required,
         maxSelections: cg.maxSelections,
+        selectionRule: cg.selectionRule
+          ? {
+              driverGroupId: cg.selectionRule.driverGroupId,
+              byOption: Object.fromEntries(
+                Object.entries(cg.selectionRule.byOption).map(([k, v]) => [k, String(v)])
+              ),
+              defaultMax: String(cg.selectionRule.defaultMax),
+            }
+          : null,
         options: cg.options.map((o) => ({
           id: o.id,
           name: { es: t(o.name), en: (o.name as any)?.en || '' },
@@ -208,8 +233,51 @@ export default function MenuScreen() {
       ...prev,
       customizations: [
         ...prev.customizations,
-        { id: `cg-${Date.now()}`, name: { es: '', en: '' }, required: false, maxSelections: 1, options: [] },
+        { id: `cg-${Date.now()}`, name: { es: '', en: '' }, required: false, maxSelections: 1, options: [], selectionRule: null },
       ],
+    }));
+  };
+
+  // ─── Conditional-max rule helpers ───────────────────────────────────────────
+
+  const toggleSelectionRule = (cg: EditingCustomization) => {
+    updateCustomizationGroup(cg.id, {
+      selectionRule: cg.selectionRule
+        ? null
+        : { driverGroupId: '', byOption: {}, defaultMax: String(cg.maxSelections || 1) },
+    });
+  };
+
+  const setDriverGroup = (cgId: string, driverGroupId: string) => {
+    setEditingItem((prev) => ({
+      ...prev,
+      customizations: prev.customizations.map((cg) =>
+        cg.id === cgId && cg.selectionRule
+          ? { ...cg, selectionRule: { ...cg.selectionRule, driverGroupId, byOption: {} } }
+          : cg
+      ),
+    }));
+  };
+
+  const setOptionMax = (cgId: string, optId: string, value: string) => {
+    setEditingItem((prev) => ({
+      ...prev,
+      customizations: prev.customizations.map((cg) =>
+        cg.id === cgId && cg.selectionRule
+          ? { ...cg, selectionRule: { ...cg.selectionRule, byOption: { ...cg.selectionRule.byOption, [optId]: value } } }
+          : cg
+      ),
+    }));
+  };
+
+  const setDefaultMax = (cgId: string, value: string) => {
+    setEditingItem((prev) => ({
+      ...prev,
+      customizations: prev.customizations.map((cg) =>
+        cg.id === cgId && cg.selectionRule
+          ? { ...cg, selectionRule: { ...cg.selectionRule, defaultMax: value } }
+          : cg
+      ),
     }));
   };
 
@@ -335,6 +403,18 @@ export default function MenuScreen() {
         name: { es: cg.name.es.trim(), en: cg.name.en.trim() },
         required: cg.required,
         maxSelections: cg.maxSelections,
+        selectionRule:
+          cg.selectionRule && cg.selectionRule.driverGroupId
+            ? {
+                driverGroupId: cg.selectionRule.driverGroupId,
+                byOption: Object.fromEntries(
+                  Object.entries(cg.selectionRule.byOption)
+                    .map(([k, v]) => [k, parseInt(v, 10) || 0] as const)
+                    .filter(([, v]) => v > 0)
+                ),
+                defaultMax: parseInt(cg.selectionRule.defaultMax, 10) || 1,
+              }
+            : null,
         options: cg.options.filter((o) => o.name.es.trim()).map((o) => ({
           id: o.id,
           name: { es: o.name.es.trim(), en: o.name.en.trim() },
@@ -516,22 +596,28 @@ export default function MenuScreen() {
         contentContainerStyle={styles.gridContainer}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <View style={[styles.emptyIcon, { backgroundColor: colors.surfaceContainer }]}>
-              <Text style={styles.emptyEmoji}>🍽</Text>
+          isLoading ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color={colors.primary} />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Sin artículos</Text>
-            <Text style={[styles.emptyBody, { color: colors.textMuted }]}>
-              Añade el primer artículo a esta categoría.
-            </Text>
-            <TouchableOpacity
-              onPress={openAddModal}
-              style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.emptyBtnText, { color: colors.onPrimary }]}>+ Añadir Artículo</Text>
-            </TouchableOpacity>
-          </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={[styles.emptyIcon, { backgroundColor: colors.surfaceContainer }]}>
+                <Text style={styles.emptyEmoji}>🍽</Text>
+              </View>
+              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Sin artículos</Text>
+              <Text style={[styles.emptyBody, { color: colors.textMuted }]}>
+                Añade el primer artículo a esta categoría.
+              </Text>
+              <TouchableOpacity
+                onPress={openAddModal}
+                style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.emptyBtnText, { color: colors.onPrimary }]}>+ Añadir Artículo</Text>
+              </TouchableOpacity>
+            </View>
+          )
         }
       />
 
@@ -588,7 +674,7 @@ export default function MenuScreen() {
                 </View>
               </View>
 
-              <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
+              <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 {/* Name */}
                 <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>NOMBRE</Text>
                 <View style={styles.bilingualField}>
@@ -707,7 +793,15 @@ export default function MenuScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {editingItem.customizations.map((cg) => (
+                {editingItem.customizations.map((cg) => {
+                  // Groups that can drive this one's cap — any other named group.
+                  const otherGroups = editingItem.customizations.filter(
+                    (g) => g.id !== cg.id && g.name.es.trim()
+                  );
+                  const driverGroup = cg.selectionRule
+                    ? editingItem.customizations.find((g) => g.id === cg.selectionRule!.driverGroupId)
+                    : undefined;
+                  return (
                   <View key={cg.id} style={[styles.cgCard, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight }]}>
                     <View style={styles.cgHeader}>
                       <View style={{ flex: 1, marginRight: spacing.sm }}>
@@ -786,8 +880,86 @@ export default function MenuScreen() {
                     <TouchableOpacity onPress={() => addOption(cg.id)} style={styles.addOptionBtn} activeOpacity={0.7}>
                       <Text style={[styles.addOptionText, { color: colors.primary }]}>+ Añadir Opción</Text>
                     </TouchableOpacity>
+
+                    {/* Conditional max: cap depends on the option picked in another group */}
+                    {otherGroups.length > 0 && (
+                      <View style={[styles.ruleBlock, { borderTopColor: colors.borderLight }]}>
+                        <TouchableOpacity
+                          style={styles.ruleToggleRow}
+                          onPress={() => toggleSelectionRule(cg)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={[styles.ruleCheckbox, { borderColor: cg.selectionRule ? colors.primary : colors.border, backgroundColor: cg.selectionRule ? colors.primary : 'transparent' }]}>
+                            {cg.selectionRule && <Text style={[styles.ruleCheck, { color: colors.onPrimary }]}>✓</Text>}
+                          </View>
+                          <Text style={[styles.ruleToggleText, { color: colors.textSecondary }]}>
+                            Máx. depende de otro grupo
+                          </Text>
+                        </TouchableOpacity>
+
+                        {cg.selectionRule && (
+                          <View style={{ marginTop: spacing.sm }}>
+                            <Text style={[styles.ruleLabel, { color: colors.textMuted }]}>GRUPO BASE</Text>
+                            <View style={styles.chipRow}>
+                              {otherGroups.map((g) => {
+                                const active = cg.selectionRule!.driverGroupId === g.id;
+                                return (
+                                  <TouchableOpacity
+                                    key={g.id}
+                                    style={[styles.chip, { backgroundColor: active ? colors.primary : colors.surfaceHighlight, borderColor: active ? colors.primary : colors.borderLight }]}
+                                    onPress={() => setDriverGroup(cg.id, g.id)}
+                                    activeOpacity={0.7}
+                                  >
+                                    <Text style={[styles.chipText, { color: active ? colors.onPrimary : colors.textSecondary }]}>
+                                      {g.name.es.trim() || 'Grupo'}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+
+                            {driverGroup && (
+                              <View style={{ marginTop: spacing.sm }}>
+                                {driverGroup.options.filter((o) => o.name.es.trim()).map((o) => (
+                                  <View key={o.id} style={styles.ruleOptRow}>
+                                    <Text style={[styles.ruleOptName, { color: colors.textSecondary }]} numberOfLines={1}>
+                                      {o.name.es.trim()}
+                                    </Text>
+                                    <Text style={[styles.ruleArrow, { color: colors.textMuted }]}>máx</Text>
+                                    <TextInput
+                                      style={[styles.maxSelInput, { backgroundColor: colors.surfaceHighlight, color: colors.textPrimary }]}
+                                      value={cg.selectionRule!.byOption[o.id] ?? ''}
+                                      onChangeText={(v) => setOptionMax(cg.id, o.id, v)}
+                                      placeholder={cg.selectionRule!.defaultMax}
+                                      placeholderTextColor={colors.textMuted}
+                                      keyboardType="numeric"
+                                    />
+                                  </View>
+                                ))}
+                                <View style={[styles.ruleOptRow, { marginTop: spacing.xs }]}>
+                                  <Text style={[styles.ruleOptName, { color: colors.textMuted, fontStyle: 'italic' }]}>
+                                    Por defecto
+                                  </Text>
+                                  <Text style={[styles.ruleArrow, { color: colors.textMuted }]}>máx</Text>
+                                  <TextInput
+                                    style={[styles.maxSelInput, { backgroundColor: colors.surfaceHighlight, color: colors.textPrimary }]}
+                                    value={cg.selectionRule!.defaultMax}
+                                    onChangeText={(v) => setDefaultMax(cg.id, v)}
+                                    keyboardType="numeric"
+                                  />
+                                </View>
+                                <Text style={[styles.ruleHint, { color: colors.textMuted }]}>
+                                  El máximo nunca supera el "Máx" del grupo ({cg.maxSelections}).
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    )}
                   </View>
-                ))}
+                  );
+                })}
 
                 {editingItem.customizations.length === 0 && (
                   <Text style={[styles.noAddonsText, { color: colors.textMuted }]}>
@@ -860,7 +1032,7 @@ export default function MenuScreen() {
                 </View>
               </View>
 
-              <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
+              <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 {/* Name */}
                 <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>NOMBRE</Text>
                 <View style={styles.bilingualField}>
@@ -938,12 +1110,14 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
   },
   tabBar: {
-    maxHeight: 52,
+    flexGrow: 0,
+    flexShrink: 0,
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
   },
   tabBarContent: {
     paddingHorizontal: spacing.base,
+    paddingVertical: spacing.xs,
     gap: spacing.sm,
     alignItems: 'center',
   },
@@ -1087,6 +1261,10 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: '100%',
+    // flexShrink lets the sheet cap at the wrapper's maxHeight so the inner
+    // ScrollView (flex:1) gets a bounded height and actually scrolls, instead
+    // of growing to content height and pushing the save button off-screen.
+    flexShrink: 1,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderRightWidth: StyleSheet.hairlineWidth,
@@ -1123,6 +1301,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   formScroll: {
+    flex: 1,
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.base,
   },
@@ -1310,6 +1489,61 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     fontStyle: 'italic',
     marginTop: spacing.sm,
+  },
+
+  // Conditional-max rule editor
+  ruleBlock: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  ruleToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  ruleCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ruleCheck: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 12,
+  },
+  ruleToggleText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSizes.sm,
+  },
+  ruleLabel: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.xs,
+    letterSpacing: 0.8,
+    marginBottom: spacing.sm,
+  },
+  ruleOptRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  ruleOptName: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: fontSizes.sm,
+  },
+  ruleArrow: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.xs,
+  },
+  ruleHint: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.xs,
+    fontStyle: 'italic',
+    marginTop: spacing.xs,
   },
   saveBtn: {
     marginHorizontal: spacing.xl,

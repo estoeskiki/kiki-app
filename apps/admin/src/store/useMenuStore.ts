@@ -1,7 +1,28 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from './useAuthStore';
-import { MenuItem, Category } from '../data/types';
+import { MenuItem, Category, SelectionRule } from '../data/types';
+
+// Convert an editing SelectionRule (camelCase, may reference freshly-created
+// groups/options by temporary id) into the DB jsonb shape, remapping any temp
+// ids to the real ids assigned on insert. Returns null when there's no rule so
+// the column is cleared (e.g. the admin toggled the dependency back off).
+function toDbSelectionRule(
+  rule: SelectionRule | null | undefined,
+  groupIdMap: Record<string, string>,
+  optIdMap: Record<string, string>,
+): Record<string, unknown> | null {
+  if (!rule || !rule.driverGroupId) return null;
+  const by_option: Record<string, number> = {};
+  for (const [optId, max] of Object.entries(rule.byOption || {})) {
+    by_option[optIdMap[optId] ?? optId] = max;
+  }
+  return {
+    driver_group_id: groupIdMap[rule.driverGroupId] ?? rule.driverGroupId,
+    by_option,
+    default: rule.defaultMax,
+  };
+}
 
 interface MenuState {
   items: MenuItem[];
@@ -61,6 +82,13 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           name: cg.name,
           required: cg.required,
           maxSelections: cg.max_selections,
+          selectionRule: cg.selection_rule
+            ? {
+                driverGroupId: cg.selection_rule.driver_group_id,
+                byOption: cg.selection_rule.by_option ?? {},
+                defaultMax: cg.selection_rule.default ?? cg.max_selections,
+              }
+            : null,
           options: cg.customization_options.map((co: any) => ({
             id: co.id,
             name: co.name,
@@ -109,7 +137,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
     if (error || !insertedItem) return console.error(error);
 
-    // 2. Insert customizations (if any)
+    // 2. Insert customizations (if any), tracking temp id -> real id so a
+    // selection_rule referencing a just-created group/option still resolves.
+    const groupIdMap: Record<string, string> = {};
+    const optIdMap: Record<string, string> = {};
     for (const group of item.customizations) {
       const { data: insertedGroup } = await supabase.from('customization_groups').insert({
         menu_item_id: insertedItem.id,
@@ -117,18 +148,34 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         name: group.name,
         required: group.required,
         max_selections: group.maxSelections,
-      }).select().single();
+      }).select('id').single();
 
-      if (insertedGroup && group.options.length > 0) {
-        await supabase.from('customization_options').insert(
+      if (!insertedGroup) continue;
+      groupIdMap[group.id] = insertedGroup.id;
+
+      if (group.options.length > 0) {
+        const { data: insertedOpts } = await supabase.from('customization_options').insert(
           group.options.map((opt) => ({
             group_id: insertedGroup.id,
             restaurant_id: restaurantId,
             name: opt.name,
             price_modifier: opt.priceModifier,
           }))
-        );
+        ).select('id');
+        // Postgres returns a multi-row insert in value order, so zip by index.
+        (insertedOpts || []).forEach((row: any, idx: number) => {
+          optIdMap[group.options[idx].id] = row.id;
+        });
       }
+    }
+
+    // 3. Second pass: now that every id is known, write selection rules.
+    for (const group of item.customizations) {
+      if (!group.selectionRule) continue;
+      const realGroupId = groupIdMap[group.id];
+      if (!realGroupId) continue;
+      const dbRule = toDbSelectionRule(group.selectionRule, groupIdMap, optIdMap);
+      await supabase.from('customization_groups').update({ selection_rule: dbRule }).eq('id', realGroupId);
     }
 
     await get().fetchMenu(); // Re-fetch all to get fully formed relations
@@ -168,6 +215,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         await supabase.from('customization_groups').delete().in('id', toDeleteGroupIds);
       }
 
+      // Track temp id -> real id so a selection_rule referencing a group/option
+      // created in this same save still resolves in the second pass below.
+      const groupIdMap: Record<string, string> = {};
+      const optIdMap: Record<string, string> = {};
+
       for (const cg of updates.customizations) {
         const isNew = cg.id.startsWith('cg-');
         let groupId = cg.id;
@@ -195,6 +247,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
             max_selections: cg.maxSelections,
           }).eq('id', groupId);
         }
+        groupIdMap[cg.id] = groupId;
 
         // Fetch current option IDs for this group
         const { data: existingOpts } = await supabase
@@ -217,12 +270,13 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
         for (const opt of cg.options) {
           if (opt.id.startsWith('opt-')) {
-            await supabase.from('customization_options').insert({
+            const { data: insertedOpt } = await supabase.from('customization_options').insert({
               group_id: groupId,
               restaurant_id: restaurantId,
               name: opt.name,
               price_modifier: opt.priceModifier,
-            });
+            }).select('id').single();
+            if (insertedOpt) optIdMap[opt.id] = insertedOpt.id;
           } else {
             await supabase.from('customization_options').update({
               name: opt.name,
@@ -230,6 +284,14 @@ export const useMenuStore = create<MenuState>((set, get) => ({
             }).eq('id', opt.id);
           }
         }
+      }
+
+      // Second pass: write (or clear) each group's selection_rule now that all
+      // ids exist. Passing null clears a rule the admin toggled back off.
+      for (const cg of updates.customizations) {
+        const realGroupId = groupIdMap[cg.id] ?? cg.id;
+        const dbRule = toDbSelectionRule(cg.selectionRule ?? null, groupIdMap, optIdMap);
+        await supabase.from('customization_groups').update({ selection_rule: dbRule }).eq('id', realGroupId);
       }
     }
 

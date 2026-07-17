@@ -11,9 +11,8 @@ export function RestaurantGrid({ slug, restaurants }: { slug: string; restaurant
           key={r.id}
           href={r.isOpen ? `/mall/${slug}/${r.id}` : '#'}
           aria-disabled={!r.isOpen}
-          className={`group fade-up-item flex flex-col overflow-hidden rounded-2xl border border-border-light bg-surface transition ${
-            r.isOpen ? 'active:scale-[0.97]' : 'pointer-events-none'
-          }`}
+          className={`group fade-up-item flex flex-col overflow-hidden rounded-2xl border border-border-light bg-surface transition ${r.isOpen ? 'active:scale-[0.97]' : 'pointer-events-none'
+            }`}
           style={{ animationDelay: `${60 + i * 60}ms` }}
         >
           <div
@@ -41,7 +40,7 @@ export function RestaurantGrid({ slug, restaurants }: { slug: string; restaurant
               <div className="flex items-center gap-1.5">
                 {r.isOpen && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
                 <span className={`font-body text-xs ${r.isOpen ? 'text-text-secondary' : 'text-text-muted'}`}>
-                  {r.isOpen ? 'Abierto ahora' : 'Cerrado'}
+                  {r.isOpen ? 'Abierto' : 'Cerrado'}
                 </span>
               </div>
             </div>

@@ -14,6 +14,18 @@ interface ItemDetailModalProps {
   onClose: () => void;
 }
 
+// How many options this group currently allows. With a selectionRule the cap
+// follows the option picked in the driver group (e.g. 5 tenders -> 1 sauce,
+// 8/12 -> 2); without one it's the static maxSelections. Never exceeds the
+// static ceiling.
+function effectiveMax(group: CustomizationGroup, selected: Record<string, string[]>): number {
+  const rule = group.selectionRule;
+  if (!rule) return group.maxSelections;
+  const driverOption = (selected[rule.driverGroupId] ?? [])[0];
+  const ruleMax = driverOption ? rule.byOption[driverOption] ?? rule.defaultMax : rule.defaultMax;
+  return Math.min(ruleMax, group.maxSelections);
+}
+
 export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }: ItemDetailModalProps) {
   const addItem = useCartStore((s) => s.addItem);
   const [selected, setSelected] = useState<Record<string, string[]>>(() => {
@@ -34,18 +46,37 @@ export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }:
     };
   }, []);
 
-  const toggleOption = useCallback((group: CustomizationGroup, optionId: string) => {
-    setSelected((prev) => {
-      const current = prev[group.id] ?? [];
-      if (group.maxSelections === 1) {
-        if (current.includes(optionId) && !group.required) return { ...prev, [group.id]: [] };
-        return { ...prev, [group.id]: [optionId] };
-      }
-      if (current.includes(optionId)) return { ...prev, [group.id]: current.filter((id) => id !== optionId) };
-      if (current.length >= group.maxSelections) return { ...prev, [group.id]: [...current.slice(1), optionId] };
-      return { ...prev, [group.id]: [...current, optionId] };
-    });
-  }, []);
+  const toggleOption = useCallback(
+    (group: CustomizationGroup, optionId: string) => {
+      setSelected((prev) => {
+        const maxSel = effectiveMax(group, prev);
+        const current = prev[group.id] ?? [];
+        let next: Record<string, string[]>;
+        if (maxSel === 1) {
+          if (current.includes(optionId) && !group.required) next = { ...prev, [group.id]: [] };
+          else next = { ...prev, [group.id]: [optionId] };
+        } else if (current.includes(optionId)) {
+          next = { ...prev, [group.id]: current.filter((id) => id !== optionId) };
+        } else if (current.length >= maxSel) {
+          next = { ...prev, [group.id]: [...current.slice(1), optionId] };
+        } else {
+          next = { ...prev, [group.id]: [...current, optionId] };
+        }
+        // Changing a driver option can shrink a dependent group's cap (e.g.
+        // switching 12 -> 5 tenders drops the allowance from 2 sauces to 1).
+        // Trim any group this one drives down to its new effective max.
+        for (const g of item.customizations) {
+          if (g.selectionRule?.driverGroupId === group.id) {
+            const gMax = effectiveMax(g, next);
+            const cur = next[g.id] ?? [];
+            if (cur.length > gMax) next = { ...next, [g.id]: cur.slice(0, gMax) };
+          }
+        }
+        return next;
+      });
+    },
+    [item.customizations],
+  );
 
   const modifierTotal = useMemo(() => {
     let total = 0;
@@ -104,7 +135,10 @@ export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }:
             <p className="font-body text-text-muted">{localize(item.description)}</p>
             <p className="font-heading text-xl font-bold text-text-primary">{formatCurrency(item.price)}</p>
 
-            {item.customizations.map((group) => (
+            {item.customizations.map((group) => {
+              const maxSel = effectiveMax(group, selected);
+              const isRadio = maxSel === 1;
+              return (
               <div key={group.id} className="mt-4 border-t border-border-light pt-4">
                 <div className="mb-2 flex items-center gap-2">
                   <h3 className="flex-1 font-heading text-base font-semibold tracking-tight text-text-primary">
@@ -113,15 +147,14 @@ export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }:
                   {group.required && (
                     <span className="rounded bg-primary px-2 py-0.5 text-xs font-bold text-on-primary">Obligatorio</span>
                   )}
-                  {!group.required && group.maxSelections > 1 && (
-                    <span className="text-sm text-text-muted">Hasta {group.maxSelections}</span>
+                  {maxSel > 1 && (
+                    <span className="text-sm text-text-muted">Hasta {maxSel}</span>
                   )}
                 </div>
 
                 <div className="flex flex-col gap-2">
                   {group.options.map((option) => {
                     const isSelected = (selected[group.id] ?? []).includes(option.id);
-                    const isRadio = group.maxSelections === 1;
                     return (
                       <button
                         key={option.id}
@@ -151,7 +184,8 @@ export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }:
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

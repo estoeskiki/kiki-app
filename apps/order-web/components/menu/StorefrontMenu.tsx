@@ -66,7 +66,7 @@ export function StorefrontMenu({ restaurantId, restaurantName, backHref }: Store
       {isLoading ? (
         <p className="px-4 py-10 text-center font-body text-text-muted">Cargando menú…</p>
       ) : (
-        <MenuGrid items={visibleItems} onSelect={setSelectedItem} />
+        <MenuGrid items={visibleItems} onSelect={setSelectedItem} onAdd={setSelectedItem} />
       )}
       <CartFAB />
       {selectedItem && (

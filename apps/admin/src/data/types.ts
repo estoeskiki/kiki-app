@@ -17,12 +17,22 @@ export interface CustomizationOption {
   priceModifier: number; // in cents (can be negative, zero, or positive)
 }
 
+// Conditional max: this group's allowed selection count depends on which
+// option is chosen in another ("driver") group. Effective max =
+// byOption[selected driver option] ?? defaultMax, capped by maxSelections.
+export interface SelectionRule {
+  driverGroupId: string;
+  byOption: Record<string, number>; // driver optionId -> max selections
+  defaultMax: number;
+}
+
 export interface CustomizationGroup {
   id: string;
   name: TranslatableText | string;
   required: boolean;
-  maxSelections: number; // 1 = radio, >1 = checkbox
+  maxSelections: number; // static ceiling; 1 = radio, >1 = checkbox
   options: CustomizationOption[];
+  selectionRule?: SelectionRule | null;
 }
 
 export interface MenuItem {

@@ -167,7 +167,7 @@ serve(async (req) => {
     const menuItemIds = [...new Set(body.items.map((i) => i.menuItemId))]
     const { data: menuItems, error: menuError } = await supabaseAdmin
       .from('menu_items')
-      .select('id, restaurant_id, name, price, available, customization_groups(id, name, required, customization_options(id, name, price_modifier))')
+      .select('id, restaurant_id, name, price, available, customization_groups(id, name, required, max_selections, selection_rule, customization_options(id, name, price_modifier))')
       .in('id', menuItemIds)
 
     if (menuError || !menuItems) {
@@ -205,6 +205,26 @@ serve(async (req) => {
         )
         if (group.required && selected.length === 0) {
           return jsonResponse({ error: `missing_required_customization:${group.id}` }, 400)
+        }
+        // Enforce the selection cap the client also enforces — a browser can
+        // send anything. A selection_rule makes the cap depend on the option
+        // chosen in a driver group (e.g. 5 tenders -> 1 sauce, 8/12 -> 2);
+        // otherwise it's the static max_selections. Never trust the client here.
+        const rule = group.selection_rule as
+          | { driver_group_id: string; by_option: Record<string, number>; default: number }
+          | null
+        let allowedMax = group.max_selections ?? 1
+        if (rule) {
+          const driverOption = (cartItem.selectedOptionIds ?? []).find(
+            (id) => rule.by_option && id in rule.by_option,
+          )
+          const ruleMax = driverOption
+            ? rule.by_option[driverOption] ?? rule.default
+            : rule.default
+          allowedMax = Math.min(ruleMax ?? allowedMax, group.max_selections ?? ruleMax ?? 1)
+        }
+        if (selected.length > allowedMax) {
+          return jsonResponse({ error: `too_many_selections:${group.id}` }, 400)
         }
         for (const opt of selected) {
           unitPrice += opt.price_modifier
@@ -370,12 +390,15 @@ serve(async (req) => {
       }
     }
 
-    // 9. Fire fiscal invoice generation the same way the kiosk does — non-fatal.
-    try {
-      await supabaseAdmin.functions.invoke('generate-fiscal-invoices', { body: { orderId: order.id } })
-    } catch (err) {
-      console.error('generate-fiscal-invoices failed for web order', order.id, err)
-    }
+    // 9. Fiscal invoice generation — DISABLED. The DGI fiscal environment isn't
+    // in use yet (the kiosk already bypasses it too, see orderService.ts), and
+    // awaiting the invoke added ~338ms to the critical path of "Confirmar
+    // pedido" for no functional gain. Re-enable when DGI is live.
+    // try {
+    //   await supabaseAdmin.functions.invoke('generate-fiscal-invoices', { body: { orderId: order.id } })
+    // } catch (err) {
+    //   console.error('generate-fiscal-invoices failed for web order', order.id, err)
+    // }
 
     return jsonResponse({ orderId: order.id, orderNumber, createdAt: order.created_at })
   } catch (error: any) {

@@ -120,6 +120,13 @@ export async function fetchMenu(restaurantId: string): Promise<{ categories: Cat
           name: cg.name,
           required: cg.required,
           maxSelections: cg.max_selections,
+          selectionRule: cg.selection_rule
+            ? {
+                driverGroupId: cg.selection_rule.driver_group_id,
+                byOption: cg.selection_rule.by_option ?? {},
+                defaultMax: cg.selection_rule.default ?? cg.max_selections,
+              }
+            : null,
           options: (cg.customization_options ?? []).map((co: any) => ({
             id: co.id,
             name: co.name,
