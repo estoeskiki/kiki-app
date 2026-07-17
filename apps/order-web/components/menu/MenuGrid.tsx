@@ -13,10 +13,17 @@ export function MenuGrid({ items, onSelect, onAdd }: MenuGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 px-4 pb-28 pt-1 sm:grid-cols-3 lg:grid-cols-4">
-      {items.map((item) => (
-        <MenuItemCard key={item.id} item={item} onSelect={() => onSelect(item)} onAdd={() => onAdd(item)} />
-      ))}
+    <div
+      className="overflow-y-auto"
+      style={{
+        maxHeight: 'calc(100dvh - 60px - 56px - 80px)',
+      }}
+    >
+      <div className="grid grid-cols-2 gap-3 px-4 pb-6 pt-1 sm:grid-cols-3 lg:grid-cols-4">
+        {items.map((item) => (
+          <MenuItemCard key={item.id} item={item} onSelect={() => onSelect(item)} onAdd={() => onAdd(item)} />
+        ))}
+      </div>
     </div>
   );
 }

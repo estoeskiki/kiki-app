@@ -17,7 +17,7 @@ interface FoodCourtDirectoryViewProps {
 export function FoodCourtDirectoryView({ slug, foodCourt, restaurants }: FoodCourtDirectoryViewProps) {
   return (
     <OrderingGate name={foodCourt.name} bgUrl={foodCourt.welcomeBgUrl} slogan={foodCourt.slogan}>
-      <div className="min-h-dvh pb-24">
+      <div className="min-h-dvh pb-4">
         <Header title={foodCourt.name} showCart />
 
         <div className="fade-up-item mx-4 mt-3 flex flex-col gap-1 rounded-xl border-l-4 border-primary bg-primary/10 px-4 py-3">
@@ -32,7 +32,14 @@ export function FoodCourtDirectoryView({ slug, foodCourt, restaurants }: FoodCou
           <span className="font-body text-xs font-semibold text-text-muted">{restaurants.length} disponibles</span>
         </div>
 
-        <RestaurantGrid slug={slug} restaurants={restaurants} />
+        <div
+          className="overflow-y-auto"
+          style={{
+            maxHeight: 'calc(100dvh - 60px - 56px - 80px - 120px)',
+          }}
+        >
+          <RestaurantGrid slug={slug} restaurants={restaurants} />
+        </div>
 
         <p className="mt-6 text-center font-body font-bold text-xs tracking-[-0.02em] text-text-muted">
           powered by <span className="font-heading font-bold tracking-[-0.036em] text-primary">kiki</span>

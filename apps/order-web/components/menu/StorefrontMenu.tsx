@@ -60,7 +60,7 @@ export function StorefrontMenu({ restaurantId, restaurantName, backHref }: Store
   );
 
   return (
-    <div className="min-h-dvh pb-24">
+    <div className="min-h-dvh pb-4">
       <Header title={restaurantName} backHref={backHref} />
       <CategoryTabs categories={categories} activeId={activeCategoryId} onSelect={setActiveCategoryId} />
       {isLoading ? (
