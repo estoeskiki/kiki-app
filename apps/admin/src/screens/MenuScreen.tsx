@@ -1262,7 +1262,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     maxHeight: '100%',
     // flexShrink lets the sheet cap at the wrapper's maxHeight so the inner
-    // ScrollView (flex:1) gets a bounded height and actually scrolls, instead
+    // ScrollView (flexShrink) gets a bounded height and actually scrolls, instead
     // of growing to content height and pushing the save button off-screen.
     flexShrink: 1,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -1301,7 +1301,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   formScroll: {
-    flex: 1,
+    // Shrink-only (not flex:1 grow): sizes to content and only shrinks when the
+    // sheet hits modalWrapper's maxHeight, so it scrolls long forms and pins the
+    // save button — without collapsing to 0 height when the parent has no
+    // definite height (which blanked the whole modal into a frozen dark overlay).
+    flexShrink: 1,
+    minHeight: 0,
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.base,
   },
