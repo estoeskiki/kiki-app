@@ -4,12 +4,20 @@ import { useAuthStore } from './useAuthStore';
 import { Order, OrderStatus } from '../data/types';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { playNewOrderChime } from '../services/notificationSound';
+// Realtime can fire many events per second during a rush (each order = one
+// sub_orders row + N order_items rows). Coalesce them into at most one refetch
+// per window instead of a full refetch per event, which otherwise pins the app
+// in a constant reload loop and machine-guns the new-order chime.
+const REFETCH_DEBOUNCE_MS = 700;
+let refetchTimer: ReturnType<typeof setTimeout> | null = null;
+let chimePending = false;
+
 interface OrdersState {
   orders: Order[];
   isLoading: boolean;
   fetchError: string | null;
   channel: RealtimeChannel | null;
-  fetchOrders: () => Promise<void>;
+  fetchOrders: (silent?: boolean) => Promise<void>;
   subscribeToOrders: () => void;
   unsubscribeFromOrders: () => void;
   acceptOrder: (orderId: string) => Promise<void>; // Moves to 'preparing'
@@ -24,12 +32,14 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
   fetchError: null,
   channel: null,
 
-  fetchOrders: async () => {
+  fetchOrders: async (silent = false) => {
     const { restaurantId } = useAuthStore.getState();
     if (!restaurantId) return;
 
-    set({ isLoading: true });
-    
+    // Realtime-triggered refetches run silent so the pull-to-refresh spinner
+    // doesn't flicker on every incoming order.
+    if (!silent) set({ isLoading: true });
+
     // Fetch active sub_orders for this specific stall
     const { data, error } = await supabase
       .from('sub_orders')
@@ -40,7 +50,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
 
     if (error) {
       console.error('Error fetching orders:', error.message);
-      set({ fetchError: error.message, isLoading: false });
+      set(silent ? { fetchError: error.message } : { fetchError: error.message, isLoading: false });
     } else if (data) {
       set({ fetchError: null });
       try {
@@ -82,7 +92,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
         console.error('[DEV] Error mapping orders:', err);
       }
     }
-    set({ isLoading: false });
+    if (!silent) set({ isLoading: false });
   },
 
   subscribeToOrders: () => {
@@ -93,6 +103,20 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
     if (currentChannel) {
       get().unsubscribeFromOrders();
     }
+
+    // Coalesce a burst of realtime events into at most one (silent) refetch per
+    // window, and play the chime once per burst rather than per event.
+    const scheduleRefetch = () => {
+      if (refetchTimer) return; // a refetch is already queued for this window
+      refetchTimer = setTimeout(() => {
+        refetchTimer = null;
+        if (chimePending) {
+          chimePending = false;
+          playNewOrderChime();
+        }
+        get().fetchOrders(true);
+      }, REFETCH_DEBOUNCE_MS);
+    };
 
     const channel = supabase
       .channel(`sub_orders-${restaurantId}`)
@@ -106,11 +130,11 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            playNewOrderChime();
+            chimePending = true; // chime fires once when the debounced fetch runs
           }
           // Realtime only sends the sub_orders row itself, not nested
           // order_items — refetch to get the full shape regardless of event type.
-          get().fetchOrders();
+          scheduleRefetch();
         }
       )
       .on(
@@ -125,7 +149,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
           // Safety net: order_items for a new sub_order are inserted right
           // after it, in a separate statement — this catches up the item
           // list if the sub_orders-triggered fetch above raced ahead of them.
-          get().fetchOrders();
+          scheduleRefetch();
         }
       )
       .subscribe();
@@ -135,6 +159,11 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
 
   unsubscribeFromOrders: () => {
     const { channel } = get();
+    if (refetchTimer) {
+      clearTimeout(refetchTimer);
+      refetchTimer = null;
+    }
+    chimePending = false;
     if (channel) {
       supabase.removeChannel(channel);
       set({ channel: null });
