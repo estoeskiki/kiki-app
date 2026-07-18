@@ -35,6 +35,12 @@
         "projectId": "2f0cb7f9-7a02-48fa-92ca-cda5f0acb874"
       }
     },
-    "owner": "omacac"
+    "owner": "omacac",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/2f0cb7f9-7a02-48fa-92ca-cda5f0acb874"
+    }
   }
 }

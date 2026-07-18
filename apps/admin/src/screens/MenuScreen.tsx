@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -92,6 +92,7 @@ export default function MenuScreen() {
   const [editingCat, setEditingCat] = useState(EMPTY_CAT);
   const [isNewCat, setIsNewCat] = useState(false);
   const { colors, isDark } = useTheme();
+  const formScrollRef = useRef<ScrollView>(null);
 
   React.useEffect(() => { fetchMenu(); }, [fetchMenu]);
 
@@ -241,6 +242,8 @@ export default function MenuScreen() {
         { id: `cg-${Date.now()}`, name: { es: '', en: '' }, required: false, maxSelections: 1, options: [], selectionRule: null },
       ],
     }));
+    // Reveal the freshly appended group — it renders at the bottom of the form.
+    requestAnimationFrame(() => formScrollRef.current?.scrollToEnd({ animated: true }));
   };
 
   // ─── Conditional-max rule helpers ───────────────────────────────────────────
@@ -679,7 +682,7 @@ export default function MenuScreen() {
                 </View>
               </View>
 
-              <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <ScrollView ref={formScrollRef} style={styles.formScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 {/* Name */}
                 <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>NOMBRE</Text>
                 <View style={styles.bilingualField}>
@@ -793,8 +796,13 @@ export default function MenuScreen() {
                 <View style={[styles.sectionDivider, { backgroundColor: colors.borderLight }]} />
                 <View style={styles.sectionHeaderRow}>
                   <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Complementos</Text>
-                  <TouchableOpacity onPress={addCustomizationGroup} activeOpacity={0.7}>
-                    <Text style={[styles.addGroupText, { color: colors.primary }]}>+ Añadir Grupo</Text>
+                  <TouchableOpacity
+                    onPress={addCustomizationGroup}
+                    activeOpacity={0.75}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    style={[styles.addGroupBtn, { backgroundColor: colors.primary + '1A', borderColor: colors.primary + '55' }]}
+                  >
+                    <Text style={[styles.addGroupText, { color: colors.primary }]}>+ Añadir Extra</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -834,6 +842,8 @@ export default function MenuScreen() {
                       <TouchableOpacity
                         style={[styles.cgToggle, { backgroundColor: cg.required ? colors.primary : colors.surfaceHighlight }]}
                         onPress={() => updateCustomizationGroup(cg.id, { required: !cg.required })}
+                        activeOpacity={0.75}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
                         <Text style={[styles.cgToggleText, { color: cg.required ? colors.onPrimary : colors.textSecondary }]}>
                           Requerido
@@ -882,7 +892,12 @@ export default function MenuScreen() {
                       </View>
                     ))}
 
-                    <TouchableOpacity onPress={() => addOption(cg.id)} style={styles.addOptionBtn} activeOpacity={0.7}>
+                    <TouchableOpacity
+                      onPress={() => addOption(cg.id)}
+                      style={[styles.addOptionBtn, { backgroundColor: colors.primary + '1A', borderColor: colors.primary + '55' }]}
+                      activeOpacity={0.75}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    >
                       <Text style={[styles.addOptionText, { color: colors.primary }]}>+ Añadir Opción</Text>
                     </TouchableOpacity>
 
@@ -968,7 +983,7 @@ export default function MenuScreen() {
 
                 {editingItem.customizations.length === 0 && (
                   <Text style={[styles.noAddonsText, { color: colors.textMuted }]}>
-                    Sin complementos. Toca "+ Añadir Grupo" para crear opciones de personalización.
+                    Sin complementos. Toca "+ Añadir Extra" para crear opciones de personalización.
                   </Text>
                 )}
 
@@ -1377,9 +1392,15 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.lg,
     letterSpacing: -0.2,
   },
+  addGroupBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   addGroupText: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: fontSizes.sm,
+    fontSize: fontSizes.base,
   },
   cgCard: {
     borderRadius: borderRadius.md,
@@ -1412,13 +1433,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   cgToggle: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 16,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
   },
   cgToggleText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSizes.xs,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.sm,
   },
   maxSelRow: {
     flexDirection: 'row',
@@ -1487,12 +1508,16 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   addOptionBtn: {
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
     alignSelf: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   addOptionText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSizes.sm,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.base,
   },
   noAddonsText: {
     fontFamily: fonts.body,
