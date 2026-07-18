@@ -8,9 +8,26 @@ import { playNewOrderChime } from '../services/notificationSound';
 // sub_orders row + N order_items rows). Coalesce them into at most one refetch
 // per window instead of a full refetch per event, which otherwise pins the app
 // in a constant reload loop and machine-guns the new-order chime.
-const REFETCH_DEBOUNCE_MS = 700;
+const REFETCH_DEBOUNCE_MS = 2000;
 let refetchTimer: ReturnType<typeof setTimeout> | null = null;
 let chimePending = false;
+
+// True when a freshly mapped order is identical (for display purposes) to the
+// one already in the store — lets us keep the OLD object reference so
+// React.memo'd cards skip re-rendering, and skip the set() entirely when a
+// refetch changed nothing.
+function sameOrder(prev: Order, next: Order): boolean {
+  return (
+    prev.status === next.status &&
+    prev.paymentStatus === next.paymentStatus &&
+    prev.total === next.total &&
+    prev.notes === next.notes &&
+    prev.tableLabel === next.tableLabel &&
+    prev.tableNumber === next.tableNumber &&
+    prev.fiscalInvoiceId === next.fiscalInvoiceId &&
+    prev.items.length === next.items.length
+  );
+}
 
 interface OrdersState {
   orders: Order[];
@@ -87,7 +104,24 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
               : [],
           })) : [],
         }));
-        set({ orders: mappedOrders });
+        // Structural sharing: reuse the previous object for any order that
+        // hasn't visibly changed. During a rush the board holds 100+ orders and
+        // refetches run every couple of seconds — without this, every refetch
+        // hands React a fully fresh array and every card re-renders, pinning
+        // the JS thread and eating taps.
+        const prevOrders = get().orders;
+        const prevById = new Map(prevOrders.map((o) => [o.id, o]));
+        let changed = mappedOrders.length !== prevOrders.length;
+        const reconciled = mappedOrders.map((o, i) => {
+          const prev = prevById.get(o.id);
+          if (prev && sameOrder(prev, o)) {
+            if (prevOrders[i] !== prev) changed = true; // same rows, new position
+            return prev;
+          }
+          changed = true;
+          return o;
+        });
+        if (changed) set({ orders: reconciled });
       } catch (err) {
         console.error('[DEV] Error mapping orders:', err);
       }

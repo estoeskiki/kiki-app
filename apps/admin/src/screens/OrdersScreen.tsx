@@ -30,7 +30,14 @@ export default function OrdersScreen() {
     return () => { unsubscribeFromOrders(); };
   }, [restaurantId, fetchOrders, subscribeToOrders, unsubscribeFromOrders]);
 
-  const activeOrders = orders.filter(o => !['completed', 'cancelled', 'failed'].includes(o.status));
+  const activeOrders = React.useMemo(
+    () => orders.filter(o => !['completed', 'cancelled', 'failed'].includes(o.status)),
+    [orders]
+  );
+
+  // Stable identity so React.memo'd OrderCards don't re-render when the list
+  // updates around them during a rush.
+  const handleSelect = React.useCallback((order: Order) => setSelectedOrder(order), []);
 
   const handleAccept = async (orderId: string) => {
     acceptOrder(orderId);
@@ -70,8 +77,11 @@ export default function OrdersScreen() {
     });
   };
 
-  const handleAdvance = (orderId: string) => {
-    const order = orders.find(o => o.id === orderId);
+  const handleAdvance = React.useCallback((orderId: string) => {
+    // Read via getState() so this callback keeps a stable identity — passing a
+    // fresh closure to every OrderCard on each orders update would defeat
+    // their React.memo.
+    const order = useOrdersStore.getState().orders.find(o => o.id === orderId);
     if (!order) return;
     switch (order.status) {
       case 'confirmed':
@@ -81,7 +91,14 @@ export default function OrdersScreen() {
       case 'preparing': markOrderReady(orderId); break;
       case 'ready': markOrderCompleted(orderId); break;
     }
-  };
+  }, [acceptOrder, markOrderReady, markOrderCompleted, restaurantName, foodCourtName]);
+
+  const renderOrder = React.useCallback(
+    ({ item }: { item: Order }) => (
+      <OrderCard order={item} onPress={handleSelect} onAdvance={handleAdvance} />
+    ),
+    [handleSelect, handleAdvance]
+  );
 
   return (
     <ScreenWrapper>
@@ -118,9 +135,14 @@ export default function OrdersScreen() {
       <FlatList
         data={activeOrders}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <OrderCard order={item} onPress={() => setSelectedOrder(item)} onAdvance={handleAdvance} />
-        )}
+        renderItem={renderOrder}
+        // Rush-hour tuning: render/keep fewer offscreen rows so a 100+ order
+        // board doesn't pin the JS thread while new orders stream in.
+        removeClippedSubviews
+        windowSize={7}
+        maxToRenderPerBatch={8}
+        initialNumToRender={10}
+        updateCellsBatchingPeriod={100}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         refreshControl={

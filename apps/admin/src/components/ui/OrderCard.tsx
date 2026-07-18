@@ -9,7 +9,9 @@ import { spacing, borderRadius } from '../../theme/spacing';
 
 interface OrderCardProps {
   order: Order;
-  onPress: () => void;
+  // Receives the order so the parent can pass ONE stable callback for every
+  // card (inline `() => ...` closures per row would defeat React.memo below).
+  onPress: (order: Order) => void;
   onAdvance?: (orderId: string) => void;
 }
 
@@ -19,7 +21,7 @@ const ORDER_TYPE_LABEL: Record<string, string> = {
   delivery: 'Delivery',
 };
 
-export function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
+export const OrderCard = React.memo(function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
   const { colors, isDark } = useTheme();
   const itemCount = order.items.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -55,7 +57,7 @@ export function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
           borderColor: colors.borderLight,
         },
       ]}
-      onPress={onPress}
+      onPress={() => onPress(order)}
       activeOpacity={0.75}
     >
       {/* Status accent left bar */}
@@ -133,7 +135,7 @@ export function OrderCard({ order, onPress, onAdvance }: OrderCardProps) {
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {
