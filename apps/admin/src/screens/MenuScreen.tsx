@@ -677,12 +677,51 @@ export default function MenuScreen() {
                     onPress={() => setEditModalVisible(false)}
                     style={[styles.modalCloseBtn, { backgroundColor: colors.surfaceHighlight }]}
                   >
-                    <X color={colors.textPrimary} size={16} strokeWidth={2} />
+                    <X color={colors.textPrimary} size={20} strokeWidth={2.25} />
                   </TouchableOpacity>
                 </View>
               </View>
 
               <ScrollView ref={formScrollRef} style={styles.formScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                {/* Toggles live above the fields: availability is the setting
+                    reached for most often, and burying it under the category
+                    chips meant scrolling past the whole form to flip it. */}
+                <View style={[styles.toggleCard, { backgroundColor: colors.surfaceContainer, borderColor: colors.borderLight }]}>
+                  <View style={styles.toggleCardRow}>
+                    <View style={styles.toggleTextGroup}>
+                      <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>Disponible</Text>
+                      <Text style={[styles.toggleHint, { color: colors.textMuted }]}>
+                        {editingItem.available ? 'Visible en el menú' : 'Oculto para los clientes'}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={editingItem.available}
+                      onValueChange={(v) => setEditingItem({ ...editingItem, available: v })}
+                      trackColor={{ false: colors.surfaceHighlight, true: colors.success }}
+                      thumbColor={colors.surface}
+                      style={styles.bigSwitch}
+                    />
+                  </View>
+
+                  <View style={[styles.toggleCardDivider, { backgroundColor: colors.borderLight }]} />
+
+                  <View style={styles.toggleCardRow}>
+                    <View style={styles.toggleTextGroup}>
+                      <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>Popular / Destacado</Text>
+                      <Text style={[styles.toggleHint, { color: colors.textMuted }]}>
+                        {editingItem.popular ? 'Con estrella en el menú' : 'Sin destacar'}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={editingItem.popular}
+                      onValueChange={(v) => setEditingItem({ ...editingItem, popular: v })}
+                      trackColor={{ false: colors.surfaceHighlight, true: colors.secondary }}
+                      thumbColor={colors.surface}
+                      style={styles.bigSwitch}
+                    />
+                  </View>
+                </View>
+
                 {/* Name */}
                 <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>NOMBRE</Text>
                 <View style={styles.bilingualField}>
@@ -770,26 +809,6 @@ export default function MenuScreen() {
                       </TouchableOpacity>
                     );
                   })}
-                </View>
-
-                {/* Toggles */}
-                <View style={[styles.toggleRow, { borderBottomColor: colors.borderLight }]}>
-                  <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>Disponible</Text>
-                  <Switch
-                    value={editingItem.available}
-                    onValueChange={(v) => setEditingItem({ ...editingItem, available: v })}
-                    trackColor={{ false: colors.surfaceHighlight, true: colors.success }}
-                    thumbColor={colors.surface}
-                  />
-                </View>
-                <View style={[styles.toggleRow, { borderBottomColor: 'transparent' }]}>
-                  <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>Popular / Destacado</Text>
-                  <Switch
-                    value={editingItem.popular}
-                    onValueChange={(v) => setEditingItem({ ...editingItem, popular: v })}
-                    trackColor={{ false: colors.surfaceHighlight, true: colors.secondary }}
-                    thumbColor={colors.surface}
-                  />
                 </View>
 
                 {/* ─── Customizations ─────────────────────────────────────── */}
@@ -1047,7 +1066,7 @@ export default function MenuScreen() {
                     onPress={() => setCatModalVisible(false)}
                     style={[styles.modalCloseBtn, { backgroundColor: colors.surfaceHighlight }]}
                   >
-                    <X color={colors.textPrimary} size={16} strokeWidth={2} />
+                    <X color={colors.textPrimary} size={20} strokeWidth={2.25} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1314,9 +1333,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   modalCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    // Matches OrderDetailsModal's close button — 44pt minimum touch target.
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1364,17 +1384,39 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: fontSizes.sm,
   },
-  toggleRow: {
+  toggleCard: {
+    marginTop: spacing.base,
+    marginBottom: spacing.lg,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.base,
+  },
+  toggleCardRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingVertical: spacing.base,
+    gap: spacing.base,
+  },
+  toggleCardDivider: {
+    height: StyleSheet.hairlineWidth,
+  },
+  toggleTextGroup: {
+    flex: 1,
+    gap: 2,
   },
   toggleLabel: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.base,
+  },
+  toggleHint: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.xs,
+  },
+  bigSwitch: {
+    // RN's Switch has no size prop; scaling is the only way to enlarge it.
+    // The row's vertical padding already leaves room for the extra height.
+    transform: [{ scaleX: 1.25 }, { scaleY: 1.25 }],
   },
   sectionDivider: {
     height: StyleSheet.hairlineWidth,

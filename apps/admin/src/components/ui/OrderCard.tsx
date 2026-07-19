@@ -66,10 +66,16 @@ export const OrderCard = React.memo(function OrderCard({ order, onPress, onAdvan
       <View style={styles.inner}>
         {/* Top row */}
         <View style={styles.topRow}>
-          <Text style={[styles.orderNumber, { color: colors.textPrimary }]}>
+          <Text
+            style={[styles.orderNumber, { color: colors.textPrimary }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             #{order.orderNumber}{order.customerName ? ` — ${order.customerName}` : ''}
           </Text>
-          <StatusBadge status={order.status} size="sm" />
+          <View style={styles.topRowBadge}>
+            <StatusBadge status={order.status} size="sm" />
+          </View>
         </View>
 
         {/* Middle row */}
@@ -102,9 +108,9 @@ export const OrderCard = React.memo(function OrderCard({ order, onPress, onAdvan
           <Text style={[styles.detail, { color: colors.textMuted }]}>{order.deliveryAddress.line1}</Text>
         )}
 
-        {order.customerPhone && (
-          <Text style={[styles.phone, { color: colors.textPrimary }]}>📞 {order.customerPhone}</Text>
-        )}
+        {/* Phone deliberately omitted here — it's only needed when someone
+            acts on the order, so it lives in OrderDetailsModal instead of
+            crowding every card in the list. */}
 
         {order.notes && (
           <Text style={[styles.notes, { color: colors.textSecondary }]} numberOfLines={2}>
@@ -157,11 +163,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.sm,
   },
   orderNumber: {
     fontFamily: fonts.heading,
     fontSize: fontSizes.xl,
     letterSpacing: -0.5,
+    // flexShrink alone isn't enough: without a flex basis the text still
+    // reserves its full intrinsic width first and pushes the badge off the
+    // card. flex:1 makes it take only the space the badge leaves behind.
+    flex: 1,
+  },
+  topRowBadge: {
+    // Badge must never absorb the shrink — it's fixed-width content and
+    // truncating "NUEVO" to "NUE" is exactly the bug being fixed here.
+    flexShrink: 0,
   },
   midRow: {
     flexDirection: 'row',
@@ -176,10 +192,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: fontSizes.sm,
     fontStyle: 'italic',
-  },
-  phone: {
-    fontFamily: fonts.bodyBold,
-    fontSize: fontSizes.sm,
   },
   typePill: {
     paddingHorizontal: spacing.sm,

@@ -104,7 +104,7 @@ export function OrderDetailsModal({
             style={[styles.closeBtn, { backgroundColor: colors.surfaceHighlight }]}
             activeOpacity={0.7}
           >
-            <X color={colors.textPrimary} size={18} strokeWidth={2} />
+            <X color={colors.textPrimary} size={20} strokeWidth={2.25} />
           </TouchableOpacity>
 
           {/* Scrollable content — header scrolls so footer stays pinned */}
@@ -320,9 +320,11 @@ const styles = StyleSheet.create({
     right: spacing.xl,
     zIndex: 10,
     elevation: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    // 44pt is the minimum comfortable touch target; this sits over scrollable
+    // content so an undersized hit area meant mis-taps into the order body.
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
