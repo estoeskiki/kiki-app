@@ -23,10 +23,10 @@ export default function ThankYouPage() {
       return;
     }
     clearCart();
-    // 2.4s: the checkmark draw finishes at ~830ms (80ms fade-up delay + 350ms
-    // stroke delay + 400ms draw), so this still leaves ~1.5s to read the order
+    // 2s: the checkmark draw finishes at ~830ms (80ms fade-up delay + 350ms
+    // stroke delay + 400ms draw), so this still leaves ~1.2s to read the order
     // number before the tracker takes over.
-    const timer = setTimeout(() => router.replace(`/order/${orderId}`), 2400);
+    const timer = setTimeout(() => router.replace(`/order/${orderId}`), 2000);
     return () => clearTimeout(timer);
   }, [isFreshOrder, orderId, router, clearCart]);
 
