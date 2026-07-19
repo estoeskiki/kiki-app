@@ -82,9 +82,10 @@ export async function getPublicStorefront(args: { slug?: string; tableToken?: st
 }
 
 // Public menu tables have an anon-readable RLS policy (migration 010), so
-// this is a direct table query — same pattern kiosk's useMenuStore uses,
-// which also means a supabase.channel(...) realtime subscription on
-// menu_items works from this app too, unlike orders/restaurants.
+// this is a direct table query — same pattern kiosk's useMenuStore uses.
+// Unlike the kiosk, the web storefront does NOT subscribe to menu_items: it
+// refetches on load and on tab focus, and relies on get_cart_validity at the
+// cart plus create-web-order at submit to catch anything that went stale.
 export async function fetchMenu(restaurantId: string): Promise<{ categories: Category[]; items: MenuItem[] }> {
   const [{ data: catData }, { data: itemData }] = await Promise.all([
     supabase.from('categories').select('*').eq('restaurant_id', restaurantId).order('sort_order'),

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { fetchMenu } from '@/lib/api';
-import { supabase } from '@/lib/supabase';
 import type { Category, MenuItem } from '@/lib/types';
 import { Header } from '@/components/layout/Header';
 import { CategoryTabs } from './CategoryTabs';
@@ -23,34 +22,40 @@ export function StorefrontMenu({ restaurantId, restaurantName, backHref }: Store
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // The menu is a snapshot, refreshed on load and whenever the customer
+  // returns to the tab. It deliberately does NOT hold a realtime subscription:
+  // availability/closure is authoritatively re-checked at the cart (checkout
+  // mounts and runs get_cart_validity) and again at submit inside
+  // create-web-order, so a stale menu can never produce a bad order — it can
+  // only show an item that gets flagged a moment later. Not worth a persistent
+  // websocket per viewer.
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
 
-    fetchMenu(restaurantId).then(({ categories, items }) => {
-      if (cancelled) return;
-      setCategories(categories);
-      setItems(items);
-      setActiveCategoryId((current) => current ?? categories[0]?.id ?? null);
-      setIsLoading(false);
-    });
+    const load = (initial: boolean) =>
+      fetchMenu(restaurantId).then(({ categories, items }) => {
+        if (cancelled) return;
+        setCategories(categories);
+        setItems(items);
+        setActiveCategoryId((current) => current ?? categories[0]?.id ?? null);
+        if (initial) setIsLoading(false);
+      });
 
-    // Live menu updates (price/availability changes) — same pattern as
-    // apps/kiosk's useMenuStore.subscribeToMenu(), works because
-    // migration 010 opens menu_items/categories to anon read.
-    const channel = supabase
-      .channel(`menu-${restaurantId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items', filter: `restaurant_id=eq.${restaurantId}` }, () => {
-        fetchMenu(restaurantId).then(({ categories, items }) => {
-          setCategories(categories);
-          setItems(items);
-        });
-      })
-      .subscribe();
+    load(true);
+
+    // A phone that sat in a pocket mid-browse is the realistic staleness case;
+    // refresh when the tab comes back rather than polling in the background.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') load(false);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
 
     return () => {
       cancelled = true;
-      supabase.removeChannel(channel);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
     };
   }, [restaurantId]);
 
