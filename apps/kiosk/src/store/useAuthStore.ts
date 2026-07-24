@@ -93,7 +93,11 @@ export const useAuthStore = create<AuthState>((set) => ({
         await useRestaurantStore.getState().fetchProfile(deviceData.ret_org_id);
         await useRestaurantStore.getState().subscribeToStatus(deviceData.ret_restaurant_id);
       }
-      // Food court mode: DirectoryScreen handles fetching all restaurants
+      // Food court mode: Welcome screen brands off the food court itself
+      // (no single restaurant to use). DirectoryScreen fetches the restaurant list separately.
+      if (newMode === 'food_court' && deviceData.ret_food_court_id) {
+        await useRestaurantStore.getState().fetchFoodCourtProfile(deviceData.ret_food_court_id);
+      }
 
       return true;
     } catch (e: any) {

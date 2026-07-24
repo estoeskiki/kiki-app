@@ -1,13 +1,10 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/navigation/types';
 import { WelcomeScreen } from '@/screens/WelcomeScreen';
-import { OrderTypeScreen } from '@/screens/OrderTypeScreen';
 import { DirectoryScreen } from '@/screens/DirectoryScreen';
 import { MenuScreen } from '@/screens/MenuScreen';
 import { ItemDetailModal } from '@/screens/ItemDetailModal';
-import { CartScreen } from '@/screens/CartScreen';
 import { CheckoutScreen } from '@/screens/CheckoutScreen';
-import { PaymentScreen } from '@/screens/PaymentScreen';
 import { ThankYouScreen } from '@/screens/ThankYouScreen';
 import { colors } from '@/theme/colors';
 
@@ -25,24 +22,18 @@ export function RootNavigator() {
       }}
     >
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
-      <Stack.Screen name="OrderType" component={OrderTypeScreen} />
       <Stack.Screen name="Directory" component={DirectoryScreen} />
       <Stack.Screen name="Menu" component={MenuScreen} />
       <Stack.Screen
         name="ItemDetail"
         component={ItemDetailModal}
         options={{
-          presentation: 'modal',
-          animation: 'slide_from_bottom',
+          presentation: 'transparentModal',
+          animation: 'fade',
+          contentStyle: { backgroundColor: 'transparent' },
         }}
       />
-      <Stack.Screen name="Cart" component={CartScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
-      <Stack.Screen
-        name="Payment"
-        component={PaymentScreen}
-        options={{ gestureEnabled: false }}
-      />
       <Stack.Screen
         name="ThankYou"
         component={ThankYouScreen}

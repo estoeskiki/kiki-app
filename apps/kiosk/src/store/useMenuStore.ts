@@ -2,23 +2,18 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from './useAuthStore';
 import { MenuItem, Category } from '../data/types';
-import { RealtimeChannel } from '@supabase/supabase-js';
 
 interface MenuState {
   items: MenuItem[];
   categories: Category[];
   isLoading: boolean;
-  channel: RealtimeChannel | null;
   fetchMenu: (targetRestaurantId?: string) => Promise<void>;
-  subscribeToMenu: (targetRestaurantId?: string) => void;
-  unsubscribeFromMenu: () => void;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
   items: [],
   categories: [],
   isLoading: false,
-  channel: null,
 
   fetchMenu: async (targetRestaurantId?: string) => {
     const defaultId = useAuthStore.getState().restaurantId;
@@ -71,43 +66,5 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     }
     
     set({ isLoading: false });
-  },
-
-  subscribeToMenu: (targetRestaurantId?: string) => {
-    const defaultId = useAuthStore.getState().restaurantId;
-    const rId = targetRestaurantId || defaultId;
-    if (!rId) return;
-    
-    const currentChannel = get().channel;
-    if (currentChannel) {
-      get().unsubscribeFromMenu();
-    }
-
-    const channel = supabase
-      .channel(`menu-${rId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'menu_items',
-          filter: `restaurant_id=eq.${rId}`,
-        },
-        () => {
-          // Re-fetch entire menu on any change (price change, availability toggle)
-          get().fetchMenu(rId);
-        }
-      )
-      .subscribe();
-
-    set({ channel });
-  },
-
-  unsubscribeFromMenu: () => {
-    const { channel } = get();
-    if (channel) {
-      supabase.removeChannel(channel);
-      set({ channel: null });
-    }
   },
 }));

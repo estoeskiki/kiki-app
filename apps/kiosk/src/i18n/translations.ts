@@ -2,8 +2,9 @@ export const translations = {
   es: {
     // Welcome Screen
     welcome: 'Bienvenido',
-    startOrder: 'Comenzar Orden',
-    poweredBy: 'Powered by ',
+    welcomeTo: 'Bienvenido a',
+    startOrder: 'Comenzar pedido',
+    poweredBy: 'powered by ',
     selectLanguage: 'Seleccionar Idioma',
 
     // Order Type Screen
@@ -17,6 +18,9 @@ export const translations = {
     menu: 'Menú',
     addToCart: 'Agregar',
     updateCart: 'Actualizar',
+    required: 'Obligatorio',
+    upTo: 'Hasta',
+    popular: 'Popular',
 
     // Cart / Checkout
     yourOrder: 'Tu Orden',
@@ -43,6 +47,50 @@ export const translations = {
     startNewOrderConfirm: 'Esto borrará tu carrito actual y comenzará de nuevo.',
     confirmRestart: 'Reiniciar',
 
+    // Checkout v2 (order-web parity)
+    orderTypeTitle: 'Tipo de pedido',
+    dineInShort: 'Comer aquí',
+    takeawayShort: 'Para llevar',
+    takeawayNote: 'Te lo empacamos para que te lo lleves.',
+    locationTitle: 'Confirma tu ubicación',
+    locationHint: 'Selecciona la sala donde estás sentado.',
+    tableNumberPlaceholder: 'Número de mesa (opcional)',
+    tableNumberHint: 'Revisa el número en tu mesa — ayuda al mesero a encontrarte.',
+    yourDetails: 'Tus datos',
+    namePlaceholder: 'Nombre',
+    phonePlaceholder: 'Celular (ej. 61234567)',
+    phoneInvalid: 'Ingresa un número válido (mínimo 8 dígitos).',
+    paymentTitle: 'Pago',
+    paymentHint: 'El pedido se paga cuando te lo entreguen.',
+    payYappy: 'Yappy (en entrega)',
+    payCard: 'Tarjeta (en entrega)',
+    notesForPrefix: 'Notas para',
+    notesTitle: 'Notas del pedido',
+    notesPlaceholder: 'Ej. sin cebolla, salsa aparte… (opcional)',
+    yourOrderTitle: 'Tu pedido',
+    clearCartAction: 'Vaciar carrito',
+    sendingOrder: 'Enviando pedido…',
+    confirmOrder: 'Confirmar pedido',
+    emptyCartShort: 'Tu carrito está vacío.',
+    cartClosedAndUnavailable: 'Un restaurante cerró y algunos platos ya no están disponibles.',
+    cartClosed: 'Un restaurante cerró mientras hacías tu pedido.',
+    cartUnavailable: 'Algunos platos ya no están disponibles.',
+    cartBlockedHint: 'Quítalos para continuar con el resto de tu pedido.',
+    removeAndContinue: 'Quitar y continuar',
+    restaurantClosedInline: 'Este restaurante cerró — no puedes ordenar de aquí ahora.',
+    orderError: 'Algo salió mal al hacer tu pedido. Por favor intenta de nuevo.',
+    scanToTrack: 'Escanea para seguir tu pedido en tu celular',
+    trackYourOrder: 'Sigue tu pedido',
+    itemsCount: 'artículos',
+
+    // Food court directory
+    directoryBannerTitle: 'Combina tus platos favoritos de diferentes restaurantes en un solo pedido.',
+    directoryBannerSub: 'Pagas tu pedido en la entrega.',
+    restaurantsTitle: 'Restaurantes',
+    availableCount: 'disponibles',
+    open: 'Abierto',
+    closed: 'Cerrado',
+
     // Payment / Success
     processing: 'Procesando pago...',
     paymentInstructions: 'Por favor, sigue las instrucciones de la terminal',
@@ -54,6 +102,8 @@ export const translations = {
     tryAgain: 'Intentar de Nuevo',
     thankYou: '¡Gracias,',
     thankYouSuccess: '¡Gracias!',
+    orderConfirmed: '¡Pedido confirmado!',
+    orderReceived: 'Ya recibimos tu pedido.',
     orderNumber: 'Tu número de orden es',
     estimatedWait: 'Tiempo de espera: 5–10 minutos',
     printReceipt: 'Imprimir Recibo',
@@ -65,8 +115,9 @@ export const translations = {
   en: {
     // Welcome Screen
     welcome: 'Welcome',
-    startOrder: 'Start Your Order',
-    poweredBy: 'Powered by ',
+    welcomeTo: 'Welcome to',
+    startOrder: 'Start order',
+    poweredBy: 'powered by ',
     selectLanguage: 'Select Language',
 
     // Order Type Screen
@@ -78,8 +129,11 @@ export const translations = {
 
     // Menu / General
     menu: 'Menu',
-    addToCart: 'Add to Cart',
+    addToCart: 'Add',
     updateCart: 'Update Cart',
+    required: 'Required',
+    upTo: 'Up to',
+    popular: 'Popular',
 
     // Cart / Checkout
     yourOrder: 'Your Order',
@@ -106,6 +160,50 @@ export const translations = {
     startNewOrderConfirm: 'This will clear your current cart and start fresh.',
     confirmRestart: 'Restart',
 
+    // Checkout v2 (order-web parity)
+    orderTypeTitle: 'Order type',
+    dineInShort: 'Dine in',
+    takeawayShort: 'Takeaway',
+    takeawayNote: 'We’ll pack it up for you to go.',
+    locationTitle: 'Confirm your location',
+    locationHint: 'Select the room where you’re seated.',
+    tableNumberPlaceholder: 'Table number (optional)',
+    tableNumberHint: 'Check the number on your table — it helps the server find you.',
+    yourDetails: 'Your details',
+    namePlaceholder: 'Name',
+    phonePlaceholder: 'Phone (e.g. 61234567)',
+    phoneInvalid: 'Enter a valid number (minimum 8 digits).',
+    paymentTitle: 'Payment',
+    paymentHint: 'You pay for your order when it’s delivered.',
+    payYappy: 'Yappy (on delivery)',
+    payCard: 'Card (on delivery)',
+    notesForPrefix: 'Notes for',
+    notesTitle: 'Order notes',
+    notesPlaceholder: 'E.g. no onion, sauce on the side… (optional)',
+    yourOrderTitle: 'Your order',
+    clearCartAction: 'Empty cart',
+    sendingOrder: 'Sending order…',
+    confirmOrder: 'Confirm order',
+    emptyCartShort: 'Your cart is empty.',
+    cartClosedAndUnavailable: 'A restaurant closed and some dishes are no longer available.',
+    cartClosed: 'A restaurant closed while you were ordering.',
+    cartUnavailable: 'Some dishes are no longer available.',
+    cartBlockedHint: 'Remove them to continue with the rest of your order.',
+    removeAndContinue: 'Remove and continue',
+    restaurantClosedInline: 'This restaurant closed — you can’t order from here right now.',
+    orderError: 'Something went wrong placing your order. Please try again.',
+    scanToTrack: 'Scan to track your order on your phone',
+    trackYourOrder: 'Track your order',
+    itemsCount: 'items',
+
+    // Food court directory
+    directoryBannerTitle: 'Combine your favorite dishes from different restaurants in a single order.',
+    directoryBannerSub: 'You pay for your order on delivery.',
+    restaurantsTitle: 'Restaurants',
+    availableCount: 'available',
+    open: 'Open',
+    closed: 'Closed',
+
     // Payment / Success
     processing: 'Processing payment...',
     paymentInstructions: 'Please follow the instructions on the terminal',
@@ -117,6 +215,8 @@ export const translations = {
     tryAgain: 'Try Again',
     thankYou: 'Thank you,',
     thankYouSuccess: 'Thank You!',
+    orderConfirmed: 'Order confirmed!',
+    orderReceived: 'We’ve received your order.',
     orderNumber: 'Your order number is',
     estimatedWait: 'Estimated wait: 5–10 minutes',
     printReceipt: 'Print Receipt',

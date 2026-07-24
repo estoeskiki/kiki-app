@@ -1,3 +1,8 @@
+// ⚠️ DEPRECATED / UNUSED — order creation now goes through the shared
+// `create-web-order` edge function via services/orderApi.ts (server-side
+// repricing + cart validation, channel:'kiosk'). This old client-trusted
+// insert path and its fiscal-invoice stub are no longer imported. Kept for
+// reference; delete once the new path is proven in production.
 import type { CartItem, OrderType } from '@/data/types';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';

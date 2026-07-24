@@ -18,6 +18,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useTranslation } from '@/i18n/useTranslation';
 import { useRestaurantStore } from '@/store/useRestaurantStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { LanguageSelector } from '@/components/layout/LanguageSelector';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
@@ -37,7 +38,15 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
   const { toggleTheme } = useThemeStore();
   const { t } = useTranslation();
   const { profile } = useRestaurantStore();
+  const mode = useAuthStore((s) => s.mode);
   const mediaType = getMediaType(profile?.welcomeBgUrl ?? '');
+
+  // No upfront order-type picker anymore (moved to checkout, matching
+  // order-web). Food courts go to the restaurant directory, standalone
+  // restaurants straight to the menu.
+  const handleStart = () => {
+    navigation.navigate(mode === 'food_court' ? 'Directory' : 'Menu');
+  };
   const hasMedia = mediaType !== null;
 
   const videoPlayer = useVideoPlayer(
@@ -82,7 +91,8 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
 
   const textColor = hasMedia ? '#ffffff' : colors.textPrimary;
-  const mutedColor = hasMedia ? 'rgba(255,255,255,0.75)' : colors.textMuted;
+  const mutedColor = hasMedia ? 'rgba(255,255,255,0.7)' : colors.textMuted;
+  const footerMutedColor = hasMedia ? 'rgba(255,255,255,0.5)' : colors.textMuted;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -128,9 +138,17 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
           entering={FadeInDown.delay(150).duration(700).springify()}
           style={styles.logoSection}
         >
+          <Text style={[styles.eyebrow, { color: colors.primary }]}>{t('welcomeTo')}</Text>
           <TouchableOpacity onPress={handleLogoTap} activeOpacity={1}>
             <View style={[styles.wordmarkContainer, tapFlash && { opacity: 0.7 }]}>
-              <Text style={[styles.wordmark, { color: textColor }]}>{profile?.name ?? 'KIKI'}</Text>
+              <Text
+                style={[styles.wordmark, { color: textColor }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.35}
+              >
+                {profile?.name ?? 'KIKI'}
+              </Text>
               <View style={[styles.wordmarkBar, { backgroundColor: colors.primary }]} />
             </View>
           </TouchableOpacity>
@@ -150,7 +168,7 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
           <Animated.View style={[styles.buttonGlow, { backgroundColor: colors.primary }, glowStyle]} />
 
           <TouchableOpacity
-            onPress={() => navigation.navigate('OrderType')}
+            onPress={handleStart}
             style={[styles.ctaButton, { backgroundColor: colors.primary }]}
             activeOpacity={0.85}
           >
@@ -158,8 +176,6 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
               {t('startOrder')}
             </Text>
           </TouchableOpacity>
-
-          <Text style={[styles.hint, { color: mutedColor }]}>{t('welcome')}</Text>
         </Animated.View>
       </View>
 
@@ -168,7 +184,7 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
         entering={FadeInUp.delay(800).duration(600)}
         style={styles.footer}
       >
-        <Text style={[styles.footerText, { color: mutedColor }]}>
+        <Text style={[styles.footerText, { color: footerMutedColor }]}>
           {t('poweredBy')}
           <Text style={{ color: colors.primary, fontFamily: fonts.heading, letterSpacing: -0.4 }}>
             kiki
@@ -199,29 +215,39 @@ const styles = StyleSheet.create({
   },
   logoSection: {
     alignItems: 'center',
-    gap: spacing.lg,
+  },
+  eyebrow: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.lg,
+    letterSpacing: 4,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
   },
   wordmarkContainer: {
     alignItems: 'center',
+    width: '100%',
+    marginBottom: spacing.md,
   },
   wordmark: {
     fontFamily: fonts.heading,
-    fontSize: 80,
+    fontSize: 72,
     fontWeight: '900',
     letterSpacing: -2,
-    lineHeight: 80,
+    textAlign: 'center',
   },
   wordmarkBar: {
-    width: 48,
+    width: 56,
     height: 4,
     borderRadius: 2,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
   tagline: {
     fontFamily: fonts.body,
-    fontSize: fontSizes.base,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
+    fontSize: fontSizes.md,
+    fontStyle: 'italic',
+    letterSpacing: -0.3,
+    textAlign: 'center',
+    maxWidth: 320,
   },
   ctaSection: {
     alignItems: 'center',
@@ -238,6 +264,7 @@ const styles = StyleSheet.create({
   },
   ctaButton: {
     width: '85%',
+    maxWidth: 340,
     height: 68,
     borderRadius: borderRadius.xl,
     alignItems: 'center',
@@ -253,19 +280,14 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xl,
     letterSpacing: -0.3,
   },
-  hint: {
-    fontFamily: fonts.body,
-    fontSize: fontSizes.sm,
-    letterSpacing: 1,
-  },
   footer: {
     paddingBottom: spacing['3xl'],
     alignItems: 'center',
   },
   footerText: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.bodyBold,
     fontSize: fontSizes.xs,
-    letterSpacing: 0.5,
+    letterSpacing: -0.2,
   },
   langToggleContainer: {
     position: 'absolute',

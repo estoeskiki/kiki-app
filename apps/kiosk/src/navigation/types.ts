@@ -3,14 +3,11 @@ import type { MenuItem } from '@/data/types';
 
 export type RootStackParamList = {
   Welcome: undefined;
-  OrderType: undefined;
   Directory: undefined;
   Menu: { restaurantId?: string; restaurantName?: string } | undefined;
   ItemDetail: { item: MenuItem; restaurantId?: string; restaurantName?: string };
-  Cart: undefined;
   Checkout: undefined;
-  Payment: undefined;
-  ThankYou: { orderNumber: number };
+  ThankYou: { orderNumber: number; orderId: string; customerName?: string };
 };
 
 export type ScreenProps<T extends keyof RootStackParamList> =

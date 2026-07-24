@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, AppState } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { ScreenWrapper } from '@/components/layout/ScreenWrapper';
 import { Header } from '@/components/layout/Header';
 import { CategoryTabs } from '@/components/menu/CategoryTabs';
@@ -15,7 +16,7 @@ import type { MenuItem } from '@/data/types';
 import type { ScreenProps } from '@/navigation/types';
 
 export function MenuScreen({ route, navigation }: ScreenProps<'Menu'>) {
-  const { categories, items: menuItems, fetchMenu, subscribeToMenu, unsubscribeFromMenu } = useMenuStore();
+  const { categories, items: menuItems, fetchMenu } = useMenuStore();
   const clearCart = useCartStore((s) => s.clearCart);
   const removeItemsByRestaurant = useCartStore((s) => s.removeItemsByRestaurant);
   const resetOrder = useOrderStore((s) => s.resetOrder);
@@ -46,11 +47,22 @@ export function MenuScreen({ route, navigation }: ScreenProps<'Menu'>) {
   }, [clearCart, resetOrder, navigation]);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
 
+  // No realtime menu subscription (matches order-web). Availability/closure is
+  // authoritatively re-checked at the cart (get_cart_validity) and at submit
+  // (create-web-order), so a persistent websocket per kiosk isn't worth it.
+  // Refetch on screen focus and when the app returns to the foreground.
+  useFocusEffect(
+    useCallback(() => {
+      fetchMenu(selectedRestaurantId);
+    }, [fetchMenu, selectedRestaurantId]),
+  );
+
   useEffect(() => {
-    fetchMenu(selectedRestaurantId);
-    subscribeToMenu(selectedRestaurantId);
-    return () => { unsubscribeFromMenu(); };
-  }, [fetchMenu, subscribeToMenu, unsubscribeFromMenu, selectedRestaurantId]);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') fetchMenu(selectedRestaurantId);
+    });
+    return () => sub.remove();
+  }, [fetchMenu, selectedRestaurantId]);
 
   // Realtime: watch if this restaurant closes while user is browsing
   useEffect(() => {
@@ -101,7 +113,6 @@ export function MenuScreen({ route, navigation }: ScreenProps<'Menu'>) {
   }, [categories]);
 
   const cartItems = useCartStore((s) => s.items);
-  const addItem = useCartStore((s) => s.addItem);
   const getTotal = useCartStore((s) => s.getTotal);
 
   const totalItemCount = useMemo(
@@ -116,18 +127,12 @@ export function MenuScreen({ route, navigation }: ScreenProps<'Menu'>) {
     [selectedCategoryId, menuItems],
   );
 
+  // The "+" quick-add button opens the same detail modal as tapping the card
+  // — it never adds directly, matching order-web (onAdd={setSelectedItem}).
+  // Quantity/customization is always chosen there before it hits the cart.
   const handleItemPress = useCallback((item: MenuItem) => {
     navigation.navigate('ItemDetail', { item, restaurantId: selectedRestaurantId, restaurantName: selectedRestaurantName });
   }, [navigation, selectedRestaurantId, selectedRestaurantName]);
-
-  const handleQuickAdd = useCallback((item: MenuItem) => {
-    const hasRequired = item.customizations.some((g) => g.required);
-    if (hasRequired) {
-      navigation.navigate('ItemDetail', { item, restaurantId: selectedRestaurantId, restaurantName: selectedRestaurantName });
-      return;
-    }
-    addItem(item, 1, {}, selectedRestaurantId, selectedRestaurantName);
-  }, [addItem, navigation, selectedRestaurantId, selectedRestaurantName]);
 
   return (
     <ScreenWrapper padded={false}>
@@ -135,13 +140,13 @@ export function MenuScreen({ route, navigation }: ScreenProps<'Menu'>) {
         title={t('menu')}
         onBack={() => navigation.goBack()}
         secondaryRightAction={{ icon: 'restart', onPress: handleRestart }}
-        rightAction={{ icon: 'cart', onPress: () => navigation.navigate('Cart'), badge: totalItemCount > 0 ? totalItemCount : undefined }}
+        rightAction={{ icon: 'cart', onPress: () => navigation.navigate('Checkout'), badge: totalItemCount > 0 ? totalItemCount : undefined }}
       />
       <CategoryTabs categories={categories} selectedId={selectedCategoryId} onSelect={setSelectedCategoryId} />
       <View style={styles.gridContainer}>
-        <MenuGrid items={filteredItems} onItemPress={handleItemPress} onQuickAdd={handleQuickAdd} />
+        <MenuGrid items={filteredItems} onItemPress={handleItemPress} onQuickAdd={handleItemPress} />
       </View>
-      <CartFAB itemCount={totalItemCount} total={cartTotal} onPress={() => navigation.navigate('Cart')} />
+      <CartFAB itemCount={totalItemCount} total={cartTotal} onPress={() => navigation.navigate('Checkout')} />
     </ScreenWrapper>
   );
 }

@@ -8,17 +8,21 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 import { translations } from '@/i18n/translations';
 
-// Try to load the native module, gracefully fallback to null if it fails (e.g. on iOS/Web or without dev client)
+// ⚠️ DISABLED — thermal-receipt / fiscal-ticket printing is turned off for now.
+// The kiosk no longer prints anything (the customer gets a QR on the ThankYou
+// screen instead). Nothing imports this module anymore; the native ICOD
+// printer load below is commented out so the SDK is never touched. Re-enable
+// the require + the useHardware branch in printReceipt when printing returns.
 let IcodPrinter: any = null;
 let icodLoadError: string | null = null;
-try {
-  if (Platform.OS === 'android') {
-    IcodPrinter = require('../../modules/icod-printer');
-  }
-} catch (e: any) {
-  icodLoadError = e?.message ?? String(e);
-  console.log('[PRINTER] IcodPrinter Native Module not available. Using simulated console output.');
-}
+// try {
+//   if (Platform.OS === 'android') {
+//     IcodPrinter = require('../../modules/icod-printer');
+//   }
+// } catch (e: any) {
+//   icodLoadError = e?.message ?? String(e);
+//   console.log('[PRINTER] IcodPrinter Native Module not available. Using simulated console output.');
+// }
 
 /**
  * Resolve a translatable text field to a plain string for printing.
@@ -33,6 +37,11 @@ function text(value: any): string {
  * Print the receipt using the physical ICOD printer, or fallback to console simulation.
  */
 export async function printReceipt(order: Order): Promise<void> {
+  // DISABLED: printing is off. No-op so any stray caller is harmless.
+  console.log('[PRINTER] printReceipt is disabled — skipping.', order?.orderNumber);
+  return;
+
+  /* DISABLED — thermal/fiscal receipt body kept for reference only.
   const mode = useAuthStore.getState().mode;
   const lang = useLocaleStore.getState().language;
   const t = translations[lang];
@@ -161,4 +170,5 @@ export async function printReceipt(order: Order): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, config.printDelay));
     console.log('\n[SIMULATED KIOSK RECEIPT]\n' + lines.join('\n'));
   }
+  */
 }

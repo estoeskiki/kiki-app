@@ -1,28 +1,54 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { ArrowRight } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useCartStore } from '@/store/useCartStore';
+import { useRestaurantStore } from '@/store/useRestaurantStore';
 import { useTheme } from '@/context/ThemeContext';
+import { useTranslation } from '@/i18n/useTranslation';
+import { ScreenWrapper } from '@/components/layout/ScreenWrapper';
+import { Header } from '@/components/layout/Header';
+import { CartFAB } from '@/components/cart/CartFAB';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
-import { UtensilsCrossed } from 'lucide-react-native';
 import type { ScreenProps } from '@/navigation/types';
 
 interface RestaurantCard {
   id: string;
   name: string;
   is_open: boolean;
+  logo_url: string | null;
+}
+
+// Deterministic pastel background behind a restaurant's logo (or initial when
+// there's no logo) — same hashing approach as the menu item plate colors.
+const LOGO_PLATES = ['#eef3ff', '#f0fff4', '#fff4f0', '#f9f0ff', '#f0fffe', '#fffbf0', '#fff0f5', '#f0f7ff'] as const;
+function getLogoPlate(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = id.charCodeAt(i) + ((h << 5) - h);
+  return LOGO_PLATES[Math.abs(h) % LOGO_PLATES.length];
 }
 
 const NUM_COLUMNS = 2;
 
 export function DirectoryScreen({ navigation }: ScreenProps<'Directory'>) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const foodCourtId = useAuthStore((s) => s.foodCourtId);
+  const profile = useRestaurantStore((s) => s.profile);
+  const cartItems = useCartStore((s) => s.items);
+  const getTotal = useCartStore((s) => s.getTotal);
   const [restaurants, setRestaurants] = useState<RestaurantCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const totalItemCount = useMemo(
+    () => cartItems.reduce((sum, ci) => sum + ci.quantity, 0),
+    [cartItems],
+  );
 
   useEffect(() => {
     if (!foodCourtId) return;
@@ -32,8 +58,10 @@ export function DirectoryScreen({ navigation }: ScreenProps<'Directory'>) {
       setIsLoading(true);
       const { data, error } = await supabase
         .from('restaurants')
-        .select('id, name, is_open')
-        .eq('food_court_id', foodCourtId);
+        .select('id, name, is_open, logo_url')
+        .eq('food_court_id', foodCourtId)
+        .eq('is_active', true)
+        .order('name');
 
       if (!error && data && isMounted) {
         setRestaurants(data as RestaurantCard[]);
@@ -54,7 +82,7 @@ export function DirectoryScreen({ navigation }: ScreenProps<'Directory'>) {
         },
         (payload) => {
           if (payload.new && 'id' in payload.new) {
-            setRestaurants((prev) => 
+            setRestaurants((prev) =>
               prev.map(r => r.id === payload.new.id ? { ...r, is_open: payload.new.is_open } : r)
             );
           }
@@ -68,162 +96,234 @@ export function DirectoryScreen({ navigation }: ScreenProps<'Directory'>) {
     };
   }, [foodCourtId]);
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
   const renderCard = ({ item, index }: { item: RestaurantCard; index: number }) => {
     const closed = !item.is_open;
     return (
       <Animated.View
-        entering={FadeInUp.delay(80 + index * 60).duration(500).springify()}
+        entering={FadeInUp.delay(60 + index * 60).duration(500).springify()}
         style={styles.cardWrapper}
       >
         <AnimatedPressable
-          accessibilityLabel={`${item.name}${closed ? ', cerrado' : ''}`}
+          accessibilityLabel={`${item.name}${closed ? `, ${t('closed')}` : ''}`}
           disabled={closed}
           onPress={() => navigation.navigate('Menu', { restaurantId: item.id, restaurantName: item.name })}
           scaleValue={0.97}
-          style={[
-            styles.card,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.borderLight,
-            },
-            closed && { opacity: 0.45 },
-          ]}
+          style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
         >
-          {/* Logo Placeholder */}
-          <View style={[styles.logoCircle, { backgroundColor: colors.surfaceContainer }]}>  
-            <UtensilsCrossed size={36} color={colors.textMuted} strokeWidth={1.5} />
+          {/* Square logo plate */}
+          <View style={[styles.logoPlate, { backgroundColor: getLogoPlate(item.id) }]}>
+            {item.logo_url ? (
+              <Image source={item.logo_url} style={styles.logoImage} contentFit="contain" cachePolicy="disk" />
+            ) : (
+              <Text style={[styles.logoInitial, { color: colors.textSecondary }]}>
+                {item.name.trim().charAt(0).toUpperCase()}
+              </Text>
+            )}
+
+            {closed && (
+              <View style={[styles.closedOverlay, { backgroundColor: colors.background + 'B3' }]}>
+                <View style={[styles.closedPill, { backgroundColor: colors.textPrimary }]}>
+                  <Text style={[styles.closedPillText, { color: colors.background }]}>{t('closed')}</Text>
+                </View>
+              </View>
+            )}
           </View>
 
-          {/* Restaurant Name */}
-          <Text
-            style={[styles.name, { color: colors.textPrimary }]}
-            numberOfLines={2}
-          >
-            {item.name}
-          </Text>
-
-          {/* Status indicator */}
-          {closed ? (
-            <View style={[styles.statusBadge, { backgroundColor: colors.error + '18' }]}>
-              <View style={[styles.statusDot, { backgroundColor: colors.error }]} />
-              <Text style={[styles.statusText, { color: colors.error }]}>Cerrado</Text>
+          {/* Name + status + go arrow */}
+          <View style={styles.cardFooter}>
+            <View style={styles.cardFooterLeft}>
+              <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <View style={styles.statusRow}>
+                {!closed && <View style={[styles.statusDot, { backgroundColor: colors.primary }]} />}
+                <Text style={[styles.statusText, { color: closed ? colors.textMuted : colors.textSecondary }]}>
+                  {closed ? t('closed') : t('open')}
+                </Text>
+              </View>
             </View>
-          ) : (
-            <View style={[styles.statusBadge, { backgroundColor: colors.success + '18' }]}>
-              <View style={[styles.statusDot, { backgroundColor: colors.success }]} />
-              <Text style={[styles.statusText, { color: colors.success }]}>Abierto</Text>
-            </View>
-          )}
 
-          {/* Accent bar */}
-          <View style={[styles.accentBar, { backgroundColor: closed ? colors.textMuted : colors.primary }]} />
+            {!closed && (
+              <View style={[styles.goBtn, { backgroundColor: colors.primary }]}>
+                <ArrowRight size={16} color={colors.onPrimary} strokeWidth={2.5} />
+              </View>
+            )}
+          </View>
         </AnimatedPressable>
       </Animated.View>
     );
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.eyebrow, { color: colors.primary }]}>FOOD COURT</Text>
-        <Text style={[styles.heading, { color: colors.textPrimary }]}>
-          ¿Qué te apetece?
-        </Text>
-      </View>
-
-      {/* Grid */}
-      <FlatList
-        data={restaurants}
-        keyExtractor={(item) => item.id}
-        numColumns={NUM_COLUMNS}
-        contentContainerStyle={styles.gridContent}
-        columnWrapperStyle={styles.gridRow}
-        renderItem={renderCard}
-        showsVerticalScrollIndicator={false}
+    <ScreenWrapper padded={false}>
+      <Header
+        title={profile?.name ?? ''}
+        onBack={() => navigation.goBack()}
+        rightAction={{
+          icon: 'cart',
+          onPress: () => navigation.navigate('Checkout'),
+          badge: totalItemCount > 0 ? totalItemCount : undefined,
+        }}
       />
-    </View>
+
+      {isLoading ? (
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={restaurants}
+          keyExtractor={(item) => item.id}
+          numColumns={NUM_COLUMNS}
+          contentContainerStyle={styles.gridContent}
+          columnWrapperStyle={styles.gridRow}
+          renderItem={renderCard}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <View>
+              {/* Multi-restaurant explainer */}
+              <View style={[styles.banner, { backgroundColor: colors.primary + '1A', borderLeftColor: colors.primary }]}>
+                <Text style={[styles.bannerTitle, { color: colors.textPrimary }]}>{t('directoryBannerTitle')}</Text>
+                <Text style={[styles.bannerSub, { color: colors.textSecondary }]}>{t('directoryBannerSub')}</Text>
+              </View>
+
+              {/* Section heading */}
+              <View style={styles.sectionRow}>
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('restaurantsTitle')}</Text>
+                <Text style={[styles.sectionCount, { color: colors.textMuted }]}>
+                  {restaurants.length} {t('availableCount')}
+                </Text>
+              </View>
+            </View>
+          }
+          ListFooterComponent={
+            <Text style={[styles.footerText, { color: colors.textMuted }]}>
+              {t('poweredBy')}
+              <Text style={{ color: colors.primary, fontFamily: fonts.heading, letterSpacing: -0.4 }}>kiki</Text>
+            </Text>
+          }
+        />
+      )}
+
+      <CartFAB
+        itemCount={totalItemCount}
+        total={getTotal()}
+        onPress={() => navigation.navigate('Checkout')}
+      />
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loading: {
     flex: 1,
-    paddingTop: spacing['3xl'],
-  },
-  header: {
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing['2xl'],
-  },
-  eyebrow: {
-    fontFamily: fonts.bodyBold,
-    fontSize: fontSizes.xs,
-    letterSpacing: 2.5,
-    textTransform: 'uppercase',
-  },
-  heading: {
-    fontFamily: fonts.heading,
-    fontSize: fontSizes['3xl'],
-    textAlign: 'center',
-    letterSpacing: -0.8,
-    lineHeight: fontSizes['3xl'] * 1.15,
   },
   gridContent: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing['3xl'],
+    paddingBottom: spacing['5xl'],
   },
   gridRow: {
     gap: spacing.md,
     marginBottom: spacing.md,
   },
+  // ── Banner ──
+  banner: {
+    borderLeftWidth: 4,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.xl,
+    gap: spacing.xs,
+  },
+  bannerTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.base,
+    lineHeight: fontSizes.base * 1.35,
+  },
+  bannerSub: {
+    fontFamily: fonts.body,
+    fontSize: fontSizes.sm,
+  },
+  // ── Section heading ──
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  sectionTitle: {
+    fontFamily: fonts.heading,
+    fontSize: fontSizes.xl,
+    letterSpacing: -0.5,
+  },
+  sectionCount: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.xs,
+  },
+  // ── Cards ──
   cardWrapper: {
     flex: 1,
   },
   card: {
     borderRadius: borderRadius.xl,
     borderWidth: 1,
-    padding: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 220,
-    gap: spacing.md,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
   },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  logoPlate: {
+    width: '100%',
+    aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xs,
+    padding: spacing.lg,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  logoInitial: {
+    fontFamily: fonts.heading,
+    fontSize: fontSizes['4xl'],
+    fontWeight: '900',
+    opacity: 0.3,
+  },
+  closedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closedPill: {
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  closedPillText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.xs,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  cardFooterLeft: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   name: {
     fontFamily: fonts.heading,
-    fontSize: fontSizes.xl,
-    textAlign: 'center',
-    letterSpacing: -0.4,
-    lineHeight: fontSizes.xl * 1.2,
+    fontSize: fontSizes.base,
+    letterSpacing: -0.3,
   },
-  statusBadge: {
+  statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
     gap: spacing.xs,
   },
   statusDot: {
@@ -232,15 +332,22 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   statusText: {
-    fontFamily: fonts.bodySemiBold,
+    fontFamily: fonts.body,
     fontSize: fontSizes.xs,
-    letterSpacing: 0.3,
   },
-  accentBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
+  goBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // ── Footer ──
+  footerText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.xs,
+    letterSpacing: -0.2,
+    textAlign: 'center',
+    marginTop: spacing.xl,
   },
 });

@@ -3,6 +3,15 @@
     "name": "Kiki Kiosk",
     "slug": "kiki-kiosk",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7065901c-2d01-45be-b6fb-e85244a6e3e0",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",

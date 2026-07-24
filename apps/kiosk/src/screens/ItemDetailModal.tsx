@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { Image } from 'expo-image';
 import { X, Minus, Plus } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,7 +37,7 @@ export function ItemDetailModal({ navigation, route }: ScreenProps<'ItemDetail'>
   const addItem = useCartStore((s) => s.addItem);
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { localize } = useTranslation();
+  const { t, localize } = useTranslation();
 
   const [selectedCustomizations, setSelectedCustomizations] = useState<Record<string, string[]>>(() => {
     const init: Record<string, string[]> = {};
@@ -87,11 +88,20 @@ export function ItemDetailModal({ navigation, route }: ScreenProps<'ItemDetail'>
   const initial = localize(item.name).trim().charAt(0).toUpperCase();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.overlay}>
+      {/* Backdrop — a sibling behind the card, not an ancestor of it, so a
+          tap on the card never bubbles down to this and closes the sheet. */}
+      <Pressable style={StyleSheet.absoluteFill} onPress={() => navigation.goBack()} />
+
+      <View style={[styles.card, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         {/* Hero */}
         <View style={[styles.hero, { backgroundColor: heroColor }]}>
-          <Text style={[styles.heroInitial, { color: colors.textSecondary, opacity: 0.2 }]}>{initial}</Text>
+          {item.image ? (
+            <Image source={item.image} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="disk" transition={150} />
+          ) : (
+            <Text style={[styles.heroInitial, { color: colors.textSecondary, opacity: 0.2 }]}>{initial}</Text>
+          )}
           {/* Close button */}
           <Pressable
             style={[styles.closeBtn, { backgroundColor: colors.surface }]}
@@ -102,7 +112,7 @@ export function ItemDetailModal({ navigation, route }: ScreenProps<'ItemDetail'>
           </Pressable>
           {item.popular && (
             <View style={[styles.popularBadge, { backgroundColor: colors.primary }]}>
-              <Text style={[styles.popularText, { color: colors.onPrimary }]}>★ Popular</Text>
+              <Text style={[styles.popularText, { color: colors.onPrimary }]}>★ {t('popular')}</Text>
             </View>
           )}
         </View>
@@ -120,11 +130,11 @@ export function ItemDetailModal({ navigation, route }: ScreenProps<'ItemDetail'>
                 <Text style={[styles.groupName, { color: colors.textPrimary }]}>{localize(group.name)}</Text>
                 {group.required && (
                   <View style={[styles.requiredBadge, { backgroundColor: colors.primary }]}>
-                    <Text style={[styles.requiredText, { color: colors.onPrimary }]}>Required</Text>
+                    <Text style={[styles.requiredText, { color: colors.onPrimary }]}>{t('required')}</Text>
                   </View>
                 )}
                 {!group.required && group.maxSelections > 1 && (
-                  <Text style={[styles.maxText, { color: colors.textMuted }]}>Up to {group.maxSelections}</Text>
+                  <Text style={[styles.maxText, { color: colors.textMuted }]}>{t('upTo')} {group.maxSelections}</Text>
                 )}
               </View>
 
@@ -191,24 +201,41 @@ export function ItemDetailModal({ navigation, route }: ScreenProps<'ItemDetail'>
           disabled={!canAdd}
         >
           <Text style={[styles.addBtnText, { color: colors.onPrimary }]}>
-            Add to Cart — {formatCurrency(lineTotal)}
+            {t('addToCart')} — {formatCurrency(lineTotal)}
           </Text>
         </AnimatedPressable>
+      </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scrollView: { flex: 1 },
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  card: {
+    maxHeight: '88%',
+    width: '100%',
+    borderTopLeftRadius: borderRadius['2xl'],
+    borderTopRightRadius: borderRadius['2xl'],
+    overflow: 'hidden',
+  },
+  // flexShrink (not flex:1): the card has only a maxHeight, so it has no
+  // definite height to resolve flex:1 against — that collapsed the scroll
+  // area to zero and hid every customization group behind the bottom bar.
+  // flexShrink lets it size to content and shrink only when it overflows.
+  scrollView: { flexShrink: 1 },
   scrollContent: { paddingBottom: spacing.xl },
   // Hero
   hero: {
-    height: 220,
+    height: 208,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   heroInitial: {
     fontFamily: fonts.heading,

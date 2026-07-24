@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { Image } from 'expo-image';
 import { Plus } from 'lucide-react-native';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
 import { useTheme } from '@/context/ThemeContext';
@@ -58,9 +59,13 @@ export function MenuItemCard({ item, onPress, onQuickAdd }: MenuItemCardProps) {
     >
       {/* Thumbnail */}
       <View style={[styles.thumbnail, { backgroundColor: bgColor }]}>
-        <Text style={[styles.initial, { color: colors.textSecondary }]}>
-          {getInitial(localize(item.name))}
-        </Text>
+        {item.image ? (
+          <Image source={item.image} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="disk" transition={150} />
+        ) : (
+          <Text style={[styles.initial, { color: colors.textSecondary }]}>
+            {getInitial(localize(item.name))}
+          </Text>
+        )}
         {item.popular && (
           <View style={[styles.popularBadge, { backgroundColor: colors.primary }]}>
             <Text style={[styles.popularText, { color: colors.onPrimary }]}>★</Text>
@@ -109,6 +114,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1.4,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   initial: {
     fontFamily: fonts.heading,

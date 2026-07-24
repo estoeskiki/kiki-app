@@ -1,3 +1,6 @@
+// ⚠️ DEPRECATED / UNUSED — the mock POS payment step was removed. The kiosk now
+// submits straight from checkout (pay-on-delivery), matching order-web. Nothing
+// imports this anymore; kept for reference until a real terminal integration.
 import { config } from '@/constants/config';
 
 export interface PaymentRequest {

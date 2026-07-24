@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import Animated, { Layout, FadeOut } from 'react-native-reanimated';
 import { Minus, Plus, Trash2 } from 'lucide-react-native';
 import { AnimatedPressable } from '@/components/ui/AnimatedPressable';
@@ -59,9 +60,19 @@ export function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowPro
     >
       {/* Item thumbnail */}
       <View style={[styles.thumbnail, { backgroundColor: bgColor }]}>
-        <Text style={[styles.thumbnailInitial, { color: colors.textSecondary }]}>
-          {getInitial(localize(item.menuItem.name))}
-        </Text>
+        {item.menuItem.image ? (
+          <Image
+            source={item.menuItem.image}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            cachePolicy="disk"
+            transition={150}
+          />
+        ) : (
+          <Text style={[styles.thumbnailInitial, { color: colors.textSecondary }]}>
+            {getInitial(localize(item.menuItem.name))}
+          </Text>
+        )}
       </View>
 
       {/* Center info */}
@@ -119,6 +130,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   thumbnailInitial: {
     fontFamily: fonts.heading,

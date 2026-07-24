@@ -39,6 +39,10 @@ interface CartItemInput {
 interface CreateWebOrderBody {
   restaurantId?: string
   foodCourtId?: string
+  // Which ordering surface this order came from. Web browsers default to
+  // 'web'; the kiosk (a controlled physical device) sends 'kiosk'. Drives the
+  // orders/sub_orders.channel column the admin app filters on.
+  channel?: 'kiosk' | 'web'
   tableToken?: string
   // Customer-confirmed zone at checkout, which may differ from tableToken's
   // own zone if they corrected it (e.g. a QR card got physically moved).
@@ -112,6 +116,7 @@ Deno.serve(async (req) => {
     let tableNumber: string | null = null
     let restaurantId = body.restaurantId ?? null
     let foodCourtId = body.foodCourtId ?? null
+    const channel = body.channel === 'kiosk' ? 'kiosk' : 'web'
 
     if (body.tableToken) {
       const { data: table, error: tableError } = await supabaseAdmin
@@ -156,6 +161,31 @@ Deno.serve(async (req) => {
 
       if (allowsManualNumber) {
         tableNumber = body.tableNumber?.trim() || null
+      }
+    } else if (body.tableId) {
+      // No QR token (e.g. the kiosk — a device paired to a restaurant/food
+      // court, not to a physical table). The customer picked their zone
+      // directly, so resolve tableId here and only honor it if it belongs to
+      // the same restaurant/food court scope the body claims — a client can't
+      // attach an arbitrary table from another venue.
+      const { data: table } = await supabaseAdmin
+        .from('tables')
+        .select('id, label, restaurant_id, food_court_id, allows_manual_number')
+        .eq('id', body.tableId)
+        .eq('is_active', true)
+        .single()
+
+      const sameScope = table && (
+        (foodCourtId && table.food_court_id === foodCourtId) ||
+        (restaurantId && table.restaurant_id === restaurantId)
+      )
+
+      if (sameScope) {
+        tableId = table.id
+        tableLabel = table.label
+        if (table.allows_manual_number) {
+          tableNumber = body.tableNumber?.trim() || null
+        }
       }
     }
 
@@ -315,7 +345,7 @@ Deno.serve(async (req) => {
         total: orderTotal,
         customer_name: body.customerName,
         customer_phone: body.customerPhone ?? null,
-        channel: 'web',
+        channel,
         payment_method: body.paymentMethod,
         payment_status: 'pending',
         table_id: tableId,
@@ -345,7 +375,7 @@ Deno.serve(async (req) => {
           subtotal: plan.subtotal,
           tax: plan.tax,
           total: plan.total,
-          channel: 'web',
+          channel,
           payment_method: body.paymentMethod,
           payment_status: 'pending',
           table_label: tableLabel,

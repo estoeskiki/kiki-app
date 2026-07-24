@@ -14,6 +14,7 @@ interface RestaurantState {
   isLoading: boolean;
   channel: RealtimeChannel | null;
   fetchProfile: (orgId: string) => Promise<void>;
+  fetchFoodCourtProfile: (foodCourtId: string) => Promise<void>;
   subscribeToStatus: (restaurantId: string) => Promise<void>;
   clear: () => void;
 }
@@ -30,6 +31,23 @@ export const useRestaurantStore = create<RestaurantState>((set, get) => ({
       .from('organizations')
       .select('name, slogan, welcome_bg_url')
       .eq('id', orgId)
+      .single();
+
+    if (!error && data) {
+      set({ profile: { name: data.name, slogan: data.slogan ?? '', welcomeBgUrl: data.welcome_bg_url ?? '' } });
+    }
+    set({ isLoading: false });
+  },
+
+  // Food-court kiosks have no single restaurant to brand the Welcome screen
+  // with — use the food court's own name/slogan/background instead (same
+  // fields order-web's Welcome renders for a food-court storefront).
+  fetchFoodCourtProfile: async (foodCourtId: string) => {
+    set({ isLoading: true });
+    const { data, error } = await supabase
+      .from('food_courts')
+      .select('name, slogan, welcome_bg_url')
+      .eq('id', foodCourtId)
       .single();
 
     if (!error && data) {
