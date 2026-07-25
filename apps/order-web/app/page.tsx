@@ -5,8 +5,8 @@ export default function HomePage() {
       <p className="max-w-sm font-body text-text-muted">
         Escanea el código QR en tu mesa, o abre el enlace que tu restaurante compartió contigo, para comenzar tu pedido.
       </p>
-      <p className="mt-4 font-body font-bold text-xs tracking-[-0.02em] text-text-muted">
-        powered by <span className="font-heading font-bold tracking-[-0.036em] text-primary">kiki</span>
+      <p className="mt-4 font-body font-bold text-xs tracking-[-0.02em] text-text-primary">
+        powered by <span className="font-heading font-bold tracking-[-0.036em] text-text-primary">kiki</span>
       </p>
     </div>
   );

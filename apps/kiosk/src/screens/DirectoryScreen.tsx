@@ -36,7 +36,7 @@ function getLogoPlate(id: string): string {
 const NUM_COLUMNS = 2;
 
 export function DirectoryScreen({ navigation }: ScreenProps<'Directory'>) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { t } = useTranslation();
   const foodCourtId = useAuthStore((s) => s.foodCourtId);
   const profile = useRestaurantStore((s) => s.profile);
@@ -197,9 +197,9 @@ export function DirectoryScreen({ navigation }: ScreenProps<'Directory'>) {
             </View>
           }
           ListFooterComponent={
-            <Text style={[styles.footerText, { color: colors.textMuted }]}>
+            <Text style={[styles.footerText, { color: isDark ? colors.textMuted : colors.textPrimary }]}>
               {t('poweredBy')}
-              <Text style={{ color: colors.primary, fontFamily: fonts.heading, letterSpacing: -0.4 }}>kiki</Text>
+              <Text style={{ color: isDark ? colors.primary : colors.textPrimary, fontFamily: fonts.heading, letterSpacing: -0.4 }}>kiki</Text>
             </Text>
           }
         />

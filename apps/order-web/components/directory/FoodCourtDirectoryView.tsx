@@ -32,17 +32,10 @@ export function FoodCourtDirectoryView({ slug, foodCourt, restaurants }: FoodCou
           <span className="font-body text-xs font-semibold text-text-muted">{restaurants.length} disponibles</span>
         </div>
 
-        <div
-          className="overflow-y-auto"
-          style={{
-            maxHeight: 'calc(100dvh - 60px - 56px - 80px - 120px)',
-          }}
-        >
-          <RestaurantGrid slug={slug} restaurants={restaurants} />
-        </div>
+        <RestaurantGrid slug={slug} restaurants={restaurants} />
 
-        <p className="mt-6 text-center font-body font-bold text-xs tracking-[-0.02em] text-text-muted">
-          powered by <span className="font-heading font-bold tracking-[-0.036em] text-primary">kiki</span>
+        <p className="mb-28 mt-6 text-center font-body font-bold text-xs tracking-[-0.02em] text-text-primary">
+          powered by <span className="font-heading font-bold tracking-[-0.036em] text-text-primary">kiki</span>
         </p>
 
         <CartFAB />

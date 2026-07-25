@@ -12,6 +12,18 @@ import { CartSummary } from '@/components/cart/CartSummary';
 import { Button } from '@/components/ui/Button';
 import type { PaymentMethod } from '@/lib/types';
 
+// Digits or dashes only, at most one dash — filters as the customer types
+// rather than validating after the fact, so it's impossible to end up with
+// letters/spaces/parens or more than one separator in the field.
+function sanitizePhoneInput(raw: string): string {
+  let cleaned = raw.replace(/[^0-9-]/g, '');
+  const firstDash = cleaned.indexOf('-');
+  if (firstDash !== -1) {
+    cleaned = cleaned.slice(0, firstDash + 1) + cleaned.slice(firstDash + 1).replace(/-/g, '');
+  }
+  return cleaned;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const items = useCartStore((s) => s.items);
@@ -98,7 +110,7 @@ export default function CheckoutPage() {
     return { subtotal, tax };
   }, [groups, getTaxRate]);
 
-  const phoneDigits = customerPhone.replace(/\D/g, '');
+  const phoneDigits = customerPhone.replace(/-/g, '');
   const isPhoneValid = phoneDigits.length >= 8;
 
   const canSubmit = items.length > 0 && customerName.trim().length > 0 && isPhoneValid && !isSubmitting && !hasBlocked;
@@ -275,8 +287,10 @@ export default function CheckoutPage() {
               <div className="flex flex-col gap-1">
                 <input
                   value={tableNumber}
-                  onChange={(e) => setTableNumber(e.target.value)}
+                  onChange={(e) => setTableNumber(e.target.value.replace(/\D/g, ''))}
                   placeholder="Número de mesa (opcional)"
+                  type="tel"
+                  inputMode="numeric"
                   className="h-12 rounded-lg border border-border-light bg-surface px-4 font-body text-text-primary outline-none focus:border-primary"
                 />
                 <p className="font-body text-xs text-text-muted">Revisa el número en tu tarjeta QR — ayuda al mesero a encontrarte.</p>
@@ -295,9 +309,10 @@ export default function CheckoutPage() {
           />
           <input
             value={customerPhone}
-            onChange={(e) => setCustomerPhone(e.target.value)}
+            onChange={(e) => setCustomerPhone(sanitizePhoneInput(e.target.value))}
             placeholder="Celular (ej. 61234567)"
             type="tel"
+            inputMode="tel"
             className="h-12 rounded-lg border border-border-light bg-surface px-4 font-body text-text-primary outline-none focus:border-primary"
           />
           {customerPhone.trim().length > 0 && !isPhoneValid && (
@@ -330,6 +345,10 @@ export default function CheckoutPage() {
         <Button onClick={handleSubmit} disabled={!canSubmit} size="xl" className="w-full">
           {isSubmitting ? 'Enviando pedido…' : 'Confirmar pedido'}
         </Button>
+
+        <p className="mt-2 text-center font-body font-bold text-xs tracking-[-0.02em] text-text-primary">
+          powered by <span className="font-heading font-bold tracking-[-0.036em] text-text-primary">kiki</span>
+        </p>
       </div>
     </div>
   );

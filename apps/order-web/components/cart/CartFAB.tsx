@@ -14,7 +14,7 @@ export function CartFAB() {
   return (
     <Link
       href="/checkout"
-      className="fixed inset-x-4 bottom-4 z-20 flex items-center justify-between rounded-xl bg-primary px-5 py-4 text-on-primary shadow-[0_8px_30px_-6px_rgba(204,255,0,0.6)] transition active:scale-[0.98] sm:inset-x-auto sm:right-6 sm:w-96"
+      className="fixed bottom-4 left-1/2 z-20 flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 items-center justify-between rounded-xl bg-primary px-5 py-4 text-on-primary shadow-[0_8px_30px_-6px_rgba(204,255,0,0.6)] transition active:scale-[0.98]"
     >
       <span className="font-heading text-sm font-bold">
         {count} artículo{count > 1 ? 's' : ''} · Ver carrito

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,7 +6,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
-  withSequence,
   withTiming,
   withDelay,
   FadeInDown,
@@ -23,8 +22,6 @@ import { LanguageSelector } from '@/components/layout/LanguageSelector';
 import { fonts, fontSizes } from '@/theme/typography';
 import { spacing, borderRadius } from '@/theme/spacing';
 import type { ScreenProps } from '@/navigation/types';
-
-const { width } = Dimensions.get('window');
 
 function getMediaType(url: string): 'video' | 'image' | null {
   if (!url) return null;
@@ -75,24 +72,30 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
     }
   };
 
-  // Pulse glow on CTA
-  const glow = useSharedValue(0.6);
+  // Soft breathing glow behind the CTA — a synced two-layer halo (wide+faint
+  // outer, tight+brighter inner) so the falloff reads as a smooth glow rather
+  // than a hard-edged slab. reverse=true ping-pongs the timing for a seamless
+  // loop with no jump at the ends; a gentle scale makes it "breathe".
+  const pulse = useSharedValue(0);
   useEffect(() => {
-    glow.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1600 }),
-        withTiming(0.6, { duration: 1600 })
-      ),
-      -1,
-      false
-    );
+    pulse.value = withRepeat(withTiming(1, { duration: 1800 }), -1, true);
   }, []);
 
-  const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
+  const glowOuterStyle = useAnimatedStyle(() => ({
+    opacity: 0.12 + pulse.value * 0.16,
+    transform: [{ scale: 1 + pulse.value * 0.06 }],
+  }));
+  const glowInnerStyle = useAnimatedStyle(() => ({
+    opacity: 0.22 + pulse.value * 0.2,
+    transform: [{ scale: 1 + pulse.value * 0.03 }],
+  }));
 
   const textColor = hasMedia ? '#ffffff' : colors.textPrimary;
   const mutedColor = hasMedia ? 'rgba(255,255,255,0.7)' : colors.textMuted;
-  const footerMutedColor = hasMedia ? 'rgba(255,255,255,0.5)' : colors.textMuted;
+  // On a plain (no photo) background, "kiki" in lime is unreadable against a
+  // light theme's near-white surface — fall back to solid textPrimary there.
+  const footerMutedColor = hasMedia ? 'rgba(255,255,255,0.5)' : isDark ? colors.textMuted : colors.textPrimary;
+  const footerBrandColor = hasMedia ? colors.primary : isDark ? colors.primary : colors.textPrimary;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -164,18 +167,26 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
           entering={FadeInUp.delay(500).duration(700).springify()}
           style={styles.ctaSection}
         >
-          {/* Glow behind button */}
-          <Animated.View style={[styles.buttonGlow, { backgroundColor: colors.primary }, glowStyle]} />
-
-          <TouchableOpacity
-            onPress={handleStart}
-            style={[styles.ctaButton, { backgroundColor: colors.primary }]}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.ctaText, { color: colors.onPrimary }]}>
-              {t('startOrder')}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.ctaWrapper}>
+            {/* Concentric glow layers, sized to the button so the halo is even */}
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.glowOuter, { backgroundColor: colors.primary }, glowOuterStyle]}
+            />
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.glowInner, { backgroundColor: colors.primary }, glowInnerStyle]}
+            />
+            <TouchableOpacity
+              onPress={handleStart}
+              style={[styles.ctaButton, { backgroundColor: colors.primary }]}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.ctaText, { color: colors.onPrimary }]}>
+                {t('startOrder')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </Animated.View>
       </View>
 
@@ -186,7 +197,7 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
       >
         <Text style={[styles.footerText, { color: footerMutedColor }]}>
           {t('poweredBy')}
-          <Text style={{ color: colors.primary, fontFamily: fonts.heading, letterSpacing: -0.4 }}>
+          <Text style={{ color: footerBrandColor, fontFamily: fonts.heading, letterSpacing: -0.4 }}>
             kiki
           </Text>
         </Text>
@@ -252,20 +263,33 @@ const styles = StyleSheet.create({
   ctaSection: {
     alignItems: 'center',
     width: '100%',
-    gap: spacing.base,
   },
-  buttonGlow: {
-    position: 'absolute',
-    top: -8,
-    width: width * 0.72,
-    height: 72,
-    borderRadius: 36,
-    opacity: 0.25,
-  },
-  ctaButton: {
+  ctaWrapper: {
     width: '85%',
     maxWidth: 340,
     height: 68,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glowOuter: {
+    position: 'absolute',
+    top: -22,
+    left: -22,
+    right: -22,
+    bottom: -22,
+    borderRadius: borderRadius.xl + 22,
+  },
+  glowInner: {
+    position: 'absolute',
+    top: -11,
+    left: -11,
+    right: -11,
+    bottom: -11,
+    borderRadius: borderRadius.xl + 11,
+  },
+  ctaButton: {
+    width: '100%',
+    height: '100%',
     borderRadius: borderRadius.xl,
     alignItems: 'center',
     justifyContent: 'center',

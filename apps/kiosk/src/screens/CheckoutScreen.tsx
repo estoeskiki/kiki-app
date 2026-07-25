@@ -23,6 +23,18 @@ import {
 import type { OrderType } from '@/data/types';
 import type { ScreenProps } from '@/navigation/types';
 
+// Digits or dashes only, at most one dash — filters as the customer types
+// rather than validating after the fact, so it's impossible to end up with
+// letters/spaces/parens or more than one separator in the field.
+function sanitizePhoneInput(raw: string): string {
+  let cleaned = raw.replace(/[^0-9-]/g, '');
+  const firstDash = cleaned.indexOf('-');
+  if (firstDash !== -1) {
+    cleaned = cleaned.slice(0, firstDash + 1) + cleaned.slice(firstDash + 1).replace(/-/g, '');
+  }
+  return cleaned;
+}
+
 export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
   const items = useCartStore((s) => s.items);
   const getItemsByRestaurant = useCartStore((s) => s.getItemsByRestaurant);
@@ -32,7 +44,7 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
   const clearCart = useCartStore((s) => s.clearCart);
   const removeItem = useCartStore((s) => s.removeItem);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { t } = useTranslation();
 
   const [orderType, setOrderType] = useState<OrderType>('dine-in');
@@ -95,7 +107,7 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
     setUnavailableItemIds([]);
   };
 
-  const phoneDigits = customerPhone.replace(/\D/g, '');
+  const phoneDigits = customerPhone.replace(/-/g, '');
   const isPhoneValid = phoneDigits.length >= 8;
   const total = getTotal();
   const canSubmit =
@@ -295,7 +307,7 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
                 <View style={{ gap: spacing.xs, marginTop: spacing.sm }}>
                   <TextInput
                     value={tableNumber}
-                    onChangeText={setTableNumber}
+                    onChangeText={(v) => setTableNumber(v.replace(/\D/g, ''))}
                     placeholder={t('tableNumberPlaceholder')}
                     placeholderTextColor={colors.textMuted}
                     keyboardType="number-pad"
@@ -319,7 +331,7 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
           />
           <TextInput
             value={customerPhone}
-            onChangeText={setCustomerPhone}
+            onChangeText={(v) => setCustomerPhone(sanitizePhoneInput(v))}
             placeholder={t('phonePlaceholder')}
             placeholderTextColor={colors.textMuted}
             keyboardType="phone-pad"
@@ -355,6 +367,13 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
           <CartSummary subtotal={getSubtotal()} tax={getTax()} total={total} />
 
           {!!error && <Text style={[styles.hint, { color: colors.error }]}>{error}</Text>}
+
+          <Text style={[styles.footerText, { color: isDark ? colors.textMuted : colors.textPrimary }]}>
+            {t('poweredBy')}
+            <Text style={{ color: isDark ? colors.primary : colors.textPrimary, fontFamily: fonts.heading, letterSpacing: -0.4 }}>
+              kiki
+            </Text>
+          </Text>
         </ScrollView>
 
         <View style={[styles.footer, { borderTopColor: colors.borderLight, backgroundColor: colors.surface }]}>
@@ -374,6 +393,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.base,
     paddingBottom: spacing.base,
+  },
+  footerText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSizes.xs,
+    letterSpacing: -0.2,
+    textAlign: 'center',
+    marginTop: spacing.xl,
   },
   emptyText: {
     fontFamily: fonts.body,

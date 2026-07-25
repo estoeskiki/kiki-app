@@ -211,9 +211,16 @@ export async function createWebOrder(payload: CreateWebOrderPayload): Promise<{ 
 // retry, not give up) from a genuine "no such order" (returns null). Collapsing
 // both into null made the tracker latch its not-found screen whenever a poll
 // fired mid-hiccup, e.g. the queued poll right after the phone wakes from lock.
-export async function getOrderStatus(orderId: string): Promise<OrderStatusResult | null> {
+// Returns:
+//   * OrderStatusResult — a live order within its public-tracking window
+//   * 'expired'         — the order exists but is past the 24h tracker window
+//                         (get_order_status_public returns { expired: true })
+//   * null              — no such order (genuine not-found)
+// A thrown error stays a transient/transport failure the caller should retry.
+export async function getOrderStatus(orderId: string): Promise<OrderStatusResult | 'expired' | null> {
   const { data, error } = await supabase.rpc('get_order_status_public', { p_order_id: orderId });
   if (error) throw new Error(error.message);
   if (!data) return null;
+  if ((data as { expired?: boolean }).expired) return 'expired';
   return data as unknown as OrderStatusResult;
 }

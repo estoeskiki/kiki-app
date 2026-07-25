@@ -42,6 +42,9 @@ export default function OrderTrackingPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const [order, setOrder] = useState<OrderStatusResult | null>(null);
   const [notFound, setNotFound] = useState(false);
+  // Order exists but is past its 24h public-tracking window — a permanent
+  // terminal state (unlike notFound, which a later good poll can clear).
+  const [expired, setExpired] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // "Nueva orden" reopens the same storefront in a fresh tab — a new tab has
@@ -59,8 +62,30 @@ export default function OrderTrackingPage() {
     : slug
       ? (mode === 'food_court' ? `/mall/${slug}` : `/r/${slug}`)
       : '/';
+  // Only offer "Nueva orden" when this device actually has ordering context
+  // (a scanned token / storefront in sessionStorage). A tracker link opened
+  // cold on another phone has none, so the button would only dead-end at the
+  // scan-QR page — hide it there and let Share take the full row.
+  const canReorder = newOrderHref !== '/';
 
   const [copied, setCopied] = useState(false);
+
+  // Paint the root + body dark for the whole tracker route. Every tracker state
+  // is dark (#060e1d), but the container is only min-h-dvh — on iOS Safari
+  // 100dvh can leave a light strip behind the collapsing toolbar and in the
+  // rubber-band overscroll area. Backing the page itself makes those fill too.
+  // Restored on navigate-away so the light-themed rest of the app is unaffected.
+  useEffect(() => {
+    const html = document.documentElement;
+    const prevHtml = html.style.backgroundColor;
+    const prevBody = document.body.style.backgroundColor;
+    html.style.backgroundColor = '#060e1d';
+    document.body.style.backgroundColor = '#060e1d';
+    return () => {
+      html.style.backgroundColor = prevHtml;
+      document.body.style.backgroundColor = prevBody;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +94,12 @@ export default function OrderTrackingPage() {
       try {
         const result = await getOrderStatus(orderId);
         if (cancelled) return;
+        if (result === 'expired') {
+          // Permanent — stop polling, the window never reopens.
+          setExpired(true);
+          if (timer.current) clearInterval(timer.current);
+          return;
+        }
         if (!result) {
           setNotFound(true);
           return;
@@ -103,6 +134,30 @@ export default function OrderTrackingPage() {
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [orderId]);
+
+  if (expired) {
+    return (
+      <div className="relative min-h-dvh overflow-hidden bg-[#060e1d]">
+        <div className="absolute inset-x-0 top-0 h-1 bg-primary" />
+        <div className="relative mx-auto flex min-h-dvh max-w-lg flex-col items-center justify-center gap-5 px-6 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-3xl">
+            ⏳
+          </div>
+          <div className="fade-up-item flex flex-col gap-2">
+            <p className="font-body text-xs font-bold uppercase tracking-[0.2em] text-white/40">Seguimiento</p>
+            <h1 className="font-heading text-3xl font-black tracking-tight text-white">Tu orden ha expirado</h1>
+            <p className="mx-auto max-w-xs font-body text-sm leading-relaxed text-white/50">
+              El seguimiento de un pedido está disponible por 24 horas. Este enlace ya no está activo, pero tu
+              pedido fue procesado con normalidad.
+            </p>
+          </div>
+          <p className="fade-up-item mt-1 font-body text-xs font-bold tracking-[-0.02em] text-white/40" style={{ animationDelay: '120ms' }}>
+            powered by <span className="font-heading font-bold tracking-[-0.036em] text-primary">kiki</span>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (notFound) {
     return (
@@ -205,10 +260,10 @@ export default function OrderTrackingPage() {
                           <div key={step} className="flex flex-1 flex-col items-center gap-1.5">
                             <div
                               className={`flex h-7 w-7 items-center justify-center rounded-full font-heading text-xs font-bold transition-colors duration-500 ${j < subCurrent
-                                  ? 'bg-primary text-on-primary'
-                                  : j === subCurrent
-                                    ? 'step-active bg-primary text-on-primary'
-                                    : 'bg-white/10 text-white/40'
+                                ? 'bg-primary text-on-primary'
+                                : j === subCurrent
+                                  ? 'step-active bg-primary text-on-primary'
+                                  : 'bg-white/10 text-white/40'
                                 }`}
                             >
                               {j + 1}
@@ -268,8 +323,19 @@ export default function OrderTrackingPage() {
         </div>
 
         {!isTerminal && (order.payment_method === 'yappy' || order.payment_method === 'card_on_delivery') && (
-          <div className="fade-up-item rounded-xl bg-white/[0.04] px-4 py-3 text-center font-body text-xs text-white/60" style={{ animationDelay: '340ms' }}>
-            {order.payment_method === 'yappy' ? 'Ten tu Yappy listo para cuando recojas tu pedido.' : 'Ten tu tarjeta lista para cuando recojas tu pedido.'}
+          <div
+            className="fade-up-item flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3.5"
+            style={{ animationDelay: '340ms' }}
+          >
+            <span className="text-2xl">{order.payment_method === 'yappy' ? '📱' : '💳'}</span>
+            <p className="text-left font-body text-sm font-bold leading-snug text-white">
+              {order.payment_method === 'yappy'
+                ? 'Ten tu Yappy listo para cuando recojas/te entreguen tu pedido.'
+                : 'Ten tu tarjeta lista para cuando recojas/te entreguen tu pedido.'}
+              <span className="mt-0.5 block font-body text-xs font-normal text-white/60">
+                Pagas a cada comercio por separado.
+              </span>
+            </p>
           </div>
         )}
 
@@ -293,17 +359,19 @@ export default function OrderTrackingPage() {
             </svg>
             {copied ? '¡Enlace copiado!' : 'Compartir'}
           </button>
-          <a
-            href={newOrderHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-body text-sm font-bold text-on-primary shadow-[0_4px_20px_-6px_rgba(204,255,0,0.5)] transition active:scale-[0.98]"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            Nueva orden
-          </a>
+          {canReorder && (
+            <a
+              href={newOrderHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-body text-sm font-bold text-on-primary shadow-[0_4px_20px_-6px_rgba(204,255,0,0.5)] transition active:scale-[0.98]"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+              Nueva orden
+            </a>
+          )}
         </div>
 
         <p className="fade-up-item text-center font-body font-bold text-xs tracking-[-0.02em] text-white/50" style={{ animationDelay: '480ms' }}>
