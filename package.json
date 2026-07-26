@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "apps/order-web",
+    "apps/admin-web",
     "packages/*"
   ],
   "scripts": {
@@ -10,6 +11,7 @@
     "kiosk:android": "cd apps/kiosk && npx expo run:android",
     "admin": "cd apps/admin && npx expo start",
     "kds": "cd apps/kds && npx expo start",
-    "order-web": "cd apps/order-web && npm run dev"
+    "order-web": "cd apps/order-web && npm run dev",
+    "admin-web": "cd apps/admin-web && npm run dev"
   }
 }

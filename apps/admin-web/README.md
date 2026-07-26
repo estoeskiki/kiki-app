@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# admin-web — Kiki operator console
 
-## Getting Started
-
-First, run the development server:
+Multi-tenant dashboard for monitoring and managing orders, menus, locations and
+staff. Restaurant admins see the same UI narrowed to their own scope, using the
+same credentials as the React Native admin app (`apps/admin`).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run admin-web        # from the repo root
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Needs `.env.local` with `NEXT_PUBLIC_SUPABASE_URL` and
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` (same project as `apps/order-web`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+> **Next.js 16**: Middleware is now `proxy.ts`, and several APIs differ from
+> earlier versions. See `AGENTS.md` — read `node_modules/next/dist/docs/`
+> before changing routing, caching or request APIs.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Security model
 
-## Learn More
+**No `service_role` key in this app.** Every read and write runs on the signed-in
+user's own JWT, so Postgres RLS is the single enforcement point — a bug in a page
+cannot leak another tenant's rows, because the database refuses to return them.
 
-To learn more about Next.js, take a look at the following resources:
+- `lib/auth/dal.ts` — the authorization boundary. Every layout, page and Server
+  Action calls it. Uses `auth.getUser()` (revalidates the JWT), never
+  `getSession()` (trusts the cookie).
+- `proxy.ts` — refreshes auth cookies, sets the per-request CSP nonce, and does
+  an *optimistic* redirect to `/login`. Next's docs are explicit that proxy is
+  not an authorization solution; it decides nothing about data access.
+- Cross-tenant access comes from `platform_admins` + `is_platform_admin()`,
+  which every RLS policy ORs in front of its tenant scope
+  (`supabase/migrations/031_platform_admins.sql`).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The one exception is creating user accounts, which needs the Admin API. That
+lives in the `admin-invite-user` Edge Function, which re-verifies the caller's
+permissions with *their* JWT before using the service role — so the key stays
+inside Supabase.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Data model notes
 
-## Deploy on Vercel
+- **Grain**: analytics aggregate `sub_orders`, not `orders`. A food-court order
+  is one `orders` row fanned out into one `sub_orders` row per restaurant;
+  summing `orders.total` double-counts across stalls. Order counts use
+  `COUNT(DISTINCT order_id)`.
+- **Channel**: `orders.channel` is `kiosk` | `web`, written by
+  `supabase/functions/create-web-order` (the kiosk posts `channel:'kiosk'`
+  through the same function).
+- **Zone**: a row in `tables` — Sala VIP, Palco #1, Mesa 5. Reporting groups on
+  `table_id`; display uses the `table_label` snapshot on the order, so renaming
+  a zone never rewrites history. `table_id IS NULL` is the real "Sin zona"
+  bucket (walk-up / slug entry).
+- **Money**: integer cents everywhere. Only divided at display, in `lib/format.ts`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Layout
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/(dashboard)/     authenticated shell — all pages live here
+app/login/           email + password, Server Action
+proxy.ts             cookie refresh, CSP nonce, optimistic redirect
+lib/auth/dal.ts      authorization boundary
+lib/queries.ts       read layer (dashboard_* RPCs + the facts view)
+lib/filters.ts       URL <-> filter state; all filter state lives in the URL
+components/charts/   inline SVG, no charting library
+```
+
+Every page lives under the `(dashboard)` route group. Note that a route group
+does not appear in the URL, so `app/page.tsx` and `app/(dashboard)/page.tsx`
+both resolve to `/` — do not create the former.
+
+Filter state is entirely in the URL, so every view is shareable and
+server-rendered, and there is no client cache to disagree with what was queried.
+
+UI is ported from a Claude Design project — see the `reference_admin_web_design`
+note in project memory before adding new surfaces.
