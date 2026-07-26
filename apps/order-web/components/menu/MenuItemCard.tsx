@@ -23,7 +23,7 @@ export function MenuItemCard({ item, onSelect, onAdd }: MenuItemCardProps) {
           onSelect();
         }
       }}
-      className="flex cursor-pointer flex-col overflow-hidden rounded-xl border border-border-light bg-surface text-left transition active:scale-[0.98]"
+      className="flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-border-light bg-surface text-left transition active:scale-[0.98]"
     >
       <div
         className="relative flex h-28 items-center justify-center sm:h-36"

@@ -161,7 +161,10 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
   if (items.length === 0) {
     return (
       <ScreenWrapper padded={false}>
-        <Header title={t('checkout')} onBack={() => navigation.goBack()} />
+        {/* goBack() already lands on Menu — the item catalog Checkout was
+            pushed from — so "Seguir comprando" just labels that existing
+            behavior clearly, same pill treatment as MenuScreen's back button. */}
+        <Header title={t('checkout')} onBack={() => navigation.goBack()} backLabel={t('continueShopping')} />
         <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t('emptyCartShort')}</Text>
       </ScreenWrapper>
     );
@@ -176,7 +179,7 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
 
   return (
     <ScreenWrapper padded={false}>
-      <Header title={t('checkout')} onBack={() => navigation.goBack()} />
+      <Header title={t('checkout')} onBack={() => navigation.goBack()} backLabel={t('continueShopping')} />
 
       <View style={styles.content}>
         <ScrollView
@@ -305,6 +308,15 @@ export function CheckoutScreen({ navigation }: ScreenProps<'Checkout'>) {
               </View>
               {tableId && (
                 <View style={{ gap: spacing.xs, marginTop: spacing.sm }}>
+                  {/* "Opcional" as its own badge, not just buried inside the
+                      placeholder — the placeholder disappears the moment the
+                      user starts typing, so it's an easy thing to miss there. */}
+                  <View style={styles.tableNumberLabelRow}>
+                    <Text style={[styles.tableNumberLabel, { color: colors.textSecondary }]}>{t('tableNumberLabel')}</Text>
+                    <View style={[styles.optionalBadge, { backgroundColor: colors.surfaceContainer }]}>
+                      <Text style={[styles.optionalBadgeText, { color: colors.textMuted }]}>{t('optionalLabel')}</Text>
+                    </View>
+                  </View>
                   <TextInput
                     value={tableNumber}
                     onChangeText={(v) => setTableNumber(v.replace(/\D/g, ''))}
@@ -493,6 +505,18 @@ const styles = StyleSheet.create({
   },
   toggleText: { fontFamily: fonts.bodySemiBold, fontSize: fontSizes.sm },
   hint: { fontFamily: fonts.body, fontSize: fontSizes.xs },
+  tableNumberLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  tableNumberLabel: { fontFamily: fonts.bodySemiBold, fontSize: fontSizes.sm },
+  optionalBadge: {
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  optionalBadgeText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.xs,
+    letterSpacing: 0.2,
+  },
   zoneWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   zoneChip: {
     borderWidth: 1,

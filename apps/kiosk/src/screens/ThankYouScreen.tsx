@@ -238,10 +238,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
   qrTitle: {
-    fontFamily: fonts.headingSemiBold,
-    fontSize: fontSizes.md,
-    color: '#ffffff',
-    letterSpacing: -0.2,
+    fontFamily: fonts.heading,
+    fontSize: fontSizes.lg,
+    fontWeight: '800',
+    color: C.primary,
+    letterSpacing: -0.3,
+    textTransform: 'uppercase',
   },
   qrCard: {
     backgroundColor: '#ffffff',

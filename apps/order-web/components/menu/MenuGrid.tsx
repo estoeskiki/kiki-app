@@ -14,8 +14,18 @@ export function MenuGrid({ items, onSelect, onAdd }: MenuGridProps) {
 
   return (
     <div className="grid grid-cols-2 gap-3 px-4 pb-28 pt-1 sm:grid-cols-3 lg:grid-cols-4">
-      {items.map((item) => (
-        <MenuItemCard key={item.id} item={item} onSelect={() => onSelect(item)} onAdd={() => onAdd(item)} />
+      {items.map((item, index) => (
+        // Staggered fade-up on load, matching the kiosk's per-row entrance
+        // animation — capped so a long menu doesn't leave the last cards
+        // waiting a visibly long time to appear. h-full: this wrapper is now
+        // the direct grid item, so it's what CSS Grid's default
+        // align-items:stretch actually stretches to match the tallest card
+        // in the row — without h-full here (and on MenuItemCard's own root)
+        // that stretched height never reaches the visible bordered card, so
+        // a longer description in one card left its neighbor visibly shorter.
+        <div key={item.id} className="fade-up-item h-full" style={{ animationDelay: `${Math.min(index * 40, 360)}ms` }}>
+          <MenuItemCard item={item} onSelect={() => onSelect(item)} onAdd={() => onAdd(item)} />
+        </div>
       ))}
     </div>
   );

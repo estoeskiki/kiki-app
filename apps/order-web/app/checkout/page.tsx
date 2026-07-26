@@ -173,7 +173,7 @@ export default function CheckoutPage() {
   if (items.length === 0) {
     return (
       <div className="min-h-dvh">
-        <Header title="Pagar" showBack showCart={false} />
+        <Header title="Carrito" showBack showCart={false} backLabel="Seguir comprando" />
         <p className="p-10 text-center font-body text-text-muted">Tu carrito está vacío.</p>
       </div>
     );
@@ -181,7 +181,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-dvh pb-10">
-      <Header title="Pagar" showBack showCart={false} />
+      <Header title="Carrito" showBack showCart={false} backLabel="Seguir comprando" />
 
       <div className="flex flex-col gap-6 px-4 py-4">
         {hasBlocked && (
@@ -255,7 +255,7 @@ export default function CheckoutPage() {
               <button
                 key={t}
                 onClick={() => setOrderType(t)}
-                className={`flex-1 rounded-lg border px-4 py-3 font-body text-sm font-semibold ${orderType === t ? 'border-primary bg-primary/10 text-text-primary' : 'border-border-light text-text-secondary'
+                className={`flex-1 rounded-lg border-2 px-4 py-3 font-body text-sm font-semibold ${orderType === t ? 'border-primary bg-primary/15 text-text-primary' : 'border-border-light text-text-secondary'
                   }`}
               >
                 {t === 'dine-in' ? 'Comer aquí' : 'Para llevar'}
@@ -276,7 +276,7 @@ export default function CheckoutPage() {
                 <button
                   key={zone.id}
                   onClick={() => setTable(zone.id)}
-                  className={`rounded-lg border px-4 py-3 font-body text-sm font-semibold ${tableId === zone.id ? 'border-primary bg-primary/10 text-text-primary' : 'border-border-light text-text-secondary'
+                  className={`rounded-lg border-2 px-4 py-3 font-body text-sm font-semibold ${tableId === zone.id ? 'border-primary bg-primary/15 text-text-primary' : 'border-border-light text-text-secondary'
                     }`}
                 >
                   {zone.label}
@@ -285,10 +285,19 @@ export default function CheckoutPage() {
             </div>
             {tableAllowsManualNumber && (
               <div className="flex flex-col gap-1">
+                {/* "Opcional" as its own badge, not just buried inside the
+                    placeholder — the placeholder disappears the moment the
+                    user starts typing, so it's an easy thing to miss there. */}
+                <div className="flex items-center gap-2">
+                  <span className="font-body text-sm font-semibold text-text-secondary">Número de mesa</span>
+                  <span className="rounded-sm bg-surface-container px-2 py-0.5 font-body text-xs font-semibold tracking-wide text-text-muted">
+                    Opcional
+                  </span>
+                </div>
                 <input
                   value={tableNumber}
                   onChange={(e) => setTableNumber(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Número de mesa (opcional)"
+                  placeholder="Ej. 12"
                   type="tel"
                   inputMode="numeric"
                   className="h-12 rounded-lg border border-border-light bg-surface px-4 font-body text-text-primary outline-none focus:border-primary"
@@ -327,7 +336,7 @@ export default function CheckoutPage() {
             <button
               key={method}
               onClick={() => setPaymentMethod(method)}
-              className={`flex items-center justify-between rounded-lg border px-4 py-3 text-left ${paymentMethod === method ? 'border-primary bg-primary/10' : 'border-border-light bg-surface'
+              className={`flex items-center justify-between rounded-lg border-2 px-4 py-3 text-left ${paymentMethod === method ? 'border-primary bg-primary/15' : 'border-border-light bg-surface'
                 }`}
             >
               <span className="font-body text-sm font-semibold text-text-primary">

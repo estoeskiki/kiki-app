@@ -1,17 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View, Text, StyleSheet, Switch, TouchableOpacity,
-  Alert, ActivityIndicator, ScrollView,
+  ScrollView,
 } from 'react-native';
 import {
-  Store, Smartphone, LogOut, Moon, Sun, ChevronRight, Copy,
+  Store, LogOut, ChevronRight,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../components/layout/ScreenWrapper';
 import { useSystemStore } from '../store/useSystemStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { useThemeStore } from '../store/useThemeStore';
 import { useTheme } from '../theme/useTheme';
-import { supabase } from '../lib/supabase';
 import { spacing, borderRadius } from '../theme/spacing';
 import { fonts, fontSizes } from '../theme/typography';
 
@@ -89,40 +87,12 @@ function CardGroup({ children }: { children: React.ReactNode }) {
 
 export default function SettingsScreen() {
   const { kioskIsOpen, toggleKiosk, fetchKioskStatus } = useSystemStore();
-  const { signOut, user, orgId, restaurantId, restaurantName, foodCourtName } = useAuthStore();
-  const { isDark, toggleTheme } = useThemeStore();
+  const { signOut, user, restaurantId, restaurantName, foodCourtName } = useAuthStore();
   const { colors } = useTheme();
-  const [isGenerating, setIsGenerating] = useState(false);
 
   React.useEffect(() => {
     if (restaurantId) fetchKioskStatus(restaurantId);
   }, [restaurantId, fetchKioskStatus]);
-
-  const handleGenerateToken = async () => {
-    if (!orgId || !restaurantId) {
-      Alert.alert('Error de Configuración', 'No se puede determinar tu sucursal. No se puede generar un token.');
-      return;
-    }
-    setIsGenerating(true);
-    const newToken = `kiosk-${Math.random().toString(36).substring(2, 8)}`;
-    const { error } = await supabase.from('device_tokens').insert({
-      org_id: orgId,
-      restaurant_id: restaurantId,
-      device_name: `Generado ${new Date().toLocaleDateString('es')}`,
-      token_hash: newToken,
-      is_active: true,
-    });
-    setIsGenerating(false);
-    if (error) {
-      Alert.alert('Error', error.message);
-    } else {
-      Alert.alert(
-        'Token Generado',
-        `${newToken}\n\nUsa este token para vincular una nueva tablet kiosko a esta sucursal.`,
-        [{ text: 'Copiar y Cerrar', onPress: () => {} }, { text: 'OK' }]
-      );
-    }
-  };
 
   return (
     <ScreenWrapper>
@@ -168,47 +138,6 @@ export default function SettingsScreen() {
                 trackColor={{ false: colors.surfaceHighlight, true: colors.success }}
                 thumbColor={colors.surface}
                 ios_backgroundColor={colors.surfaceHighlight}
-              />
-            }
-          />
-        </CardGroup>
-
-        {/* ── Dispositivos ── */}
-        <SectionLabel label="DISPOSITIVOS" />
-        <CardGroup>
-          <SettingsRow
-            first
-            last
-            icon={
-              isGenerating
-                ? <ActivityIndicator size="small" color={colors.primary} />
-                : <Smartphone color={colors.primary} size={18} strokeWidth={2} />
-            }
-            label="Generar Token de Kiosco"
-            sublabel="Vincula un nuevo iPad o tablet Android"
-            onPress={isGenerating ? undefined : handleGenerateToken}
-          />
-        </CardGroup>
-
-        {/* ── Apariencia ── */}
-        <SectionLabel label="APARIENCIA" />
-        <CardGroup>
-          <SettingsRow
-            first
-            last
-            icon={isDark
-              ? <Moon color={colors.tertiary} size={18} strokeWidth={2} />
-              : <Sun color={colors.warning} size={18} strokeWidth={2} />
-            }
-            label={isDark ? 'Modo Oscuro' : 'Modo Claro'}
-            sublabel="Cambia la apariencia de la app"
-            right={
-              <Switch
-                value={isDark}
-                onValueChange={toggleTheme}
-                trackColor={{ false: colors.border, true: colors.tertiary }}
-                thumbColor={colors.surface}
-                ios_backgroundColor={colors.border}
               />
             }
           />

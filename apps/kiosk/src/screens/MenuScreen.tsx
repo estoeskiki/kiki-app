@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { View, StyleSheet, Alert, AppState } from 'react-native';
+import { View, Text, StyleSheet, Alert, AppState } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { ScreenWrapper } from '@/components/layout/ScreenWrapper';
 import { Header } from '@/components/layout/Header';
@@ -10,8 +10,11 @@ import { useCartStore } from '@/store/useCartStore';
 import { useOrderStore } from '@/store/useOrderStore';
 import { useMenuStore } from '@/store/useMenuStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useTheme } from '@/context/ThemeContext';
 import { useTranslation } from '@/i18n/useTranslation';
 import { supabase } from '@/lib/supabase';
+import { fonts, fontSizes } from '@/theme/typography';
+import { spacing } from '@/theme/spacing';
 import type { MenuItem } from '@/data/types';
 import type { ScreenProps } from '@/navigation/types';
 
@@ -21,6 +24,7 @@ export function MenuScreen({ route, navigation }: ScreenProps<'Menu'>) {
   const removeItemsByRestaurant = useCartStore((s) => s.removeItemsByRestaurant);
   const resetOrder = useOrderStore((s) => s.resetOrder);
   const mode = useAuthStore((s) => s.mode);
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const closedAlertShown = useRef(false);
 
@@ -136,10 +140,20 @@ export function MenuScreen({ route, navigation }: ScreenProps<'Menu'>) {
 
   return (
     <ScreenWrapper padded={false}>
+      {mode === 'food_court' && (
+        <View style={[styles.multiRestaurantBanner, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40' }]}>
+          <Text style={[styles.multiRestaurantBannerText, { color: colors.textPrimary }]}>{t('multiRestaurantBanner')}</Text>
+        </View>
+      )}
       <Header
         title={t('menu')}
         onBack={() => navigation.goBack()}
-        secondaryRightAction={{ icon: 'restart', onPress: handleRestart }}
+        // Only labeled "Volver a restaurantes" in food-court mode, where
+        // back genuinely returns to the restaurant catalog (Directory) — in
+        // standalone mode this goes to Welcome instead, so it stays a bare
+        // chevron there rather than a misleading label.
+        backLabel={mode === 'food_court' ? t('backToRestaurants') : undefined}
+        secondaryRightAction={{ icon: 'restart', onPress: handleRestart, label: t('restartOrder') }}
         rightAction={{ icon: 'cart', onPress: () => navigation.navigate('Checkout'), badge: totalItemCount > 0 ? totalItemCount : undefined }}
       />
       <CategoryTabs categories={categories} selectedId={selectedCategoryId} onSelect={setSelectedCategoryId} />
@@ -153,4 +167,16 @@ export function MenuScreen({ route, navigation }: ScreenProps<'Menu'>) {
 
 const styles = StyleSheet.create({
   gridContainer: { flex: 1 },
+  // Very thin strip — a reminder that stays visible through the whole
+  // shopping session (not just the directory banner shown once, up front),
+  // that items from other restaurants can join this same order.
+  multiRestaurantBanner: {
+    borderBottomWidth: 1,
+    paddingVertical: spacing.xs,
+    alignItems: 'center',
+  },
+  multiRestaurantBannerText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.xs,
+  },
 });

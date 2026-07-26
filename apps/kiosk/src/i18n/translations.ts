@@ -46,6 +46,12 @@ export const translations = {
     startNewOrder: 'Nueva Orden',
     startNewOrderConfirm: 'Esto borrará tu carrito actual y comenzará de nuevo.',
     confirmRestart: 'Reiniciar',
+    // Labeled header buttons — the bare icons weren't clear enough for users
+    restartOrder: 'Reiniciar pedido',
+    backToRestaurants: 'Volver a restaurantes',
+    continueShopping: 'Seguir comprando',
+    scrollForMore: 'Más opciones abajo',
+    multiRestaurantBanner: 'Múltiples restaurantes, un solo pedido',
 
     // Checkout v2 (order-web parity)
     orderTypeTitle: 'Tipo de pedido',
@@ -54,7 +60,9 @@ export const translations = {
     takeawayNote: 'Te lo empacamos para que te lo lleves.',
     locationTitle: 'Confirma tu ubicación',
     locationHint: 'Selecciona la sala donde estás sentado.',
-    tableNumberPlaceholder: 'Número de mesa (opcional)',
+    tableNumberLabel: 'Número de mesa',
+    optionalLabel: 'Opcional',
+    tableNumberPlaceholder: 'Ej. 12',
     tableNumberHint: 'Revisa el número en tu mesa — ayuda al mesero a encontrarte.',
     yourDetails: 'Tus datos',
     namePlaceholder: 'Nombre',
@@ -80,7 +88,7 @@ export const translations = {
     restaurantClosedInline: 'Este restaurante cerró — no puedes ordenar de aquí ahora.',
     orderError: 'Algo salió mal al hacer tu pedido. Por favor intenta de nuevo.',
     scanToTrack: 'Escanea para seguir tu pedido en tu celular',
-    trackYourOrder: 'Sigue tu pedido',
+    trackYourOrder: 'Escanea el QR para seguir tu pedido',
     itemsCount: 'artículos',
 
     // Food court directory
@@ -159,6 +167,11 @@ export const translations = {
     startNewOrder: 'Start New Order',
     startNewOrderConfirm: 'This will clear your current cart and start fresh.',
     confirmRestart: 'Restart',
+    restartOrder: 'Restart order',
+    backToRestaurants: 'Back to restaurants',
+    continueShopping: 'Continue shopping',
+    scrollForMore: 'More options below',
+    multiRestaurantBanner: 'Multiple restaurants, one order',
 
     // Checkout v2 (order-web parity)
     orderTypeTitle: 'Order type',
@@ -167,7 +180,9 @@ export const translations = {
     takeawayNote: 'We’ll pack it up for you to go.',
     locationTitle: 'Confirm your location',
     locationHint: 'Select the room where you’re seated.',
-    tableNumberPlaceholder: 'Table number (optional)',
+    tableNumberLabel: 'Table number',
+    optionalLabel: 'Optional',
+    tableNumberPlaceholder: 'E.g. 12',
     tableNumberHint: 'Check the number on your table — it helps the server find you.',
     yourDetails: 'Your details',
     namePlaceholder: 'Name',
@@ -193,7 +208,7 @@ export const translations = {
     restaurantClosedInline: 'This restaurant closed — you can’t order from here right now.',
     orderError: 'Something went wrong placing your order. Please try again.',
     scanToTrack: 'Scan to track your order on your phone',
-    trackYourOrder: 'Track your order',
+    trackYourOrder: 'Scan the QR to track your order',
     itemsCount: 'items',
 
     // Food court directory

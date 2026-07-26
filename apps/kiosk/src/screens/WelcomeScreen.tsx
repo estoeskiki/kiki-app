@@ -8,6 +8,7 @@ import Animated, {
   withRepeat,
   withTiming,
   withDelay,
+  Easing,
   FadeInDown,
   FadeInUp,
 } from 'react-native-reanimated';
@@ -72,22 +73,44 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
     }
   };
 
-  // Soft breathing glow behind the CTA — a synced two-layer halo (wide+faint
-  // outer, tight+brighter inner) so the falloff reads as a smooth glow rather
-  // than a hard-edged slab. reverse=true ping-pongs the timing for a seamless
-  // loop with no jump at the ends; a gentle scale makes it "breathe".
+  // Pulsing glow behind the CTA. reverse=true ping-pongs the timing for a
+  // seamless loop with no jump at the ends. The glow is ONE pill sized to the
+  // button (see buttonGlow) — the earlier version keyed its width off the
+  // screen width, so it blew far past the button on a large kiosk display while
+  // looking fine on a small simulator; anchoring it to the button keeps it
+  // proportional on every screen. Opacity + a slight scale make it breathe.
   const pulse = useSharedValue(0);
   useEffect(() => {
     pulse.value = withRepeat(withTiming(1, { duration: 1800 }), -1, true);
   }, []);
 
-  const glowOuterStyle = useAnimatedStyle(() => ({
-    opacity: 0.12 + pulse.value * 0.16,
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: 0.6 + pulse.value * 0.35,
     transform: [{ scale: 1 + pulse.value * 0.06 }],
   }));
-  const glowInnerStyle = useAnimatedStyle(() => ({
-    opacity: 0.22 + pulse.value * 0.2,
-    transform: [{ scale: 1 + pulse.value * 0.03 }],
+
+  // Ripple rings — an outlined (not filled) pill so it can only ever draw a
+  // thin line, never band into a solid slab. Two rings staggered by half the
+  // cycle so a new one starts expanding as the other is still fading, giving
+  // a continuous "radar ping" pulse instead of a single one-shot ripple.
+  // reverse=false makes each a sawtooth: expand+fade, snap back, repeat.
+  const ripple1 = useSharedValue(0);
+  const ripple2 = useSharedValue(0);
+  useEffect(() => {
+    ripple1.value = withRepeat(withTiming(1, { duration: 1800, easing: Easing.out(Easing.ease) }), -1, false);
+    ripple2.value = withDelay(
+      900,
+      withRepeat(withTiming(1, { duration: 1800, easing: Easing.out(Easing.ease) }), -1, false)
+    );
+  }, []);
+
+  const ripple1Style = useAnimatedStyle(() => ({
+    opacity: (1 - ripple1.value) * 0.55,
+    transform: [{ scale: 1 + ripple1.value * 0.45 }],
+  }));
+  const ripple2Style = useAnimatedStyle(() => ({
+    opacity: (1 - ripple2.value) * 0.55,
+    transform: [{ scale: 1 + ripple2.value * 0.45 }],
   }));
 
   const textColor = hasMedia ? '#ffffff' : colors.textPrimary;
@@ -168,14 +191,21 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
           style={styles.ctaSection}
         >
           <View style={styles.ctaWrapper}>
-            {/* Concentric glow layers, sized to the button so the halo is even */}
+            {/* Single soft glow, sized to the button so it stays proportional
+                on any screen (small simulator → large kiosk) */}
             <Animated.View
               pointerEvents="none"
-              style={[styles.glowOuter, { backgroundColor: colors.primary }, glowOuterStyle]}
+              style={[styles.buttonGlow, { backgroundColor: colors.primary }, glowStyle]}
+            />
+            {/* Ripple rings — outlined only, so they read as an expanding
+                "radar ping" instead of a filled shape that could band */}
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.rippleRing, { borderColor: colors.primary }, ripple1Style]}
             />
             <Animated.View
               pointerEvents="none"
-              style={[styles.glowInner, { backgroundColor: colors.primary }, glowInnerStyle]}
+              style={[styles.rippleRing, { borderColor: colors.primary }, ripple2Style]}
             />
             <TouchableOpacity
               onPress={handleStart}
@@ -271,21 +301,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  glowOuter: {
+  buttonGlow: {
     position: 'absolute',
-    top: -22,
-    left: -22,
-    right: -22,
-    bottom: -22,
-    borderRadius: borderRadius.xl + 22,
+    top: -14,
+    left: -14,
+    right: -14,
+    bottom: -14,
+    borderRadius: borderRadius.xl + 14,
   },
-  glowInner: {
+  rippleRing: {
     position: 'absolute',
-    top: -11,
-    left: -11,
-    right: -11,
-    bottom: -11,
-    borderRadius: borderRadius.xl + 11,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: borderRadius.xl,
+    borderWidth: 2,
+    backgroundColor: 'transparent',
   },
   ctaButton: {
     width: '100%',

@@ -10,16 +10,24 @@ interface RightAction {
   icon: 'cart' | 'restart';
   onPress: () => void;
   badge?: number;
+  // When set, renders as a labeled pill (icon + text) instead of an icon-only
+  // circle — the bare RotateCcw ("undo") icon reads as unclear on its own,
+  // so the restart action always passes a label.
+  label?: string;
 }
 
 interface HeaderProps {
   title: string;
   onBack?: () => void;
+  // When set, onBack renders as a labeled pill instead of a bare chevron —
+  // used specifically where "back" means returning to the restaurant catalog,
+  // so the label can say that explicitly rather than leave it ambiguous.
+  backLabel?: string;
   rightAction?: RightAction;
   secondaryRightAction?: RightAction;
 }
 
-export function Header({ title, onBack, rightAction, secondaryRightAction }: HeaderProps) {
+export function Header({ title, onBack, backLabel, rightAction, secondaryRightAction }: HeaderProps) {
   const { colors } = useTheme();
 
   function renderIcon(action: RightAction) {
@@ -41,7 +49,21 @@ export function Header({ title, onBack, rightAction, secondaryRightAction }: Hea
         </AnimatedPressable>
       );
     }
-    // restart icon
+    // restart icon — always labeled (see RightAction.label)
+    if (action.label) {
+      return (
+        <AnimatedPressable
+          key="restart"
+          onPress={action.onPress}
+          style={[styles.pillBtn, { backgroundColor: colors.surfaceContainer }]}
+        >
+          <RotateCcw size={16} color={colors.textSecondary} strokeWidth={2} />
+          <Text style={[styles.pillText, { color: colors.textSecondary }]} numberOfLines={1}>
+            {action.label}
+          </Text>
+        </AnimatedPressable>
+      );
+    }
     return (
       <AnimatedPressable
         key="restart"
@@ -56,14 +78,24 @@ export function Header({ title, onBack, rightAction, secondaryRightAction }: Hea
   return (
     <View style={[styles.container, { backgroundColor: colors.background, borderBottomColor: colors.borderLight }]}>
       <View style={styles.left}>
-        {onBack && (
+        {onBack && (backLabel ? (
+          <AnimatedPressable
+            onPress={onBack}
+            style={[styles.pillBtn, { backgroundColor: colors.surfaceContainer }]}
+          >
+            <ChevronLeft size={18} color={colors.textPrimary} strokeWidth={2.5} />
+            <Text style={[styles.pillText, { color: colors.textPrimary }]} numberOfLines={1}>
+              {backLabel}
+            </Text>
+          </AnimatedPressable>
+        ) : (
           <AnimatedPressable
             onPress={onBack}
             style={[styles.iconBtn, { backgroundColor: colors.surfaceContainer }]}
           >
             <ChevronLeft size={22} color={colors.textPrimary} strokeWidth={2.5} />
           </AnimatedPressable>
-        )}
+        ))}
         <LanguageSelector variant="compact" />
       </View>
 
@@ -73,7 +105,7 @@ export function Header({ title, onBack, rightAction, secondaryRightAction }: Hea
         </Text>
       </View>
 
-      <View style={[styles.right, { width: secondaryRightAction ? 96 : 44 }]}>
+      <View style={styles.right}>
         {secondaryRightAction && renderIcon(secondaryRightAction)}
         {rightAction && renderIcon(rightAction)}
       </View>
@@ -123,6 +155,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pillBtn: {
+    height: 40,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  pillText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.sm,
   },
   badge: {
     position: 'absolute',

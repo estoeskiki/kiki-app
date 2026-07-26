@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { Dimensions, FlatList, StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { MenuItemCard } from '@/components/menu/MenuItemCard';
 import { spacing } from '@/theme/spacing';
@@ -12,6 +12,13 @@ interface MenuGridProps {
 }
 
 const COLUMN_GAP = spacing.md;
+const ROW_PADDING = spacing.lg;
+// Fixed card width instead of flex:1 on the wrapper — flex:1 fills the whole
+// row when the last row only has one item (odd item count), making that card
+// look twice as big. A fixed width keeps every card the same size and just
+// leaves the other half of a lone last row empty, like a real grid.
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const ITEM_WIDTH = (SCREEN_WIDTH - ROW_PADDING * 2 - COLUMN_GAP) / 2;
 
 export function MenuGrid({ items, onItemPress, onQuickAdd }: MenuGridProps) {
   const renderItem = useCallback(
@@ -68,6 +75,6 @@ const styles = StyleSheet.create({
     height: COLUMN_GAP,
   },
   itemWrapper: {
-    flex: 1,
+    width: ITEM_WIDTH,
   },
 });

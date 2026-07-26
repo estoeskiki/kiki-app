@@ -200,9 +200,15 @@ export default function OrderTrackingPage() {
 
       <div className="relative mx-auto flex max-w-lg flex-col gap-8 px-4 py-10">
         <div className="fade-up-item flex flex-col items-center gap-3 text-center" style={{ animationDelay: '20ms' }}>
-          <div className="flex items-center gap-2">
-            {!isTerminal && <span className="live-dot h-1.5 w-1.5 rounded-full bg-primary" />}
-            <p className="font-body text-xs font-bold uppercase tracking-[0.2em] text-white/50">
+          <div
+            className={`flex items-center gap-2 rounded-full px-3 py-1 ${isTerminal ? '' : 'border border-primary/40 bg-primary/10'
+              }`}
+          >
+            {!isTerminal && <span className="live-dot h-2 w-2 rounded-full bg-primary" />}
+            <p
+              className={`font-body text-xs font-bold uppercase tracking-[0.2em] ${isTerminal ? 'text-white/50' : 'text-primary'
+                }`}
+            >
               {isTerminal ? 'Pedido' : 'Live tracker'}
             </p>
           </div>
@@ -221,8 +227,25 @@ export default function OrderTrackingPage() {
           </div>
         </div>
 
+        {!isTerminal && (order.payment_method === 'yappy' || order.payment_method === 'card_on_delivery') && (
+          <div
+            className="fade-up-item flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3.5"
+            style={{ animationDelay: '140ms' }}
+          >
+            <span className="text-2xl">{order.payment_method === 'yappy' ? '📱' : '💳'}</span>
+            <p className="text-left font-body text-sm font-bold leading-snug text-white">
+              {order.payment_method === 'yappy'
+                ? 'Ten tu Yappy listo para cuando recojas/te entreguen tu pedido.'
+                : 'Ten tu tarjeta lista para cuando recojas/te entreguen tu pedido.'}
+              <span className="mt-0.5 block font-body text-xs font-normal text-white/60">
+                Pagas a cada comercio por separado.
+              </span>
+            </p>
+          </div>
+        )}
+
         {isCancelled && (
-          <div className="fade-up-item rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-center font-body text-sm font-semibold text-error" style={{ animationDelay: '160ms' }}>
+          <div className="fade-up-item rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-center font-body text-sm font-semibold text-error" style={{ animationDelay: '200ms' }}>
             Este pedido fue cancelado.
           </div>
         )}
@@ -245,7 +268,14 @@ export default function OrderTrackingPage() {
                     <div className="flex flex-col items-start gap-1.5">
                       <span className="w-fit rounded-full bg-error/20 px-3 py-1 font-body text-xs font-bold text-error">Cancelado</span>
                       {sub.cancellation_reason && (
-                        <p className="font-body text-xs text-white/50">{sub.cancellation_reason}</p>
+                        <div className="w-full rounded-lg border border-error/30 bg-error/10 px-3 py-2">
+                          <p className="font-body text-[10px] font-bold uppercase tracking-wide text-error/80">
+                            Razón de cancelación
+                          </p>
+                          <p className="mt-0.5 font-body text-sm font-semibold text-white">
+                            {sub.cancellation_reason}
+                          </p>
+                        </div>
                       )}
                     </div>
                   ) : (
@@ -321,23 +351,6 @@ export default function OrderTrackingPage() {
             </div>
           </div>
         </div>
-
-        {!isTerminal && (order.payment_method === 'yappy' || order.payment_method === 'card_on_delivery') && (
-          <div
-            className="fade-up-item flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3.5"
-            style={{ animationDelay: '340ms' }}
-          >
-            <span className="text-2xl">{order.payment_method === 'yappy' ? '📱' : '💳'}</span>
-            <p className="text-left font-body text-sm font-bold leading-snug text-white">
-              {order.payment_method === 'yappy'
-                ? 'Ten tu Yappy listo para cuando recojas/te entreguen tu pedido.'
-                : 'Ten tu tarjeta lista para cuando recojas/te entreguen tu pedido.'}
-              <span className="mt-0.5 block font-body text-xs font-normal text-white/60">
-                Pagas a cada comercio por separado.
-              </span>
-            </p>
-          </div>
-        )}
 
         {isTerminal && !isCancelled && (
           <div className="fade-up-item rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-center font-body text-sm font-semibold text-success" style={{ animationDelay: '340ms' }}>

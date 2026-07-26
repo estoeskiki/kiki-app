@@ -68,6 +68,21 @@ body {
   animation: fade-up 0.5s ease-out forwards;
 }
 
+/* Item modal: gentle up/down bounce on the "more below" scroll hint pill. */
+@keyframes scroll-hint-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(5px);
+  }
+}
+
+.scroll-hint-bounce {
+  animation: scroll-hint-bounce 1.8s ease-in-out infinite;
+}
+
 /* Tracker: pulsing "live" dot next to the polling indicator. */
 @keyframes live-pulse {
   0%,

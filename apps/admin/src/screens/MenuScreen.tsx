@@ -478,24 +478,26 @@ export default function MenuScreen() {
         onPress={() => openEditModal(item)}
         activeOpacity={0.75}
       >
-        {/* Popular star */}
+        {/* Popular star — top-left corner badge */}
         {item.popular && (
           <View style={[styles.popularBadge, { backgroundColor: colors.surfaceHighlight }]}>
-            <Star color={colors.secondary} size={11} fill={colors.secondary} />
+            <Star color={colors.secondary} size={12} fill={colors.secondary} />
           </View>
         )}
 
-        <View style={styles.cardTop}>
+        {/* Delete — top-right corner, bigger tap target */}
+        <TouchableOpacity
+          onPress={() => handleDelete(item)}
+          style={[styles.cardDeleteBtn, { backgroundColor: colors.error + '1A' }]}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <X color={colors.error} size={16} strokeWidth={2.5} />
+        </TouchableOpacity>
+
+        <View style={[styles.cardTop, item.popular && styles.cardTopWithBadge]}>
           <Text style={[styles.cardName, { color: colors.textPrimary }]} numberOfLines={2}>
             {t(item.name)}
           </Text>
-          <TouchableOpacity
-            onPress={() => handleDelete(item)}
-            style={styles.cardDeleteBtn}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <X color={colors.textMuted} size={14} strokeWidth={2} />
-          </TouchableOpacity>
         </View>
 
         {t(item.description) ? (
@@ -510,14 +512,21 @@ export default function MenuScreen() {
           </Text>
           <TouchableOpacity
             onPress={() => toggleItemAvailability(item.id, item.available)}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 4 }}
             activeOpacity={0.7}
+            style={styles.availabilityToggle}
           >
+            <Text
+              style={[styles.availabilityLabel, { color: item.available ? colors.error : colors.success }]}
+              numberOfLines={1}
+            >
+              {item.available ? 'Deshabilitar' : 'Habilitar'}
+            </Text>
             <Switch
               value={item.available}
               onValueChange={() => toggleItemAvailability(item.id, item.available)}
-              trackColor={{ false: colors.surfaceHighlight, true: colors.success }}
-              thumbColor={item.available ? colors.surface : colors.textMuted}
+              trackColor={{ false: colors.border, true: colors.success }}
+              thumbColor={colors.surface}
               style={styles.cardSwitch}
               pointerEvents="none"
             />
@@ -1204,29 +1213,37 @@ const styles = StyleSheet.create({
   popularBadge: {
     position: 'absolute',
     top: 8,
-    right: 8,
+    left: 8,
     width: 22,
     height: 22,
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 2,
+  },
+  cardDeleteBtn: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
   },
   cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     marginBottom: spacing.xs,
-    paddingRight: 28, // space for popular badge
+    paddingRight: 32, // clearance for the absolute delete X
+  },
+  cardTopWithBadge: {
+    paddingLeft: 26, // clearance for the absolute popular badge
   },
   cardName: {
     fontFamily: fonts.headingSemiBold,
     fontSize: fontSizes.base,
-    flex: 1,
     marginRight: spacing.xs,
     letterSpacing: -0.2,
-  },
-  cardDeleteBtn: {
-    padding: 2,
   },
   cardDesc: {
     fontFamily: fonts.body,
@@ -1237,12 +1254,21 @@ const styles = StyleSheet.create({
   cardBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
   },
   cardPrice: {
     fontFamily: fonts.heading,
     fontSize: fontSizes.md,
     letterSpacing: -0.3,
+  },
+  availabilityToggle: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  availabilityLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 9,
+    letterSpacing: -0.1,
   },
   cardSwitch: {
     transform: [{ scale: 1.15 }],

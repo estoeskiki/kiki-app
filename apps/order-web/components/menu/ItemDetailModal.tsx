@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import type { CustomizationGroup, MenuItem } from '@/lib/types';
 import { formatCurrency, localize } from '@/lib/currency';
@@ -44,6 +44,22 @@ export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }:
     return () => {
       document.body.style.overflow = previousOverflow;
     };
+  }, []);
+
+  // "Más opciones abajo" scroll hint. A sentinel sits right after the real
+  // content; while it isn't intersecting the scroll container, there's more
+  // below. IntersectionObserver only fires on visibility-threshold crossings
+  // (not every scroll tick), so this never re-renders on scroll.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [hasMoreBelow, setHasMoreBelow] = useState(false);
+  useEffect(() => {
+    const root = scrollRef.current;
+    const sentinel = sentinelRef.current;
+    if (!root || !sentinel) return;
+    const observer = new IntersectionObserver(([entry]) => setHasMoreBelow(!entry.isIntersecting), { root, threshold: 0 });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
   }, []);
 
   const toggleOption = useCallback(
@@ -116,7 +132,7 @@ export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }:
           ✕
         </button>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
           <div className="relative flex h-52 items-center justify-center" style={{ backgroundColor: getPlateColor(item.id) }}>
             {item.image ? (
               <Image src={item.image} alt="" fill sizes="(min-width: 640px) 512px, 100vw" className="object-cover" />
@@ -148,7 +164,7 @@ export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }:
                     <span className="rounded bg-primary px-2 py-0.5 text-xs font-bold text-on-primary">Obligatorio</span>
                   )}
                   {maxSel > 1 && (
-                    <span className="text-sm text-text-muted">Hasta {maxSel}</span>
+                    <span className="rounded bg-surface-container px-2 py-0.5 text-xs font-bold text-text-secondary">Hasta {maxSel}</span>
                   )}
                 </div>
 
@@ -186,6 +202,27 @@ export function ItemDetailModal({ item, restaurantId, restaurantName, onClose }:
               </div>
               );
             })}
+          </div>
+
+          {/* Sentinel marks the true end of content — invisible, zero-size.
+              The hint below is sticky (not absolute), so it needs no wrapper
+              or new positioning context: it just pins to the bottom of this
+              existing scroll container as its last child, the standard
+              cross-browser pattern for a sticky scroll-area footer. */}
+          <div ref={sentinelRef} />
+          <div
+            className="sticky bottom-0 pointer-events-none transition-opacity duration-200"
+            style={{ opacity: hasMoreBelow ? 1 : 0 }}
+          >
+            <div className="h-7 bg-gradient-to-t from-background to-transparent" />
+            <div className="flex justify-center pb-1.5">
+              <span className="scroll-hint-bounce inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-bold text-on-primary shadow-sm">
+                Más opciones abajo
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </span>
+            </div>
           </div>
         </div>
 
