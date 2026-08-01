@@ -181,10 +181,12 @@ export function DirectoryScreen({ navigation }: ScreenProps<'Directory'>) {
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             <View>
-              {/* Multi-restaurant explainer */}
-              <View style={[styles.banner, { backgroundColor: colors.primary + '1A', borderLeftColor: colors.primary }]}>
-                <Text style={[styles.bannerTitle, { color: colors.textPrimary }]}>{t('directoryBannerTitle')}</Text>
-                <Text style={[styles.bannerSub, { color: colors.textSecondary }]}>{t('directoryBannerSub')}</Text>
+              {/* Multi-restaurant explainer — solid lime (matching order-web),
+                  not a tinted/bordered box. This is the headline reason a food
+                  court is worth using, so it gets the full-strength treatment. */}
+              <View style={[styles.banner, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.bannerTitle, { color: colors.onPrimary }]}>{t('directoryBannerTitle')}</Text>
+                <Text style={[styles.bannerSub, { color: colors.onPrimary + 'B3' }]}>{t('directoryBannerSub')}</Text>
               </View>
 
               {/* Section heading */}
@@ -230,7 +232,6 @@ const styles = StyleSheet.create({
   },
   // ── Banner ──
   banner: {
-    borderLeftWidth: 4,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
@@ -239,12 +240,12 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   bannerTitle: {
-    fontFamily: fonts.bodySemiBold,
+    fontFamily: fonts.bodyBold,
     fontSize: fontSizes.base,
     lineHeight: fontSizes.base * 1.35,
   },
   bannerSub: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.bodySemiBold,
     fontSize: fontSizes.sm,
   },
   // ── Section heading ──

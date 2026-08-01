@@ -48,6 +48,7 @@ export function CategoryTabs({ categories, selectedId, onSelect }: CategoryTabsP
                   { color: isSelected ? colors.onPrimary : colors.textSecondary },
                 ]}
               >
+                {category.icon ? `${category.icon} ` : ''}
                 {localize(category.name)}
               </Text>
             </AnimatedPressable>

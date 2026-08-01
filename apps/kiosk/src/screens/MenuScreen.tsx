@@ -141,8 +141,10 @@ export function MenuScreen({ route, navigation }: ScreenProps<'Menu'>) {
   return (
     <ScreenWrapper padded={false}>
       {mode === 'food_court' && (
-        <View style={[styles.multiRestaurantBanner, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40' }]}>
-          <Text style={[styles.multiRestaurantBannerText, { color: colors.textPrimary }]}>{t('multiRestaurantBanner')}</Text>
+        // Solid lime, matching the directory banner + order-web (no more
+        // tinted/bordered strip).
+        <View style={[styles.multiRestaurantBanner, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.multiRestaurantBannerText, { color: colors.onPrimary }]}>{t('multiRestaurantBanner')}</Text>
         </View>
       )}
       <Header
@@ -171,12 +173,11 @@ const styles = StyleSheet.create({
   // shopping session (not just the directory banner shown once, up front),
   // that items from other restaurants can join this same order.
   multiRestaurantBanner: {
-    borderBottomWidth: 1,
     paddingVertical: spacing.xs,
     alignItems: 'center',
   },
   multiRestaurantBannerText: {
-    fontFamily: fonts.bodySemiBold,
+    fontFamily: fonts.bodyBold,
     fontSize: fontSizes.xs,
   },
 });
