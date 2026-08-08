@@ -8,7 +8,7 @@ import { issueDeviceToken, type IssueTokenState } from '@/app/(dashboard)/kiosks
 import type { ScopeFoodCourt, ScopeRestaurant } from '@/lib/types';
 
 const INPUT =
-  'w-full rounded-[8px] border border-line bg-surface-container px-3 py-2 text-[13px] text-text-primary outline-none focus:border-primary/40';
+  'w-full rounded-md border border-line bg-surface-container px-3 py-2 text-sm text-text-primary outline-none focus-visible:outline-none focus:border-primary/40';
 
 /**
  * Issues a pairing token and shows it exactly once.
@@ -72,19 +72,19 @@ export function IssueTokenForm({
       {state.error ? (
         <p
           role="alert"
-          className="mt-3 rounded-[8px] border border-secondary/30 bg-secondary/10 px-3 py-2 text-[12px] text-secondary"
+          className="mt-3 rounded-md border border-secondary/30 bg-secondary/10 px-3 py-2 text-xs text-secondary"
         >
           {state.error}
         </p>
       ) : null}
 
       {state.token ? (
-        <div className="mt-3 rounded-[10px] border border-primary/35 bg-primary/[0.07] p-4">
+        <div className="mt-3 rounded-md border border-primary/35 bg-primary/[0.07] p-4">
           <CardLabel className="mb-2 text-primary">Token de emparejamiento</CardLabel>
-          <code className="block select-all font-heading text-[20px] font-bold tracking-[0.12em] text-primary">
+          <code className="block select-all font-heading text-xl font-bold tracking-[0.12em] text-primary">
             {state.token}
           </code>
-          <p className="mt-2.5 text-[11px] text-muted">
+          <p className="mt-2.5 text-2xs text-muted">
             Cópialo ahora: no se volverá a mostrar. Introdúcelo una vez en la app del kiosko para
             emparejar el dispositivo.
           </p>

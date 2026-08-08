@@ -25,7 +25,12 @@ import { useTheme } from '../theme/useTheme';
 import { spacing, borderRadius } from '../theme/spacing';
 import { fonts, fontSizes } from '../theme/typography';
 
-const t = (val: any) => val?.es || val || '';
+// val?.es || val: with an empty (but present) `es` string, `val?.es` is
+// falsy and this used to fall through to `val` itself — the raw {es, en}
+// object, not a string. React then crashed rendering it as a child ("Objects
+// are not valid as a React child"). Falling back to `en` before the final ''
+// guarantees a string in every case.
+const t = (val: any) => val?.es || val?.en || '';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;

@@ -55,7 +55,7 @@ export function SearchBox({ placeholder = 'Buscar # o cliente…' }: { placehold
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
         aria-label="Buscar pedidos"
-        className="w-full rounded-[8px] border border-line bg-surface py-2 pl-8 pr-3 text-[13px] text-text-primary outline-none focus:border-primary/40"
+        className="w-full rounded-md border border-line bg-surface py-2 pl-8 pr-3 text-sm text-text-primary outline-none focus-visible:outline-none focus:border-primary/40"
       />
     </div>
   );

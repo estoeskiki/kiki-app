@@ -14,6 +14,22 @@
      --text-muted    ->   --color-text-secondary    #a3abc0
      --border        ->   --color-border-light      #1e2d44
      --border-strong ->   --color-border            #40485a
+
+   DATA-VIZ HUE MAPPING — five hues total, all already in the palette above (no
+   new colors introduced for this). Used consistently so a color means the same
+   thing everywhere in the console rather than being picked per-component:
+
+     lime (primary)    growth, revenue, web channel, "good" direction
+     pink (secondary)  cancellations, alerts, kiosk-adjacent negative signal
+     cyan (tertiary)   kiosk channel, secondary metric emphasis
+     blue (#60a5fa)    neutral/in-progress state (confirmed pipeline stage,
+                        ticket-size metrics that are neither good nor bad)
+     green (success)   completed/delivered states only
+
+   Applied to the KPI row (components/KpiCard.tsx `accent` prop) so four
+   otherwise-identical tiles read as distinct metrics at a glance, matching how
+   the fintech references color-code their stat tiles — without inventing a
+   second palette to do it.
 */
 @theme inline {
   --font-heading: var(--font-space-grotesk), sans-serif;
@@ -24,10 +40,95 @@
   --color-muted: var(--color-text-secondary);
 }
 
+/*
+ * SURFACE CONTRAST (dark mode) — overridden locally, on purpose.
+ *
+ * @kiki/ui-tokens sets --color-surface to #0f192c against a #060e1d page
+ * background. Measured (WCAG relative-luminance ratio): 1.10:1 — for reference,
+ * 1:1 is identical colors. Every card in this console is `bg-surface`, so at
+ * that ratio cards were reading as barely-there smudges rather than panels, no
+ * matter how the spacing or radius was tuned around them; this was the root
+ * cause, not a symptom to style around.
+ *
+ * Values below were chosen by measuring, not eyeballing — background stays put,
+ * everything that sits on top of it is lifted enough to read as elevated while
+ * preserving the tokens' existing sunken → card → hover ordering
+ * (surface-container < surface < surface-highlight):
+ *
+ *   token                new ratio vs background   (was)
+ *   surface-container     1.08                      1.04   sunken: inputs, sidebar
+ *   surface                1.24                      1.10   the card fill itself
+ *   surface-highlight      1.46                      —      hover / open popovers
+ *   border-light            1.43 vs the new surface   1.06   was nearly invisible
+ *                                                             against a lighter card
+ *
+ * Local to admin-web, same precedent as the radius override above: editing
+ * @kiki/ui-tokens directly would silently restyle order-web, the kiosk and KDS,
+ * which share that file and were never part of this complaint.
+ */
+[data-theme='dark'] {
+  --color-surface-container: #0d1728;
+  --color-surface: #17233f;
+  --color-surface-highlight: #212f52;
+  --color-border-light: #2c3c62;
+}
+
+/*
+ * TYPE SCALE — seven steps, and nothing outside them.
+ *
+ * The app previously used 17 different arbitrary pixel sizes, which is the main
+ * reason it read as sloppy: nothing lined up because nothing shared a rhythm.
+ * Every size below is rem-based so it scales with the root and stays in
+ * proportion to the (also rem-based) Tailwind spacing utilities.
+ *
+ *   2xs  11px  uppercase eyebrow labels only
+ *   xs   12px  secondary / meta text
+ *   sm   14px  body, table cells, nav — the default
+ *   base 16px  card titles
+ *   lg   18px  section headings
+ *   xl   20px  page headings
+ *   3xl  30px  primary metrics
+ *   4xl  36px  hero numerals, wordmark
+ */
+@theme {
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1.4;
+
+  /*
+   * RADIUS — softened, and overridden locally on purpose.
+   *
+   * The base values live in @kiki/ui-tokens (6/10/14/20/28) and are shared with
+   * the kiosk, KDS and order-web. Editing them there to soften this console would
+   * silently restyle the customer-facing storefront and the kiosk, so the console
+   * keeps its own scale here instead.
+   *
+   *   xs    3px  data-viz marks only (heatmap cells) — a 9px cell needs a
+   *              hairline corner; anything from the scale below turns it into a
+   *              capsule and stops reading as a grid
+   *   sm   10px  chips, checkboxes, icon buttons
+   *   md   14px  buttons, inputs, popovers, inner panels
+   *   lg   18px  cards — the shape that sets the tone for the page
+   *   xl   26px  large containers
+   */
+  --radius-xs: 3px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 26px;
+  --radius-2xl: 34px;
+}
+
 html {
   color-scheme: dark;
-  /* The reference sets a 13px base and sizes everything from it. */
-  font-size: 13px;
+  /*
+   * 16px root. This used to be 13px, copied from the design reference — but the
+   * reference styled everything with absolute pixel values, so it was internally
+   * consistent. Here it silently scaled every rem-based Tailwind spacing utility
+   * to 81% while the absolute px font sizes stayed put, so type and space were
+   * permanently out of proportion. Anything needing the reference's tighter feel
+   * gets it from the type scale above, not from shrinking the root.
+   */
+  font-size: 16px;
 }
 
 html[data-theme='light'] {
@@ -61,7 +162,9 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-  border-radius: 4px;
+  /* Matches --radius-sm so the ring follows the shape of what it surrounds
+     instead of cutting a sharper corner across it. */
+  border-radius: var(--radius-sm);
 }
 
 @keyframes pulse-dot {

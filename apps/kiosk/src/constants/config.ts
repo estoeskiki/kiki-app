@@ -12,7 +12,12 @@ export const config = {
   // live tracker on their own phone. Set EXPO_PUBLIC_ORDER_WEB_URL in env.
   orderWebUrl: (process.env.EXPO_PUBLIC_ORDER_WEB_URL as string | undefined)?.replace(/\/$/, '') ?? '',
   autoResetTimeout: 45000, // 45 seconds on ThankYou — gives time to scan the tracker QR
-  idleTimeout: 60000, // 60 seconds
+  // Idle guard while browsing/ordering (Directory, Menu, item modal,
+  // Checkout — not Welcome/ThankYou, which have their own timers): after
+  // idleWarningTimeout with no touch, show "¿Sigues ahí?"; if unanswered for
+  // idleConfirmGracePeriod more, reset to Welcome.
+  idleWarningTimeout: 120000, // 2 minutes
+  idleConfirmGracePeriod: 20000, // 20 seconds
   paymentSuccessRate: 0.9, // 90% mock success
   paymentDelay: { min: 2000, max: 3000 },
   orderDelay: 500,

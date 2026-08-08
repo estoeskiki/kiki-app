@@ -4,7 +4,7 @@ import Link from 'next/link';
 export type ButtonVariant = 'primary' | 'outline' | 'ghost' | 'danger';
 
 const BASE =
-  'inline-flex items-center justify-center gap-1.5 rounded-[8px] font-bold uppercase tracking-[0.06em] transition-colors disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex items-center justify-center gap-1.5 rounded-md font-bold uppercase tracking-[0.06em] transition-colors disabled:cursor-not-allowed disabled:opacity-50';
 
 const VARIANT: Record<ButtonVariant, string> = {
   // The lime glow is the one piece of chrome the reference keeps — it marks the
@@ -17,8 +17,8 @@ const VARIANT: Record<ButtonVariant, string> = {
 };
 
 const SIZE = {
-  sm: 'px-2.5 py-[5px] text-[11px]',
-  md: 'px-4 py-2 text-[12px]',
+  sm: 'px-2.5 py-[5px] text-2xs',
+  md: 'px-4 py-2 text-xs',
 } as const;
 
 type Size = keyof typeof SIZE;

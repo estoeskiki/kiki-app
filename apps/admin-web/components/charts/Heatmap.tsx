@@ -18,7 +18,7 @@ export function Heatmap({ cells }: { cells: HeatCell[] }) {
           {Array.from({ length: 24 }, (_, h) => (
             <div
               key={h}
-              className="h-[9px] text-right text-[7px] leading-[9px] text-muted"
+              className="h-[9px] text-right text-2xs leading-[9px] text-muted"
               // Only every sixth hour is labelled; the rest keep the row height.
               style={{ visibility: h % 6 === 0 ? 'visible' : 'hidden' }}
             >
@@ -29,7 +29,7 @@ export function Heatmap({ cells }: { cells: HeatCell[] }) {
 
         {DAYS.map((day, dow) => (
           <div key={day} className="flex flex-1 flex-col gap-[2px]">
-            <div className="h-[14px] text-center text-[8px] font-bold tracking-[0.04em] text-muted">
+            <div className="h-[14px] text-center text-2xs font-bold tracking-[0.04em] text-muted">
               {day}
             </div>
             {Array.from({ length: 24 }, (_, hour) => {
@@ -38,7 +38,7 @@ export function Heatmap({ cells }: { cells: HeatCell[] }) {
                 <div
                   key={hour}
                   title={`${day} ${String(hour).padStart(2, '0')}:00 · ${orders} pedidos`}
-                  className="h-[9px] rounded-[2px]"
+                  className="h-[9px] rounded-xs"
                   style={{
                     background: `color-mix(in srgb, var(--color-primary) ${
                       Math.round(Math.max(0.04, orders / peak) * 85)

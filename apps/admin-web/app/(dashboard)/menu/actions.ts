@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
+import { dbId } from '@/lib/validation';
 import { canAdminister, canWrite, requireViewer } from '@/lib/auth/dal';
 import { assertRestaurantInScope } from '@/lib/auth/scope';
 import { createClient } from '@/lib/supabase/server';
@@ -19,7 +20,7 @@ import { createClient } from '@/lib/supabase/server';
  * currency and convert once, here.
  */
 
-const uuid = z.string().uuid();
+const uuid = dbId;
 
 const translatable = z.object({
   es: z.string().trim().min(1, 'El nombre en español es obligatorio').max(120),

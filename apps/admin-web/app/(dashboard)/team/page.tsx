@@ -1,4 +1,6 @@
+import { CONTENT_WIDTH } from '@/components/ui/Container';
 import { notFound } from 'next/navigation';
+import { Avatar } from '@/components/ui/Avatar';
 import { Badge, RoleBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardLabel, EmptyState, PageHeading } from '@/components/ui/Card';
@@ -12,7 +14,7 @@ import { inviteMember, removeMember, updateMemberRole } from './actions';
 export const metadata = { title: 'Equipo · Kiki' };
 
 const INPUT =
-  'w-full rounded-[8px] border border-line bg-surface-container px-3 py-2 text-[13px] text-text-primary outline-none focus:border-primary/40';
+  'w-full rounded-md border border-line bg-surface-container px-3 py-2 text-sm text-text-primary outline-none focus-visible:outline-none focus:border-primary/40';
 
 type Member = {
   id: string;
@@ -85,7 +87,7 @@ export default async function TeamPage() {
   ];
 
   return (
-    <div className="fade-in px-7 pb-12 pt-6">
+    <div className={`fade-in ${CONTENT_WIDTH} pb-12 pt-6`}>
       <PageHeading
         title="Equipo"
         subtitle={`${members.length} miembro${members.length === 1 ? '' : 's'} con acceso`}
@@ -110,22 +112,13 @@ export default async function TeamPage() {
                 <TR key={`${member.table}-${member.id}`}>
                   <TD>
                     <div className="flex items-center gap-2.5">
-                      <div
-                        className="flex size-8 shrink-0 items-center justify-center rounded-full font-heading text-[10px] font-extrabold text-on-primary"
-                        style={{
-                          background:
-                            'linear-gradient(135deg, var(--color-primary), var(--color-tertiary))',
-                        }}
-                        aria-hidden
-                      >
-                        {(member.display_name ?? '?').slice(0, 2).toUpperCase()}
-                      </div>
+                      <Avatar name={member.display_name} fallback="?" />
                       <div className="min-w-0">
                         <div className="truncate font-semibold text-text-primary">
                           {member.display_name ?? 'Sin nombre'}
                         </div>
                         {member.user_id === viewer.user_id ? (
-                          <span className="text-[10px] text-muted">tú</span>
+                          <span className="text-2xs text-muted">tú</span>
                         ) : null}
                       </div>
                     </div>
@@ -143,7 +136,7 @@ export default async function TeamPage() {
                       <select
                         name="role"
                         defaultValue={member.role}
-                        className="rounded-[7px] border border-line bg-surface-container px-2 py-1 text-[12px] text-text-primary outline-none focus:border-primary/40"
+                        className="rounded-sm border border-line bg-surface-container px-2 py-1 text-xs text-text-primary outline-none focus-visible:outline-none focus:border-primary/40"
                       >
                         <option value="owner">Propietario</option>
                         <option value="manager">Gerente</option>
@@ -181,7 +174,7 @@ export default async function TeamPage() {
 
       <Card className="mt-4 max-w-[820px] p-5">
         <CardLabel className="mb-1">Invitar miembro</CardLabel>
-        <p className="mb-4 text-[11px] text-muted">
+        <p className="mb-4 text-2xs text-muted">
           Se crea la cuenta con la contraseña que definas y el usuario podrá entrar de inmediato,
           aquí y en la app de administración. Compártela por un canal seguro y pídele que la cambie.
         </p>

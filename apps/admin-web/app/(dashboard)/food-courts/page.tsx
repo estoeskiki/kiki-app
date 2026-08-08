@@ -1,3 +1,4 @@
+import { CONTENT_WIDTH } from '@/components/ui/Container';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card, CardLabel, EmptyState, PageHeading } from '@/components/ui/Card';
@@ -11,7 +12,7 @@ import { createFoodCourt } from '../restaurants/actions';
 export const metadata = { title: 'Patios de Comida · Kiki' };
 
 const INPUT =
-  'w-full rounded-[8px] border border-line bg-surface-container px-3 py-2 text-[13px] text-text-primary outline-none focus:border-primary/40';
+  'w-full rounded-md border border-line bg-surface-container px-3 py-2 text-sm text-text-primary outline-none focus-visible:outline-none focus:border-primary/40';
 
 export default async function FoodCourtsPage() {
   const viewer = await requireViewer();
@@ -38,7 +39,7 @@ export default async function FoodCourtsPage() {
   }
 
   return (
-    <div className="fade-in px-7 pb-12 pt-6">
+    <div className={`fade-in ${CONTENT_WIDTH} pb-12 pt-6`}>
       <PageHeading
         title="Patios de Comida"
         subtitle={`${scope.food_courts.length} recinto${scope.food_courts.length === 1 ? '' : 's'} · últimos 30 días`}
@@ -61,11 +62,11 @@ export default async function FoodCourtsPage() {
                   <div>
                     <Link
                       href={`/food-courts/${foodCourt.id}`}
-                      className="font-heading text-[15px] font-bold tracking-[-0.03em] text-text-primary hover:text-primary"
+                      className="font-heading text-base font-bold tracking-[-0.03em] text-text-primary hover:text-primary"
                     >
                       {foodCourt.name}
                     </Link>
-                    <div className="mt-1 text-[11px] text-muted">
+                    <div className="mt-1 text-2xs text-muted">
                       {stalls.length} puesto{stalls.length === 1 ? '' : 's'} · {zones.length} zona
                       {zones.length === 1 ? '' : 's'}
                     </div>
@@ -88,7 +89,7 @@ export default async function FoodCourtsPage() {
                   {stalls.map((stall, index) => (
                     <span
                       key={stall.id}
-                      className={`rounded-[5px] px-2 py-[3px] text-[10px] font-semibold ${
+                      className={`rounded-sm px-2 py-[3px] text-2xs font-semibold ${
                         index % 2 === 0 ? 'bg-primary/[0.08] text-primary' : 'bg-tertiary/[0.08] text-tertiary'
                       }`}
                     >
@@ -105,7 +106,7 @@ export default async function FoodCourtsPage() {
       {viewer.is_platform_admin ? (
         <Card className="mt-4 max-w-[560px] p-5">
           <CardLabel className="mb-1">Nuevo recinto</CardLabel>
-          <p className="mb-3 text-[11px] text-muted">
+          <p className="mb-3 text-2xs text-muted">
             Un patio de comida aloja restaurantes de varias organizaciones, por eso solo lo crea el
             operador de la plataforma.
           </p>
@@ -137,10 +138,10 @@ export default async function FoodCourtsPage() {
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className="rounded-[8px] bg-surface-container px-3 py-2.5">
-      <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.08em] text-muted">{label}</div>
+    <div className="rounded-md bg-surface-container px-3 py-2.5">
+      <div className="mb-1 text-2xs font-bold uppercase tracking-[0.08em] text-muted">{label}</div>
       <div
-        className={`font-heading text-[16px] font-bold tracking-[-0.03em] tabular-nums ${
+        className={`font-heading text-base font-bold tracking-[-0.03em] tabular-nums ${
           accent ? 'text-primary' : 'text-text-primary'
         }`}
       >

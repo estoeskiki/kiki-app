@@ -1,10 +1,12 @@
+import { CONTENT_WIDTH } from '@/components/ui/Container';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardLabel, EmptyState, PageHeading } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { NumCell, TableWrap, TD, TH, TR } from '@/components/ui/Table';
-import { requireViewer } from '@/lib/auth/dal';
+import { FlagSwitch } from '@/components/ui/Switch';
+import { canAdminister, requireViewer } from '@/lib/auth/dal';
 import { getScopeTree } from '@/lib/queries';
 import { createClient } from '@/lib/supabase/server';
 import { formatMoney, formatNumber, startOfLocalDay, addDays } from '@/lib/format';
@@ -43,9 +45,12 @@ export default async function RestaurantsPage() {
   const foodCourtName = new Map(scope.food_courts.map((fc) => [fc.id, fc.name]));
   const orgName = new Map(scope.organizations.map((org) => [org.id, org.name]));
   const canCreate = viewer.is_platform_admin || viewer.role === 'owner';
+  // Same gate setRestaurantFlag enforces server-side — this only decides
+  // whether the switch renders as actionable or as a read-only state.
+  const administers = canAdminister(viewer);
 
   return (
-    <div className="fade-in px-7 pb-12 pt-6">
+    <div className={`fade-in ${CONTENT_WIDTH} pb-12 pt-6`}>
       <PageHeading
         title="Restaurantes"
         subtitle={`${scope.restaurants.length} ubicación${scope.restaurants.length === 1 ? '' : 'es'} · últimos 30 días`}
@@ -79,11 +84,11 @@ export default async function RestaurantsPage() {
                       >
                         {restaurant.name}
                       </Link>
-                      <div className="text-[11px] text-muted">/{restaurant.slug}</div>
+                      <div className="text-2xs text-muted">/{restaurant.slug}</div>
                     </TD>
                     {viewer.is_platform_admin ? (
                       <TD>
-                        <span className="text-[12px] text-muted">
+                        <span className="text-xs text-muted">
                           {orgName.get(restaurant.org_id) ?? '—'}
                         </span>
                       </TD>
@@ -96,10 +101,22 @@ export default async function RestaurantsPage() {
                       </span>
                     </TD>
                     <TD>
-                      <div className="flex gap-1.5">
-                        <Badge tone={restaurant.is_open ? 'lime' : 'neutral'}>
+                      <div className="flex items-center gap-2.5">
+                        <FlagSwitch
+                          id={restaurant.id}
+                          field="is_open"
+                          value={restaurant.is_open}
+                          label={`${restaurant.is_open ? 'Cerrar' : 'Abrir'} ${restaurant.name}`}
+                          disabled={!administers}
+                          size="sm"
+                        />
+                        <span
+                          className={`text-xs font-semibold ${
+                            restaurant.is_open ? 'text-primary' : 'text-muted'
+                          }`}
+                        >
                           {restaurant.is_open ? 'Abierto' : 'Cerrado'}
-                        </Badge>
+                        </span>
                         {restaurant.is_active ? null : <Badge tone="pink">Oculto</Badge>}
                       </div>
                     </TD>
@@ -196,7 +213,7 @@ export default async function RestaurantsPage() {
 }
 
 const INPUT =
-  'w-full rounded-[8px] border border-line bg-surface-container px-3 py-2 text-[13px] text-text-primary outline-none focus:border-primary/40';
+  'w-full rounded-md border border-line bg-surface-container px-3 py-2 text-sm text-text-primary outline-none focus-visible:outline-none focus:border-primary/40';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

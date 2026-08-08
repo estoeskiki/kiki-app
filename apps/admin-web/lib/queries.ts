@@ -8,7 +8,9 @@ import type {
   ChannelSlice,
   HeatCell,
   Kpis,
+  OrderPipeline,
   ScopeTree,
+  StageDurations,
   StatusFunnel,
   TimeseriesPoint,
   TopItem,
@@ -120,6 +122,35 @@ export async function getHeatmap(filters: DashboardFilters): Promise<HeatCell[]>
   return (data ?? []) as unknown as HeatCell[];
 }
 
+const EMPTY_PIPELINE: OrderPipeline = {
+  total_orders: 0,
+  total_revenue_cents: 0,
+  completed: 0,
+  cancelled: 0,
+  in_progress: 0,
+  completion_rate: 0,
+  cancellation_rate: 0,
+  avg_fulfillment_seconds: null,
+  stages: [],
+};
+
+/**
+ * Order lifecycle, one bucket per order. Prefer this over getStatusFunnel:
+ * the funnel counts an order once per sub_order status, so its numbers overcount
+ * multi-stall orders and cannot be turned into percentages.
+ */
+export async function getOrderPipeline(filters: DashboardFilters): Promise<OrderPipeline> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('dashboard_order_pipeline', toRpcArgs(filters));
+
+  if (error) {
+    console.error('[queries] dashboard_order_pipeline failed:', error.message);
+    return EMPTY_PIPELINE;
+  }
+
+  return { ...EMPTY_PIPELINE, ...((data ?? {}) as unknown as Partial<OrderPipeline>) };
+}
+
 export async function getStatusFunnel(filters: DashboardFilters): Promise<StatusFunnel> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc('dashboard_status_funnel', toRpcArgs(filters));
@@ -128,6 +159,18 @@ export async function getStatusFunnel(filters: DashboardFilters): Promise<Status
     return {};
   }
   return (data ?? {}) as unknown as StatusFunnel;
+}
+
+/** Average time spent in each status. See lib/types.ts StageDurations for why
+ *  this is thin until real order activity accumulates. */
+export async function getStageDurations(filters: DashboardFilters): Promise<StageDurations> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('dashboard_stage_durations', toRpcArgs(filters));
+  if (error) {
+    console.error('[queries] dashboard_stage_durations failed:', error.message);
+    return {};
+  }
+  return (data ?? {}) as unknown as StageDurations;
 }
 
 export const ORDERS_PAGE_SIZE = 50;
@@ -151,6 +194,12 @@ export type OrderRow = {
   currency: string;
   total: number;
   created_at: string;
+  /** Last time this row changed. For status='completed'|'cancelled' this is
+   *  the moment it reached that state (see 041's caveat: a generic "last
+   *  touched" trigger, not a dedicated event — sound as long as nothing edits
+   *  a row after it's terminal). For an in-progress row it's just "last
+   *  edited," not meaningful as a duration endpoint on its own. */
+  updated_at: string;
 };
 
 /**
@@ -174,7 +223,7 @@ export async function getOrders(
     .select(
       'sub_order_id, order_id, order_number, restaurant_id, restaurant_name, food_court_id, ' +
         'table_id, table_label, table_number, status, channel, order_type, payment_status, ' +
-        'payment_method, customer_name, currency, total, created_at'
+        'payment_method, customer_name, currency, total, created_at, updated_at'
     )
     .gte('created_at', filters.from.toISOString())
     .lt('created_at', filters.to.toISOString())
@@ -240,7 +289,7 @@ export async function getLiveOrders(limit = 6): Promise<OrderRow[]> {
     .select(
       'sub_order_id, order_id, order_number, restaurant_id, restaurant_name, food_court_id, ' +
         'table_id, table_label, table_number, status, channel, order_type, payment_status, ' +
-        'payment_method, customer_name, currency, total, created_at'
+        'payment_method, customer_name, currency, total, created_at, updated_at'
     )
     .order('created_at', { ascending: false })
     .limit(limit);

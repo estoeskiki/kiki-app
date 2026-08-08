@@ -26,7 +26,7 @@ export function TH({
   return (
     <th
       scope="col"
-      className={`whitespace-nowrap border-b border-line px-4 py-[11px] text-[10px] font-bold uppercase tracking-[0.08em] text-muted ${
+      className={`whitespace-nowrap border-b border-line px-4 py-[11px] text-2xs font-bold uppercase tracking-[0.08em] text-muted ${
         align === 'right' ? 'text-right' : 'text-left'
       } ${className}`}
     >

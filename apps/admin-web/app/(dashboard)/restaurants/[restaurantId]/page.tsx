@@ -1,3 +1,4 @@
+import { CONTENT_WIDTH } from '@/components/ui/Container';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
@@ -6,17 +7,18 @@ import { Card, CardLabel, CardTitle } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { KpiCard } from '@/components/KpiCard';
 import { ZonesCard } from '@/components/tenant/ZonesCard';
+import { FlagSwitch } from '@/components/ui/Switch';
 import { canAdminister, requireViewer } from '@/lib/auth/dal';
 import { createClient } from '@/lib/supabase/server';
 import { parseFilters } from '@/lib/filters';
 import { getKpis } from '@/lib/queries';
 import { changeRatio, formatMoney, formatNumber, formatPercent } from '@/lib/format';
-import { setRestaurantFlag, updateRestaurant } from '../actions';
+import { updateRestaurant } from '../actions';
 
 export const metadata = { title: 'Restaurante · Kiki' };
 
 const INPUT =
-  'w-full rounded-[8px] border border-line bg-surface-container px-3 py-2 text-[13px] text-text-primary outline-none focus:border-primary/40';
+  'w-full rounded-md border border-line bg-surface-container px-3 py-2 text-sm text-text-primary outline-none focus-visible:outline-none focus:border-primary/40';
 
 export default async function RestaurantDetailPage({
   params,
@@ -53,11 +55,11 @@ export default async function RestaurantDetailPage({
   const administers = canAdminister(viewer);
 
   return (
-    <div className="fade-in px-7 pb-12 pt-6">
+    <div className={`fade-in ${CONTENT_WIDTH} pb-12 pt-6`}>
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Link
           href="/restaurants"
-          className="flex items-center gap-1 text-[12px] text-muted hover:text-text-primary"
+          className="flex items-center gap-1 text-xs text-muted hover:text-text-primary"
         >
           <Icon name="chevronLeft" size={13} />
           Restaurantes
@@ -65,7 +67,7 @@ export default async function RestaurantDetailPage({
         <span className="text-line-strong" aria-hidden>
           |
         </span>
-        <h1 className="font-heading text-[20px] font-bold tracking-[-0.04em] text-text-primary">
+        <h1 className="font-heading text-xl font-bold tracking-[-0.04em] text-text-primary">
           {restaurant.name}
         </h1>
         <Badge tone={restaurant.is_open ? 'lime' : 'neutral'}>
@@ -141,7 +143,7 @@ export default async function RestaurantDetailPage({
               </div>
             </form>
           ) : (
-            <dl className="text-[12px]">
+            <dl className="text-xs">
               <Detail label="Slug" value={`/${restaurant.slug}`} />
               <Detail label="Dirección" value={restaurant.address ?? '—'} />
               <Detail label="Patio de comida" value={foodCourt?.name ?? 'Independiente'} />
@@ -153,18 +155,15 @@ export default async function RestaurantDetailPage({
 
         <div className="flex flex-col gap-3.5">
           <Card className="p-5">
-            <CardTitle className="mb-1">Estado</CardTitle>
-            <CardLabel className="mb-4">
-              «Abierto» es la operación diaria; «Publicado» controla si la tienda existe para el
-              público
-            </CardLabel>
+            <CardTitle className="mb-3">Estado</CardTitle>
 
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col">
               <ToggleRow
                 id={restaurant.id}
                 field="is_open"
                 value={restaurant.is_open}
                 label="Aceptando pedidos"
+                hint="Operación diaria — ciérralo para dejar de recibir pedidos ahora"
                 disabled={!administers}
               />
               <ToggleRow
@@ -172,11 +171,12 @@ export default async function RestaurantDetailPage({
                 field="is_active"
                 value={restaurant.is_active}
                 label="Publicado"
+                hint="Si se desactiva, la tienda deja de existir para el público"
                 disabled={!administers || (!viewer.is_platform_admin && viewer.role !== 'owner')}
               />
             </div>
 
-            <dl className="mt-4 border-t border-line pt-3 text-[12px]">
+            <dl className="mt-4 border-t border-line pt-3 text-xs">
               <Detail label="Patio de comida" value={foodCourt?.name ?? 'Independiente'} />
               <Detail label="Slug público" value={`/${restaurant.slug}`} />
             </dl>
@@ -200,29 +200,23 @@ function ToggleRow({
   field,
   value,
   label,
+  hint,
   disabled,
 }: {
   id: string;
   field: 'is_open' | 'is_active';
   value: boolean;
   label: string;
+  hint: string;
   disabled: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-[13px] text-text-primary">{label}</span>
-      {disabled ? (
-        <Badge tone={value ? 'lime' : 'neutral'}>{value ? 'Sí' : 'No'}</Badge>
-      ) : (
-        <form action={setRestaurantFlag}>
-          <input type="hidden" name="id" value={id} />
-          <input type="hidden" name="field" value={field} />
-          <input type="hidden" name="value" value={String(!value)} />
-          <button type="submit" aria-pressed={value} className="cursor-pointer">
-            <Badge tone={value ? 'lime' : 'neutral'}>{value ? 'Sí' : 'No'}</Badge>
-          </button>
-        </form>
-      )}
+    <div className="flex items-center justify-between gap-4 border-b border-line py-2.5 last:border-b-0">
+      <div className="min-w-0">
+        <div className="text-sm text-text-primary">{label}</div>
+        <div className="text-2xs text-muted">{hint}</div>
+      </div>
+      <FlagSwitch id={id} field={field} value={value} label={label} disabled={disabled} />
     </div>
   );
 }

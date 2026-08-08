@@ -15,11 +15,14 @@ import {
 } from '@expo-google-fonts/syne';
 import * as SplashScreen from 'expo-splash-screen';
 import { RootNavigator } from '@/navigation/RootNavigator';
+import { navigationRef } from '@/navigation/navigationRef';
 import { DeviceAuthScreen } from '@/screens/AuthScreen';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { LanguageModal } from '@/components/layout/LanguageModal';
 import { StoreClosedOverlay } from '@/components/layout/StoreClosedOverlay';
+import { IdleConfirmModal } from '@/components/layout/IdleConfirmModal';
+import { useIdleGuard } from '@/hooks/useIdleGuard';
 import { useRestaurantStore } from '@/store/useRestaurantStore';
 
 SplashScreen.preventAutoHideAsync();
@@ -29,6 +32,9 @@ function AppInner() {
   const { colors, isDark } = useTheme();
   const { deviceToken, isLoading, initialize } = useAuthStore();
   const { isOpen } = useRestaurantStore();
+  // Mounted once here (not per-screen) so its timers survive navigation
+  // between Directory/Menu/ItemDetail/Checkout — see useIdleGuard's docstring.
+  const { panHandlers, showModal, secondsLeft, confirmStillHere } = useIdleGuard();
 
   useEffect(() => { initialize(); }, [initialize]);
 
@@ -55,10 +61,10 @@ function AppInner() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]} {...panHandlers}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {deviceToken ? (
-        <NavigationContainer theme={navTheme}>
+        <NavigationContainer ref={navigationRef} theme={navTheme}>
           <RootNavigator />
           {!isOpen && <StoreClosedOverlay />}
         </NavigationContainer>
@@ -66,6 +72,7 @@ function AppInner() {
         <DeviceAuthScreen />
       )}
       <LanguageModal />
+      <IdleConfirmModal visible={showModal} secondsLeft={secondsLeft} onConfirm={confirmStillHere} />
     </View>
   );
 }

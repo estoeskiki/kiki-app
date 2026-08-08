@@ -1,3 +1,4 @@
+import { CONTENT_WIDTH } from '@/components/ui/Container';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ItemForm } from '@/components/menu/ItemForm';
@@ -21,7 +22,7 @@ import {
 export const metadata = { title: 'Artículo · Kiki' };
 
 const SMALL_INPUT =
-  'rounded-[7px] border border-line bg-surface-container px-2.5 py-1.5 text-[12px] text-text-primary outline-none focus:border-primary/40';
+  'rounded-sm border border-line bg-surface-container px-2.5 py-1.5 text-xs text-text-primary outline-none focus-visible:outline-none focus:border-primary/40';
 
 /**
  * Item editor, including its customization groups and options.
@@ -73,11 +74,11 @@ export default async function MenuItemPage({
   const administers = canAdminister(viewer);
 
   return (
-    <div className="fade-in px-7 pb-12 pt-6">
+    <div className={`fade-in ${CONTENT_WIDTH} pb-12 pt-6`}>
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Link
           href={`/menu?r=${item.restaurant_id}&cat=${item.category_id}`}
-          className="flex items-center gap-1 text-[12px] text-muted hover:text-text-primary"
+          className="flex items-center gap-1 text-xs text-muted hover:text-text-primary"
         >
           <Icon name="chevronLeft" size={13} />
           Menú
@@ -85,14 +86,14 @@ export default async function MenuItemPage({
         <span className="text-line-strong" aria-hidden>
           |
         </span>
-        <h1 className="font-heading text-[20px] font-bold tracking-[-0.04em] text-text-primary">
+        <h1 className="font-heading text-xl font-bold tracking-[-0.04em] text-text-primary">
           {tr(item.name)}
         </h1>
         <Badge tone={item.available ? 'lime' : 'neutral'}>
           {item.available ? 'Disponible' : 'No disponible'}
         </Badge>
         {item.popular ? <Badge tone="pink">★ Popular</Badge> : null}
-        <span className="text-[12px] text-muted">{restaurant?.name}</span>
+        <span className="text-xs text-muted">{restaurant?.name}</span>
       </div>
 
       <div className="grid max-w-[1100px] gap-3.5 xl:grid-cols-[1.4fr_1fr]">
@@ -107,11 +108,11 @@ export default async function MenuItemPage({
         ) : (
           <Card className="p-5">
             <CardTitle className="mb-3">Detalles</CardTitle>
-            <p className="text-[13px] text-text-primary">{tr(item.description)}</p>
-            <p className="mt-3 font-heading text-[18px] font-bold text-primary">
+            <p className="text-sm text-text-primary">{tr(item.description)}</p>
+            <p className="mt-3 font-heading text-lg font-bold text-primary">
               {formatMoney(item.price, currency)}
             </p>
-            <p className="mt-3 text-[11px] text-muted">
+            <p className="mt-3 text-2xs text-muted">
               Tu rol no permite editar el menú.
             </p>
           </Card>
@@ -123,14 +124,14 @@ export default async function MenuItemPage({
             <CardLabel className="mb-4">Grupos de opciones para este artículo</CardLabel>
 
             {(groups ?? []).length === 0 ? (
-              <p className="text-[12px] text-muted">Sin grupos de personalización.</p>
+              <p className="text-xs text-muted">Sin grupos de personalización.</p>
             ) : (
               <ul className="flex flex-col gap-3">
                 {(groups ?? []).map((group) => (
-                  <li key={group.id} className="rounded-[10px] border border-line p-3">
+                  <li key={group.id} className="rounded-md border border-line p-3">
                     <div className="mb-2 flex items-start justify-between gap-2">
                       <div>
-                        <div className="text-[13px] font-semibold text-text-primary">
+                        <div className="text-sm font-semibold text-text-primary">
                           {tr(group.name)}
                         </div>
                         <div className="mt-0.5 flex gap-1.5">
@@ -165,11 +166,11 @@ export default async function MenuItemPage({
                             key={option.id}
                             className="flex items-center justify-between gap-2 border-b border-line py-1 last:border-b-0"
                           >
-                            <span className="min-w-0 truncate text-[12px] text-text-primary">
+                            <span className="min-w-0 truncate text-xs text-text-primary">
                               {tr(option.name)}
                             </span>
                             <span className="flex items-center gap-2">
-                              <span className="font-heading text-[11px] tabular-nums text-muted">
+                              <span className="font-heading text-2xs tabular-nums text-muted">
                                 {option.price_modifier === 0
                                   ? '—'
                                   : `${option.price_modifier > 0 ? '+' : '−'}${formatMoney(
@@ -236,7 +237,7 @@ export default async function MenuItemPage({
                 <input name="name_es" required placeholder="Nombre (ES)" className={SMALL_INPUT} />
                 <input name="name_en" placeholder="Name (EN)" className={SMALL_INPUT} />
                 <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-1.5 text-[12px] text-text-primary">
+                  <label className="flex items-center gap-1.5 text-xs text-text-primary">
                     <input
                       type="checkbox"
                       name="required"
@@ -244,7 +245,7 @@ export default async function MenuItemPage({
                     />
                     Obligatorio
                   </label>
-                  <label className="flex items-center gap-1.5 text-[12px] text-muted">
+                  <label className="flex items-center gap-1.5 text-xs text-muted">
                     Máx
                     <input
                       name="max_selections"
@@ -267,7 +268,7 @@ export default async function MenuItemPage({
           {administers ? (
             <Card className="border-secondary/25 p-4">
               <CardLabel className="mb-1.5">Zona de peligro</CardLabel>
-              <p className="mb-3 text-[11px] text-muted">
+              <p className="mb-3 text-2xs text-muted">
                 Los pedidos anteriores conservan el nombre y el precio con los que se vendieron.
               </p>
               <form action={deleteMenuItem}>

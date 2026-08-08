@@ -4,124 +4,134 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { isActive, type NavItem } from '@/components/layout/nav';
-import { setTheme, signOut } from '@/app/actions';
-import type { Viewer } from '@/lib/types';
+import { setSidebarCollapsed } from '@/app/actions';
 
-function initials(name: string | null, email: string): string {
-  const source = name?.trim() || email;
-  const parts = source.split(/[\s@._-]+/).filter(Boolean);
-  return (parts[0]?.[0] ?? '?').concat(parts[1]?.[0] ?? '').toUpperCase();
-}
-
-function scopeLabel(viewer: Viewer): string {
-  if (viewer.is_platform_admin) return 'Todas las organizaciones';
-  if (viewer.food_court_ids.length) return 'Patio de comida';
-  const n = viewer.restaurant_ids.length;
-  return n === 1 ? 'Un restaurante' : `${n} restaurantes`;
-}
-
-export function Sidebar({
-  viewer,
-  items,
-  theme,
-}: {
-  viewer: Viewer;
-  items: NavItem[];
-  theme: 'dark' | 'light';
-}) {
+/**
+ * Pure navigation — identity/theme/sign-out live in TopBar.
+ *
+ * Rebuilt against a concrete reference (two real product sidebars) rather than
+ * general "make it nicer" guessing: the active item is a full solid pill, not a
+ * thin left accent bar on an 8%-opacity tint — a wash that barely registered as
+ * "on" against an already-dark page was the actual complaint. Rows also got
+ * real room (py-2 / 1px gaps before) to breathe.
+ *
+ * Collapse persists via a cookie (setSidebarCollapsed, same mechanism as
+ * setTheme) so it's a page-level prop, not client state — no hydration
+ * mismatch, and it survives a reload instead of resetting every visit.
+ */
+export function Sidebar({ items, collapsed }: { items: NavItem[]; collapsed: boolean }) {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 flex h-dvh w-[220px] min-w-[220px] flex-col border-r border-line bg-surface-container">
-      <div className="border-b border-line px-5 pb-4 pt-6">
-        <div className="font-heading text-[24px] font-black leading-none tracking-[-0.05em] text-primary [text-shadow:0_0_20px_rgba(204,255,0,0.35),0_0_60px_rgba(204,255,0,0.1)]">
-          KIKI
+    <aside
+      className={`sticky top-0 flex h-dvh shrink-0 flex-col border-r border-line bg-surface-container transition-[width] duration-200 ${
+        collapsed ? 'w-[76px]' : 'w-[232px]'
+      }`}
+    >
+      <div className={`flex items-center pb-5 pt-6 ${collapsed ? 'justify-center px-2' : 'justify-between px-5'}`}>
+        <div className="font-heading text-2xl font-black leading-none tracking-[-0.05em] text-primary [text-shadow:0_0_20px_rgba(204,255,0,0.35),0_0_60px_rgba(204,255,0,0.1)]">
+          {collapsed ? 'K' : 'KIKI'}
         </div>
-        <div className="mt-1 text-[9px] uppercase tracking-[0.18em] text-muted">Consola Admin</div>
+
+        {!collapsed ? <CollapseToggle collapsed={false} /> : null}
       </div>
 
-      {/* Scope indicator. Replaces the reference's mock role switcher — real
-          scope comes from the session and cannot be switched from the UI. */}
-      <div className="px-3 pb-1.5 pt-2.5">
-        <div className="flex items-center gap-2 rounded-[8px] border border-line-strong bg-surface px-2.5 py-2">
-          <span className="pulse-dot size-[7px] shrink-0 rounded-full bg-primary shadow-[0_0_6px_var(--color-primary)]" />
-          <div className="min-w-0">
-            <div className="truncate text-[12px] font-semibold text-text-primary">
-              {viewer.is_platform_admin ? 'Super Admin' : (viewer.display_name ?? 'Equipo')}
-            </div>
-            <div className="truncate text-[9px] text-muted">{scopeLabel(viewer)}</div>
-          </div>
+      {collapsed ? (
+        <div className="px-2.5 pb-2">
+          <CollapseToggle collapsed />
         </div>
-      </div>
+      ) : null}
 
-      <nav className="flex-1 overflow-y-auto px-2.5 py-1.5" aria-label="Principal">
-        {items.map((item) => {
-          const active = isActive(pathname, item.href);
-          return (
-            <div key={item.href}>
-              {item.section ? (
-                <div className="px-2.5 pb-1.5 pt-4 text-[9px] font-bold uppercase tracking-[0.12em] text-muted">
-                  {item.section}
-                </div>
-              ) : null}
-              <Link
-                href={item.href}
-                aria-current={active ? 'page' : undefined}
-                className={`mb-px flex items-center gap-2.5 rounded-[7px] border px-2.5 py-2 text-[13px] transition-colors ${
-                  active
-                    ? 'border-primary/20 bg-primary/[0.07] font-semibold text-primary'
-                    : 'border-transparent text-muted hover:text-text-primary'
-                }`}
-              >
-                <Icon name={item.icon} size={15} />
-                <span>{item.label}</span>
-              </Link>
-            </div>
-          );
-        })}
-      </nav>
-
-      <div className="border-t border-line p-3">
-        <div className="flex items-center gap-2.5">
+      <nav
+        className={`flex flex-1 flex-col overflow-y-auto pb-4 ${collapsed ? 'px-2' : 'px-3'}`}
+        aria-label="Principal"
+      >
+        {groupItems(items).map((group, groupIndex) => (
           <div
-            className="flex size-8 shrink-0 items-center justify-center rounded-full font-heading text-[11px] font-extrabold text-on-primary"
-            style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-tertiary))' }}
-            aria-hidden
+            key={group.section ?? 'primary'}
+            // Group spacing lives here, on a real wrapper, instead of being
+            // padding on a label that shares a box with a nav row — that older
+            // shape is what let a stray `first:pt-0` silently cancel it.
+            className={groupIndex === 0 ? '' : 'mt-6'}
           >
-            {initials(viewer.display_name, viewer.email)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[12px] font-semibold text-text-primary">{viewer.email}</div>
-            <div className="text-[10px] text-muted">
-              {viewer.is_platform_admin ? 'Super Admin' : (viewer.role ?? 'Sin rol')}
-            </div>
-          </div>
-        </div>
+            {group.section && !collapsed ? (
+              <h2 className="mb-2 px-3.5 text-2xs font-bold uppercase tracking-[0.14em] text-muted">
+                {group.section}
+              </h2>
+            ) : null}
 
-        <div className="mt-2.5 flex items-center gap-1.5">
-          <form action={setTheme} className="flex-1">
-            <input type="hidden" name="theme" value={theme === 'dark' ? 'light' : 'dark'} />
-            <button
-              type="submit"
-              className="flex w-full items-center justify-center gap-1.5 rounded-[7px] border border-line px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.06em] text-muted transition-colors hover:text-text-primary"
-            >
-              <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={12} />
-              {theme === 'dark' ? 'Claro' : 'Oscuro'}
-            </button>
-          </form>
+            {/* Collapsed hides the label, so the break has to be carried by a
+                rule — otherwise the icons read as one undivided column. */}
+            {group.section && collapsed ? (
+              <div className="mx-2 mb-3 h-px bg-line" aria-hidden />
+            ) : null}
 
-          <form action={signOut}>
-            <button
-              type="submit"
-              aria-label="Cerrar sesión"
-              title="Cerrar sesión"
-              className="flex items-center justify-center rounded-[7px] border border-line p-[7px] text-muted transition-colors hover:border-secondary/40 hover:text-secondary"
-            >
-              <Icon name="signout" size={13} />
-            </button>
-          </form>
-        </div>
-      </div>
+            <ul className="flex flex-col gap-1.5">
+              {group.items.map((item) => {
+                const active = isActive(pathname, item.href);
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      aria-current={active ? 'page' : undefined}
+                      title={collapsed ? item.label : undefined}
+                      // Full solid pill on the active row — high-contrast, not
+                      // a tint. Icon strokeWidth steps up when active too,
+                      // matching how the reference sidebars bolden it.
+                      className={`flex items-center gap-3 rounded-full py-2.5 text-sm font-medium transition-colors duration-150 ${
+                        collapsed ? 'justify-center px-0' : 'px-3.5'
+                      } ${
+                        active
+                          ? 'bg-primary font-semibold text-on-primary shadow-[0_2px_12px_rgba(204,255,0,0.25)]'
+                          : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                      }`}
+                    >
+                      <Icon name={item.icon} size={18} strokeWidth={active ? 2.1 : 1.8} />
+                      {!collapsed ? <span className="truncate">{item.label}</span> : null}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </nav>
     </aside>
+  );
+}
+
+/**
+ * `section` marks the first item of a run, not a container — so a group is
+ * "an item carrying a section, plus every item after it that doesn't."
+ */
+function groupItems(items: NavItem[]): { section?: string; items: NavItem[] }[] {
+  const groups: { section?: string; items: NavItem[] }[] = [];
+  for (const item of items) {
+    if (item.section || groups.length === 0) {
+      groups.push({ section: item.section, items: [item] });
+    } else {
+      groups[groups.length - 1].items.push(item);
+    }
+  }
+  return groups;
+}
+
+function CollapseToggle({ collapsed }: { collapsed: boolean }) {
+  return (
+    <form action={setSidebarCollapsed}>
+      <input type="hidden" name="collapsed" value={String(!collapsed)} />
+      <button
+        type="submit"
+        aria-label={collapsed ? 'Expandir barra lateral' : 'Contraer barra lateral'}
+        title={collapsed ? 'Expandir' : 'Contraer'}
+        className="flex size-7 cursor-pointer items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-surface hover:text-text-primary"
+      >
+        <Icon
+          name="chevronLeft"
+          size={14}
+          className={`transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`}
+        />
+      </button>
+    </form>
   );
 }

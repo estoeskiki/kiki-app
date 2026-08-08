@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { AppState } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from './useAuthStore';
 import { Order, OrderStatus } from '../data/types';
@@ -9,8 +10,23 @@ import { playNewOrderChime } from '../services/notificationSound';
 // per window instead of a full refetch per event, which otherwise pins the app
 // in a constant reload loop and machine-guns the new-order chime.
 const REFETCH_DEBOUNCE_MS = 2000;
+// Safety-net poll. Realtime is the fast path, but a websocket can silently die
+// while the app stays foregrounded (network blip, ~hourly token refresh,
+// server dropping the channel) and postgres_changes never replays what it
+// missed. A cheap low-frequency silent refetch guarantees a new order surfaces
+// within this window even when realtime is dead — the difference between "it
+// intermittently doesn't show until I refresh" and it always showing.
+const REALTIME_SAFETY_POLL_MS = 10000;
 let refetchTimer: ReturnType<typeof setTimeout> | null = null;
-let chimePending = false;
+let pollInterval: ReturnType<typeof setInterval> | null = null;
+let appStateSub: ReturnType<typeof AppState.addEventListener> | null = null;
+// Chime + "new order" detection now live in fetchOrders (not the realtime
+// event) so an order chimes no matter how it surfaces — live event, reconnect
+// catch-up, foreground catch-up, or the safety poll. knownOrderIds is every
+// order id we've already accounted for; hasLoadedOnce suppresses the chime on
+// the very first load (so opening the screen doesn't ring for existing orders).
+let hasLoadedOnce = false;
+const knownOrderIds = new Set<string>();
 
 // True when a freshly mapped order is identical (for display purposes) to the
 // one already in the store — lets us keep the OLD object reference so
@@ -104,6 +120,18 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
               : [],
           })) : [],
         }));
+        // Chime for genuinely new orders, driven by the fetched data rather
+        // than a realtime event — so it rings whether the order arrived via a
+        // live event, a reconnect/foreground catch-up, or the safety poll.
+        // knownOrderIds guards against a double chime when two fetches race
+        // (e.g. realtime + poll); hasLoadedOnce suppresses the first load.
+        const hasNewOrder = mappedOrders.some(
+          (o) => o.status === 'confirmed' && !knownOrderIds.has(o.id),
+        );
+        for (const o of mappedOrders) knownOrderIds.add(o.id);
+        if (hasLoadedOnce && hasNewOrder) playNewOrderChime();
+        hasLoadedOnce = true;
+
         // Structural sharing: reuse the previous object for any order that
         // hasn't visibly changed. During a rush the board holds 100+ orders and
         // refetches run every couple of seconds — without this, every refetch
@@ -138,16 +166,12 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
       get().unsubscribeFromOrders();
     }
 
-    // Coalesce a burst of realtime events into at most one (silent) refetch per
-    // window, and play the chime once per burst rather than per event.
+    // Coalesce a burst of realtime events into at most one silent refetch per
+    // window. The chime + new-order detection live in fetchOrders now.
     const scheduleRefetch = () => {
       if (refetchTimer) return; // a refetch is already queued for this window
       refetchTimer = setTimeout(() => {
         refetchTimer = null;
-        if (chimePending) {
-          chimePending = false;
-          playNewOrderChime();
-        }
         get().fetchOrders(true);
       }, REFETCH_DEBOUNCE_MS);
     };
@@ -162,14 +186,9 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
           table: 'sub_orders',
           filter: `restaurant_id=eq.${restaurantId}`,
         },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            chimePending = true; // chime fires once when the debounced fetch runs
-          }
-          // Realtime only sends the sub_orders row itself, not nested
-          // order_items — refetch to get the full shape regardless of event type.
-          scheduleRefetch();
-        }
+        // Realtime only sends the sub_orders row itself, not nested
+        // order_items — refetch to get the full shape regardless of event type.
+        () => scheduleRefetch(),
       )
       .on(
         'postgres_changes',
@@ -179,16 +198,33 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
           table: 'order_items',
           filter: `restaurant_id=eq.${restaurantId}`,
         },
-        () => {
-          // Safety net: order_items for a new sub_order are inserted right
-          // after it, in a separate statement — this catches up the item
-          // list if the sub_orders-triggered fetch above raced ahead of them.
-          scheduleRefetch();
-        }
+        // order_items for a new sub_order are inserted right after it, in a
+        // separate statement — this catches up the item list if the
+        // sub_orders-triggered fetch above raced ahead of them.
+        () => scheduleRefetch(),
       )
-      .subscribe();
+      .subscribe((status) => {
+        // Fires on the initial join AND on every automatic rejoin after the
+        // socket drops and reconnects. Since postgres_changes never replays
+        // events missed while disconnected, every (re)subscribe does a silent
+        // catch-up fetch — which also chimes for anything that came in during
+        // the gap. This is what makes a dropped connection self-heal instead
+        // of silently going dead until a manual refresh.
+        if (status === 'SUBSCRIBED') get().fetchOrders(true);
+      });
 
     set({ channel });
+
+    // Foreground catch-up: the OS tears down the websocket when the tablet is
+    // backgrounded/asleep, and orders that arrived meanwhile are never
+    // delivered. Refetch the instant we return to the foreground.
+    appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') get().fetchOrders(true);
+    });
+
+    // Safety-net poll — see REALTIME_SAFETY_POLL_MS. Backstops realtime dying
+    // while the app stays foregrounded, so orders never require a manual refresh.
+    pollInterval = setInterval(() => get().fetchOrders(true), REALTIME_SAFETY_POLL_MS);
   },
 
   unsubscribeFromOrders: () => {
@@ -197,7 +233,18 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
       clearTimeout(refetchTimer);
       refetchTimer = null;
     }
-    chimePending = false;
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
+    if (appStateSub) {
+      appStateSub.remove();
+      appStateSub = null;
+    }
+    // Reset new-order tracking so the next mount (or a restaurant switch)
+    // doesn't chime for the orders already on the board at first load.
+    hasLoadedOnce = false;
+    knownOrderIds.clear();
     if (channel) {
       supabase.removeChannel(channel);
       set({ channel: null });

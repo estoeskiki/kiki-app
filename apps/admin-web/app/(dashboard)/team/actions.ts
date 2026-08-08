@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { dbId } from '@/lib/validation';
 import { canAdminister, requireViewer } from '@/lib/auth/dal';
 import { createClient } from '@/lib/supabase/server';
 
@@ -15,7 +16,7 @@ import { createClient } from '@/lib/supabase/server';
  * The service-role key is never present in this process.
  */
 
-const uuid = z.string().uuid();
+const uuid = dbId;
 const role = z.enum(['owner', 'manager', 'staff']);
 
 function fail(message: string): never {

@@ -6,7 +6,7 @@ export type BarRow = {
   value: ReactNode;
   /** 0–1. Bar width relative to the largest row. */
   ratio: number;
-  tone?: 'lime' | 'cyan' | 'pink' | 'fade';
+  tone?: 'lime' | 'cyan' | 'blue' | 'pink' | 'fade';
   /** Optional second line under the bar. */
   meta?: ReactNode;
 };
@@ -14,9 +14,15 @@ export type BarRow = {
 const TONE: Record<NonNullable<BarRow['tone']>, string> = {
   lime: 'bg-primary',
   cyan: 'bg-tertiary',
+  blue: 'bg-[#60a5fa]',
   pink: 'bg-secondary',
   fade: 'bg-text-secondary/50',
 };
+
+/** Cycles the four data hues across a row index, for lists (top items, etc.)
+ *  where every row is the same kind of thing and a single flat color made the
+ *  whole card read as monochrome next to charts elsewhere on the page. */
+export const CYCLE_TONES: NonNullable<BarRow['tone']>[] = ['lime', 'cyan', 'blue', 'pink'];
 
 /**
  * Horizontal bar list — the reference's shared shape for top items, the status
@@ -25,26 +31,26 @@ const TONE: Record<NonNullable<BarRow['tone']>, string> = {
  */
 export function BarList({ rows, emptyLabel = 'Sin datos' }: { rows: BarRow[]; emptyLabel?: string }) {
   if (rows.length === 0) {
-    return <p className="py-4 text-[12px] text-muted">{emptyLabel}</p>;
+    return <p className="py-4 text-xs text-muted">{emptyLabel}</p>;
   }
 
   return (
     <ul className="flex flex-col gap-2.5">
       {rows.map((row) => (
         <li key={row.key}>
-          <div className="mb-1 flex items-baseline justify-between gap-3 text-[11px]">
+          <div className="mb-1 flex items-baseline justify-between gap-3 text-2xs">
             <span className="min-w-0 truncate text-muted">{row.label}</span>
             <span className="shrink-0 font-heading font-semibold tabular-nums text-text-primary">
               {row.value}
             </span>
           </div>
-          <div className="h-[5px] overflow-hidden rounded-[3px] bg-line">
+          <div className="h-[5px] overflow-hidden rounded-full bg-line">
             <div
-              className={`h-full rounded-[3px] transition-[width] duration-500 ${TONE[row.tone ?? 'lime']}`}
+              className={`h-full rounded-full transition-[width] duration-500 ${TONE[row.tone ?? 'lime']}`}
               style={{ width: `${Math.max(0, Math.min(1, row.ratio)) * 100}%` }}
             />
           </div>
-          {row.meta ? <div className="mt-1 text-[10px] text-muted">{row.meta}</div> : null}
+          {row.meta ? <div className="mt-1 text-2xs text-muted">{row.meta}</div> : null}
         </li>
       ))}
     </ul>

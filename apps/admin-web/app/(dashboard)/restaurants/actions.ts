@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
+import { dbId } from '@/lib/validation';
 import { canAdminister, requirePlatformAdmin, requireViewer } from '@/lib/auth/dal';
 import { assertFoodCourtInScope, assertRestaurantInScope } from '@/lib/auth/scope';
 import { createClient } from '@/lib/supabase/server';
@@ -16,7 +17,7 @@ import { createClient } from '@/lib/supabase/server';
  * requirePlatformAdmin() calls here just fail early and legibly.
  */
 
-const uuid = z.string().uuid();
+const uuid = dbId;
 
 const slug = z
   .string()

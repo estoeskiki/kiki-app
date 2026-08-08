@@ -35,3 +35,20 @@ export async function setTheme(formData: FormData) {
   // The root layout reads this cookie to stamp data-theme before first paint.
   revalidatePath('/', 'layout');
 }
+
+export async function setSidebarCollapsed(formData: FormData) {
+  const collapsed = formData.get('collapsed') === 'true';
+
+  (await cookies()).set('kiki-sidebar-collapsed', String(collapsed), {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: 'lax',
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+  });
+
+  // (dashboard)/layout.tsx reads this cookie before rendering the sidebar, so
+  // the collapsed width survives a reload instead of resetting every visit —
+  // same mechanism as the theme cookie above.
+  revalidatePath('/', 'layout');
+}

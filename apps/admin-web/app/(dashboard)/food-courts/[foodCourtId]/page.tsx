@@ -1,3 +1,4 @@
+import { CONTENT_WIDTH } from '@/components/ui/Container';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
@@ -91,11 +92,11 @@ export default async function FoodCourtDetailPage({
   const unlinked = scope.restaurants.filter((r) => !r.food_court_id);
 
   return (
-    <div className="fade-in px-7 pb-12 pt-6">
+    <div className={`fade-in ${CONTENT_WIDTH} pb-12 pt-6`}>
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Link
           href="/food-courts"
-          className="flex items-center gap-1 text-[12px] text-muted hover:text-text-primary"
+          className="flex items-center gap-1 text-xs text-muted hover:text-text-primary"
         >
           <Icon name="chevronLeft" size={13} />
           Patios de Comida
@@ -103,7 +104,7 @@ export default async function FoodCourtDetailPage({
         <span className="text-line-strong" aria-hidden>
           |
         </span>
-        <h1 className="font-heading text-[20px] font-bold tracking-[-0.04em] text-text-primary">
+        <h1 className="font-heading text-xl font-bold tracking-[-0.04em] text-text-primary">
           {foodCourt.name}
         </h1>
         <Badge tone="neutral">/{foodCourt.slug}</Badge>
@@ -127,11 +128,11 @@ export default async function FoodCourtDetailPage({
         <Card>
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <CardTitle>Puestos</CardTitle>
-            <span className="text-[11px] text-muted">últimos 30 días</span>
+            <span className="text-2xs text-muted">últimos 30 días</span>
           </div>
 
           {stalls.length === 0 ? (
-            <p className="p-6 text-center text-[12px] text-muted">
+            <p className="p-6 text-center text-xs text-muted">
               Aún no hay restaurantes vinculados.
             </p>
           ) : (
@@ -180,7 +181,7 @@ export default async function FoodCourtDetailPage({
                             <input type="hidden" name="food_court_id" value="" />
                             <button
                               type="submit"
-                              className="text-[10px] text-muted transition-colors hover:text-secondary"
+                              className="text-2xs text-muted transition-colors hover:text-secondary"
                             >
                               Desvincular
                             </button>
@@ -204,7 +205,7 @@ export default async function FoodCourtDetailPage({
                 <CardLabel className="mb-1.5">Vincular restaurante</CardLabel>
                 <select
                   name="restaurant_id"
-                  className="rounded-[8px] border border-line bg-surface-container px-3 py-2 text-[13px] text-text-primary outline-none focus:border-primary/40"
+                  className="rounded-md border border-line bg-surface-container px-3 py-2 text-sm text-text-primary outline-none focus-visible:outline-none focus:border-primary/40"
                 >
                   {unlinked.map((restaurant) => (
                     <option key={restaurant.id} value={restaurant.id}>

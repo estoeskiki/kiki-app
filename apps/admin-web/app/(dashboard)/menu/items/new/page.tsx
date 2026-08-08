@@ -1,3 +1,4 @@
+import { CONTENT_WIDTH } from '@/components/ui/Container';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ItemForm } from '@/components/menu/ItemForm';
@@ -38,11 +39,11 @@ export default async function NewMenuItemPage({
   const categoryId = categories.find((c) => c.id === requestedCat)?.id ?? categories[0].id;
 
   return (
-    <div className="fade-in px-7 pb-12 pt-6">
+    <div className={`fade-in ${CONTENT_WIDTH} pb-12 pt-6`}>
       <div className="mb-6 flex items-center gap-3">
         <Link
           href={`/menu?r=${restaurant.id}`}
-          className="flex items-center gap-1 text-[12px] text-muted hover:text-text-primary"
+          className="flex items-center gap-1 text-xs text-muted hover:text-text-primary"
         >
           <Icon name="chevronLeft" size={13} />
           Menú
@@ -50,7 +51,7 @@ export default async function NewMenuItemPage({
         <span className="text-line-strong" aria-hidden>
           |
         </span>
-        <h1 className="font-heading text-[20px] font-bold tracking-[-0.04em] text-text-primary">
+        <h1 className="font-heading text-xl font-bold tracking-[-0.04em] text-text-primary">
           Nuevo artículo
         </h1>
       </div>

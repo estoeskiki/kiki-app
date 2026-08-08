@@ -48,28 +48,28 @@ export default async function LoginPage({
     <main className="flex min-h-dvh items-center justify-center px-6 py-12">
       <div className="w-full max-w-[360px]">
         <div className="mb-8 text-center">
-          <div className="font-heading text-[34px] font-black leading-none tracking-[-0.05em] text-primary [text-shadow:0_0_24px_rgba(204,255,0,0.35),0_0_70px_rgba(204,255,0,0.12)]">
+          <div className="font-heading text-4xl font-black leading-none tracking-[-0.05em] text-primary [text-shadow:0_0_24px_rgba(204,255,0,0.35),0_0_70px_rgba(204,255,0,0.12)]">
             KIKI
           </div>
-          <p className="mt-2 text-[10px] uppercase tracking-[0.18em] text-muted">Consola Admin</p>
+          <p className="mt-2 text-2xs uppercase tracking-[0.18em] text-muted">Consola Admin</p>
         </div>
 
         <form
           action={signIn}
-          className="rounded-[12px] border border-line bg-surface p-6"
+          className="rounded-lg border border-line bg-surface p-6"
           // Never let a password manager or the browser cache the password field
           // into a URL; POST-only via Server Action.
         >
-          <h1 className="mb-1 font-heading text-[18px] font-bold tracking-[-0.03em] text-text-primary">
+          <h1 className="mb-1 font-heading text-lg font-bold tracking-[-0.03em] text-text-primary">
             Iniciar sesión
           </h1>
-          <p className="mb-5 text-[12px] text-muted">
+          <p className="mb-5 text-xs text-muted">
             Usa las mismas credenciales de la app de administración.
           </p>
 
           {next ? <input type="hidden" name="next" value={next} /> : null}
 
-          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.08em] text-muted">
+          <label className="mb-1.5 block text-2xs font-bold uppercase tracking-[0.08em] text-muted">
             Correo
             <input
               type="email"
@@ -77,25 +77,25 @@ export default async function LoginPage({
               required
               autoComplete="username"
               autoFocus
-              className="mt-1.5 w-full rounded-[8px] border border-line bg-surface-container px-3 py-2.5 text-[13px] font-normal normal-case tracking-normal text-text-primary outline-none focus:border-primary/40"
+              className="mt-1.5 w-full rounded-md border border-line bg-surface-container px-3 py-2.5 text-sm font-normal normal-case tracking-normal text-text-primary outline-none focus-visible:outline-none focus:border-primary/40"
             />
           </label>
 
-          <label className="mb-5 mt-4 block text-[10px] font-bold uppercase tracking-[0.08em] text-muted">
+          <label className="mb-5 mt-4 block text-2xs font-bold uppercase tracking-[0.08em] text-muted">
             Contraseña
             <input
               type="password"
               name="password"
               required
               autoComplete="current-password"
-              className="mt-1.5 w-full rounded-[8px] border border-line bg-surface-container px-3 py-2.5 text-[13px] font-normal normal-case tracking-normal text-text-primary outline-none focus:border-primary/40"
+              className="mt-1.5 w-full rounded-md border border-line bg-surface-container px-3 py-2.5 text-sm font-normal normal-case tracking-normal text-text-primary outline-none focus-visible:outline-none focus:border-primary/40"
             />
           </label>
 
           {error ? (
             <p
               role="alert"
-              className="mb-4 rounded-[8px] border border-secondary/30 bg-secondary/10 px-3 py-2 text-[12px] text-secondary"
+              className="mb-4 rounded-md border border-secondary/30 bg-secondary/10 px-3 py-2 text-xs text-secondary"
             >
               Correo o contraseña incorrectos.
             </p>

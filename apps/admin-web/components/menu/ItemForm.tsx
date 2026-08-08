@@ -4,7 +4,7 @@ import { tr } from '@/lib/i18n';
 import type { Json } from '@/lib/types';
 
 const INPUT =
-  'w-full rounded-[8px] border border-line bg-surface-container px-3 py-2 text-[13px] text-text-primary outline-none focus:border-primary/40';
+  'w-full rounded-md border border-line bg-surface-container px-3 py-2 text-sm text-text-primary outline-none focus-visible:outline-none focus:border-primary/40';
 
 export type ItemFormValues = {
   id?: string;
@@ -162,7 +162,7 @@ function Check({
   defaultChecked: boolean;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 text-[13px] text-text-primary">
+    <label className="flex cursor-pointer items-center gap-2 text-sm text-text-primary">
       <input
         type="checkbox"
         name={name}

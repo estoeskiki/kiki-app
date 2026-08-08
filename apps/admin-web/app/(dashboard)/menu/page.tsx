@@ -1,3 +1,4 @@
+import { CONTENT_WIDTH } from '@/components/ui/Container';
 import Link from 'next/link';
 import { Card, CardLabel, EmptyState, PageHeading } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -37,7 +38,7 @@ export default async function MenuPage({
 
   if (!restaurant) {
     return (
-      <div className="px-7 pt-6">
+      <div className={`${CONTENT_WIDTH} pt-6`}>
         <PageHeading title="Menú" />
         <Card>
           <EmptyState>No tienes restaurantes asignados.</EmptyState>
@@ -81,7 +82,7 @@ export default async function MenuPage({
   };
 
   return (
-    <div className="fade-in px-7 pb-12 pt-6">
+    <div className={`fade-in ${CONTENT_WIDTH} pb-12 pt-6`}>
       <PageHeading
         title="Menú"
         subtitle={`${restaurant.name} · ${items.length} artículo${items.length === 1 ? '' : 's'} en ${categories.length} categoría${categories.length === 1 ? '' : 's'}`}
@@ -111,7 +112,7 @@ export default async function MenuPage({
             <CardLabel className="px-2 pb-2 pt-1.5">Categorías</CardLabel>
 
             {categories.length === 0 ? (
-              <p className="px-2 pb-2 text-[12px] text-muted">Aún no hay categorías.</p>
+              <p className="px-2 pb-2 text-xs text-muted">Aún no hay categorías.</p>
             ) : (
               categories.map((category) => {
                 const active = category.id === activeCategory?.id;
@@ -120,7 +121,7 @@ export default async function MenuPage({
                   <Link
                     key={category.id}
                     href={query({ cat: category.id })}
-                    className={`mb-0.5 flex items-center justify-between gap-2 rounded-[7px] border px-2.5 py-2 text-[13px] transition-colors ${
+                    className={`mb-0.5 flex items-center justify-between gap-2 rounded-sm border px-2.5 py-2 text-sm transition-colors ${
                       active
                         ? 'border-primary/20 bg-primary/[0.07] font-semibold text-primary'
                         : 'border-transparent text-muted hover:text-text-primary'
@@ -130,7 +131,7 @@ export default async function MenuPage({
                       <span className="mr-1.5">{category.icon}</span>
                       {tr(category.name)}
                     </span>
-                    <span className="shrink-0 rounded-[4px] bg-line px-1.5 py-0.5 text-[10px] text-muted">
+                    <span className="shrink-0 rounded-sm bg-line px-1.5 py-0.5 text-2xs text-muted">
                       {count}
                     </span>
                   </Link>
@@ -148,12 +149,12 @@ export default async function MenuPage({
                   name="name_es"
                   required
                   placeholder="Nombre (ES)"
-                  className="rounded-[7px] border border-line bg-surface-container px-2.5 py-1.5 text-[12px] text-text-primary outline-none focus:border-primary/40"
+                  className="rounded-sm border border-line bg-surface-container px-2.5 py-1.5 text-xs text-text-primary outline-none focus-visible:outline-none focus:border-primary/40"
                 />
                 <input
                   name="name_en"
                   placeholder="Name (EN)"
-                  className="rounded-[7px] border border-line bg-surface-container px-2.5 py-1.5 text-[12px] text-text-primary outline-none focus:border-primary/40"
+                  className="rounded-sm border border-line bg-surface-container px-2.5 py-1.5 text-xs text-text-primary outline-none focus-visible:outline-none focus:border-primary/40"
                 />
                 <div className="flex gap-2">
                   <input
@@ -161,13 +162,13 @@ export default async function MenuPage({
                     required
                     pattern="[a-z0-9-]+"
                     placeholder="slug"
-                    className="min-w-0 flex-1 rounded-[7px] border border-line bg-surface-container px-2.5 py-1.5 text-[12px] text-text-primary outline-none focus:border-primary/40"
+                    className="min-w-0 flex-1 rounded-sm border border-line bg-surface-container px-2.5 py-1.5 text-xs text-text-primary outline-none focus-visible:outline-none focus:border-primary/40"
                   />
                   <input
                     name="icon"
                     maxLength={4}
                     placeholder="📦"
-                    className="w-12 rounded-[7px] border border-line bg-surface-container px-2 py-1.5 text-center text-[12px] outline-none focus:border-primary/40"
+                    className="w-12 rounded-sm border border-line bg-surface-container px-2 py-1.5 text-center text-xs outline-none focus-visible:outline-none focus:border-primary/40"
                   />
                 </div>
                 <Button type="submit" size="sm">

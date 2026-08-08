@@ -1,12 +1,15 @@
+import { CONTENT_WIDTH } from '@/components/ui/Container';
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { FilterBar } from '@/components/filters/FilterBar';
 import { KpiCard } from '@/components/KpiCard';
 import { AreaChart } from '@/components/charts/AreaChart';
-import { BarList, type BarRow } from '@/components/charts/BarList';
+import { BarList, CYCLE_TONES, type BarRow } from '@/components/charts/BarList';
 import { Heatmap } from '@/components/charts/Heatmap';
-import { Card, CardLabel, CardTitle, PageHeading } from '@/components/ui/Card';
-import { ChannelBadge, StatusBadge, ZoneBadge } from '@/components/ui/Badge';
+import { Pipeline } from '@/components/charts/Pipeline';
+import { Avatar } from '@/components/ui/Avatar';
+import { Card, CardTitle, PageHeading } from '@/components/ui/Card';
+import { ChannelBadge, StatusBadge } from '@/components/ui/Badge';
 import { requireViewer } from '@/lib/auth/dal';
 import { parseFilters, type SearchParams } from '@/lib/filters';
 import {
@@ -14,11 +17,11 @@ import {
   getHeatmap,
   getKpis,
   getLiveOrders,
+  getOrderPipeline,
   getScopeTree,
-  getStatusFunnel,
+  getStageDurations,
   getTimeseries,
   getTopItems,
-  getZoneBreakdown,
 } from '@/lib/queries';
 import {
   changeRatio,
@@ -67,7 +70,7 @@ export default async function OverviewPage({
     <>
       <FilterBar scope={scope} />
 
-      <div className="fade-in px-7 pb-12 pt-6">
+      <div className={`fade-in ${CONTENT_WIDTH} pb-12 pt-6`}>
         <PageHeading title={scopeName} subtitle={subtitle} />
 
         <Suspense fallback={<KpiSkeleton />}>
@@ -80,26 +83,30 @@ export default async function OverviewPage({
           </Suspense>
         </div>
 
-        {/* The two cards the operator specifically asked for: where orders come
-            from (kiosk vs order-web) and which zone they came from. */}
-        <div className="mt-4 grid gap-3.5 lg:grid-cols-2">
-          <Suspense fallback={<CardSkeleton height={200} />}>
-            <ChannelCard filters={filters} />
-          </Suspense>
-          <Suspense fallback={<CardSkeleton height={200} />}>
-            <ZoneCard filters={filters} />
+        {/* Pipeline gets the full width and sits directly under revenue: it is
+            the view the operator watches most, and the stage detail needs the
+            horizontal room to read as a sequence rather than a stack. */}
+        <div className="mt-4">
+          <Suspense fallback={<CardSkeleton height={300} />}>
+            <PipelineCard filters={filters} />
           </Suspense>
         </div>
 
         <div className="mt-4 grid gap-3.5 xl:grid-cols-3">
           <Suspense fallback={<CardSkeleton height={280} />}>
-            <HeatmapCard filters={filters} />
+            <ChannelCard filters={filters} />
           </Suspense>
           <Suspense fallback={<CardSkeleton height={280} />}>
             <TopItemsCard filters={filters} />
           </Suspense>
           <Suspense fallback={<CardSkeleton height={280} />}>
-            <FunnelAndLiveCard filters={filters} />
+            <LiveOrdersCard />
+          </Suspense>
+        </div>
+
+        <div className="mt-4">
+          <Suspense fallback={<CardSkeleton height={260} />}>
+            <HeatmapCard filters={filters} />
           </Suspense>
         </div>
       </div>
@@ -121,23 +128,27 @@ async function KpiRow({ filters }: { filters: DashboardFilters }) {
         value={formatMoneyCompact(current.revenue_cents)}
         change={changeRatio(current.revenue_cents, previous.revenue_cents)}
         spark={revenueSpark}
+        accent="lime"
       />
       <KpiCard
         label="Pedidos"
         value={formatNumber(current.orders)}
         change={changeRatio(current.orders, previous.orders)}
         spark={ordersSpark}
+        accent="cyan"
       />
       <KpiCard
         label="Ticket Medio"
         value={formatMoney(current.avg_ticket_cents)}
         change={changeRatio(current.avg_ticket_cents, previous.avg_ticket_cents)}
+        accent="blue"
       />
       <KpiCard
         label="Cancelaciones"
         value={formatPercent(current.cancel_rate)}
         change={changeRatio(current.cancel_rate, previous.cancel_rate)}
         goodWhenUp={false}
+        accent="pink"
       />
     </div>
   );
@@ -148,12 +159,7 @@ async function RevenueCard({ filters }: { filters: DashboardFilters }) {
 
   return (
     <Card className="p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <CardTitle className="text-[14px]">Ingresos en el Tiempo</CardTitle>
-        <span className="text-[10px] uppercase tracking-[0.08em] text-muted">
-          día de servicio · corte 04:00
-        </span>
-      </div>
+      <CardTitle className="mb-5">Ingresos</CardTitle>
       <AreaChart
         data={series.map((point) => ({
           label: formatDayLabel(point.day),
@@ -181,58 +187,32 @@ async function ChannelCard({ filters }: { filters: DashboardFilters }) {
     value: `${formatNumber(slice.orders)} · ${formatMoney(slice.revenue_cents)}`,
     ratio: slice.orders / peak,
     tone: slice.channel === 'kiosk' ? 'lime' : 'cyan',
-    meta: `${formatPercent(slice.order_share)} de los pedidos · ${formatPercent(
-      slice.revenue_share
-    )} de los ingresos`,
   }));
 
   return (
     <Card className="p-5">
-      <div className="mb-1 flex items-baseline justify-between">
+      <div className="mb-5 flex items-baseline justify-between">
         <CardTitle>Origen del Pedido</CardTitle>
-        <span className="font-heading text-[13px] font-bold tabular-nums text-text-primary">
+        <span className="font-heading text-base font-bold tabular-nums text-text-primary">
           {formatNumber(totalOrders)}
         </span>
       </div>
-      <CardLabel className="mb-4">Kiosko vs Web</CardLabel>
       <BarList rows={rows} emptyLabel="Sin pedidos en este período" />
     </Card>
   );
 }
 
-/** Zonas — Sala VIP, Palcos, mesas, y los pedidos sin zona. */
-async function ZoneCard({ filters }: { filters: DashboardFilters }) {
-  const slices = await getZoneBreakdown(filters);
-  const peak = Math.max(1, ...slices.map((s) => s.orders));
-
-  const rows: BarRow[] = slices.map((slice) => {
-    const normalized = slice.label.toLowerCase();
-    return {
-      key: slice.table_id ?? 'unzoned',
-      label: (
-        <ZoneBadge tableId={slice.table_id} label={slice.table_id ? slice.label : null} />
-      ),
-      value: `${formatNumber(slice.orders)} · ${formatMoney(slice.revenue_cents)}`,
-      ratio: slice.orders / peak,
-      tone: !slice.table_id
-        ? 'fade'
-        : normalized.includes('vip')
-          ? 'pink'
-          : normalized.includes('palco')
-            ? 'cyan'
-            : 'lime',
-      meta: `${formatPercent(slice.order_share)} de los pedidos`,
-    };
-  });
+/** Order lifecycle — the operator's primary working view. */
+async function PipelineCard({ filters }: { filters: DashboardFilters }) {
+  const [pipeline, stageDurations] = await Promise.all([
+    getOrderPipeline(filters),
+    getStageDurations(filters),
+  ]);
 
   return (
     <Card className="p-5">
-      <div className="mb-1 flex items-baseline justify-between">
-        <CardTitle>Zonas</CardTitle>
-        <span className="text-[10px] text-muted">{slices.length} activas</span>
-      </div>
-      <CardLabel className="mb-4">Sala VIP · Palcos · Mesas</CardLabel>
-      <BarList rows={rows} emptyLabel="Sin pedidos en este período" />
+      <CardTitle className="mb-5">Pipeline de Pedidos</CardTitle>
+      <Pipeline data={pipeline} stageDurations={stageDurations} />
     </Card>
   );
 }
@@ -281,7 +261,7 @@ async function TopItemsCard({ filters }: { filters: DashboardFilters }) {
               ),
             value: formatNumber(item.quantity),
             ratio: item.quantity / peak,
-            tone: 'lime' as const,
+            tone: CYCLE_TONES[index % CYCLE_TONES.length],
           };
         })}
         emptyLabel="Sin ventas en este período"
@@ -290,54 +270,53 @@ async function TopItemsCard({ filters }: { filters: DashboardFilters }) {
   );
 }
 
-async function FunnelAndLiveCard({ filters }: { filters: DashboardFilters }) {
-  const [funnel, live] = await Promise.all([getStatusFunnel(filters), getLiveOrders(5)]);
-
-  const order = ['confirmed', 'preparing', 'ready', 'completed', 'cancelled'] as const;
-  const peak = Math.max(1, ...order.map((status) => funnel[status] ?? 0));
-
-  const rows: BarRow[] = order.map((status) => ({
-    key: status,
-    label: <StatusBadge status={status} />,
-    value: formatNumber(funnel[status] ?? 0),
-    ratio: (funnel[status] ?? 0) / peak,
-    tone: status === 'cancelled' ? 'pink' : status === 'ready' ? 'lime' : 'cyan',
-  }));
+/**
+ * Live feed. Deliberately unfiltered — it answers "what is happening right now
+ * in my scope", which a date range would contradict.
+ */
+async function LiveOrdersCard() {
+  const live = await getLiveOrders(8);
 
   return (
     <Card className="p-5">
-      <CardTitle className="mb-1">Embudo de Pedidos</CardTitle>
-      <CardLabel className="mb-4">Un pedido puede contar en varios estados</CardLabel>
-      <BarList rows={rows} />
-
-      <div className="mt-5 border-t border-line pt-4">
-        <CardLabel className="mb-2.5">En Vivo</CardLabel>
-        {live.length === 0 ? (
-          <p className="text-[12px] text-muted">Sin pedidos recientes</p>
-        ) : (
-          <ul className="flex flex-col">
-            {live.map((row) => (
-              <li key={row.sub_order_id}>
-                <Link
-                  href={`/orders/${row.order_id}`}
-                  className="flex items-center gap-2 border-b border-line py-1.5 last:border-b-0 hover:bg-surface-container"
-                >
-                  <span className="min-w-[38px] font-heading text-[11px] font-bold tabular-nums text-primary">
-                    #{row.order_number}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-[11px] text-text-primary">
-                    {row.restaurant_name}
-                  </span>
-                  <ChannelBadge channel={row.channel} />
-                  <span className="w-[26px] shrink-0 text-right text-[10px] text-muted">
-                    {formatAgo(row.created_at)}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+      <div className="mb-4 flex items-center justify-between">
+        <CardTitle>En Vivo</CardTitle>
+        <span className="flex items-center gap-1.5 text-2xs uppercase tracking-[0.08em] text-muted">
+          <span className="pulse-dot size-[6px] rounded-full bg-primary" aria-hidden />
+          Últimos pedidos
+        </span>
       </div>
+
+      {live.length === 0 ? (
+        <p className="text-xs text-muted">Sin pedidos recientes.</p>
+      ) : (
+        <ul className="flex flex-col">
+          {live.map((row) => (
+            <li key={row.sub_order_id}>
+              <Link
+                href={`/orders/${row.order_id}`}
+                className="-mx-2 flex items-center gap-2.5 rounded-sm border-b border-line px-2 py-2.5 transition-colors duration-150 last:border-b-0 hover:bg-surface-container"
+              >
+                <Avatar name={row.restaurant_name} fallback={row.restaurant_name} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-heading text-2xs font-bold tabular-nums text-primary">
+                      #{row.order_number}
+                    </span>
+                    <span className="truncate text-2xs text-text-primary">
+                      {row.restaurant_name}
+                    </span>
+                  </div>
+                </div>
+                <StatusBadge status={row.status} />
+                <span className="w-[26px] shrink-0 text-right text-2xs tabular-nums text-muted">
+                  {formatAgo(row.created_at)}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   );
 }
@@ -346,7 +325,7 @@ function KpiSkeleton() {
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {Array.from({ length: 4 }, (_, i) => (
-        <div key={i} className="h-[142px] animate-pulse rounded-[12px] border border-line bg-surface" />
+        <div key={i} className="h-[142px] animate-pulse rounded-lg border border-line bg-surface" />
       ))}
     </div>
   );
@@ -355,7 +334,7 @@ function KpiSkeleton() {
 function CardSkeleton({ height }: { height: number }) {
   return (
     <div
-      className="animate-pulse rounded-[12px] border border-line bg-surface"
+      className="animate-pulse rounded-lg border border-line bg-surface"
       style={{ height }}
     />
   );

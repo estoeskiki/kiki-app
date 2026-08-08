@@ -31,7 +31,7 @@ export function RestaurantPicker({
 
   return (
     <label className="flex items-center gap-2">
-      <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted">
+      <span className="text-2xs font-bold uppercase tracking-[0.08em] text-muted">
         Restaurante
       </span>
       <select
@@ -44,7 +44,7 @@ export function RestaurantPicker({
             router.replace(`${pathname}${buildQuery(params, patch)}`, { scroll: false });
           });
         }}
-        className="rounded-[8px] border border-line bg-surface px-2.5 py-1.5 text-[12px] text-text-primary outline-none focus:border-primary/40"
+        className="rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-text-primary outline-none focus-visible:outline-none focus:border-primary/40"
       >
         {restaurants.map((restaurant) => (
           <option key={restaurant.id} value={restaurant.id}>

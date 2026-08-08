@@ -51,6 +51,10 @@ export const translations = {
     backToRestaurants: 'Volver a restaurantes',
     continueShopping: 'Seguir comprando',
     scrollForMore: 'Más opciones abajo',
+    // Idle guard — "still ordering?" confirmation
+    idleCheckTitle: '¿Sigues ahí?',
+    idleCheckBody: 'Volveremos al inicio en',
+    idleCheckConfirm: 'Sí, sigo aquí',
     multiRestaurantBanner: 'Múltiples restaurantes, un solo pedido',
 
     // Checkout v2 (order-web parity)
@@ -171,6 +175,9 @@ export const translations = {
     backToRestaurants: 'Back to restaurants',
     continueShopping: 'Continue shopping',
     scrollForMore: 'More options below',
+    idleCheckTitle: 'Still there?',
+    idleCheckBody: "We'll return to the start in",
+    idleCheckConfirm: "Yes, I'm still here",
     multiRestaurantBanner: 'Multiple restaurants, one order',
 
     // Checkout v2 (order-web parity)

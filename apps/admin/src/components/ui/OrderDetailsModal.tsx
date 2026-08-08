@@ -13,9 +13,14 @@ import { spacing, borderRadius } from '../../theme/spacing';
 const t = (val: any) => {
   if (!val) return '';
   if (typeof val === 'string') {
-    try { val = JSON.parse(val); } catch {}
+    // Not JSON — a genuine plain-string legacy value (e.g. an order-item
+    // name snapshot stored as text). Return it as-is; it's already a string.
+    try { val = JSON.parse(val); } catch { return val; }
   }
-  return val?.es || val?.en || val || '';
+  // No `|| val` tail here: if es and en are both empty (e.g. an item added
+  // without descriptions), that used to fall through to the raw {es, en}
+  // object — React then crashed rendering it as a child.
+  return val?.es || val?.en || '';
 };
 
 interface OrderDetailsModalProps {

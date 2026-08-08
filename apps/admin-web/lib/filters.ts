@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { DashboardFilterArgs, OrderChannel, OrderStatus } from '@/lib/types';
 import { DEFAULT_TIMEZONE, addDays, startOfLocalDay } from '@/lib/format';
+import { dbId } from '@/lib/validation';
 
 /**
  * The dashboard's filter state lives entirely in the URL.
@@ -31,7 +32,7 @@ export const ORDER_CHANNELS: OrderChannel[] = ['kiosk', 'web'];
 /** Sentinel for the "Sin zona" bucket — orders with table_id IS NULL. */
 export const UNZONED = 'sin-zona';
 
-const uuid = z.string().uuid();
+const uuid = dbId;
 
 /** Comma-separated UUID list, silently dropping anything malformed. */
 const uuidList = z

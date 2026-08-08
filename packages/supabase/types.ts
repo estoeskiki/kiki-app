@@ -327,6 +327,22 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['platform_admins']['Row']>
         Relationships: []
       }
+      // 042: one row per sub_order status transition, written only by the
+      // log_sub_order_status_change trigger — the app never inserts here.
+      order_status_events: {
+        Row: {
+          id: string
+          sub_order_id: string
+          order_id: string
+          restaurant_id: string
+          from_status: OrderStatus
+          to_status: OrderStatus
+          changed_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
     }
     Views: {
       // 034_dashboard_rpcs. security_invoker view over
@@ -407,6 +423,15 @@ export interface Database {
       dashboard_channel_breakdown: { Args: DashboardFilterArgs; Returns: Json }
       dashboard_zone_breakdown: { Args: DashboardFilterArgs; Returns: Json }
       dashboard_status_funnel: { Args: DashboardFilterArgs; Returns: Json }
+      // 040: each order counted once, in the stage of its least advanced live
+      // stall. Prefer this over dashboard_status_funnel, whose per-status counts
+      // overcount multi-stall orders and cannot be turned into percentages.
+      dashboard_order_pipeline: { Args: DashboardFilterArgs; Returns: Json }
+      // 043: avg time spent in each status (confirmed/preparing/ready), built
+      // from order_status_events (042) — only populated going forward from
+      // when that migration landed; there is no way to recover per-stage
+      // timing for orders that transitioned before it existed.
+      dashboard_stage_durations: { Args: DashboardFilterArgs; Returns: Json }
       dashboard_hour_dow_heatmap: { Args: DashboardFilterArgs; Returns: Json }
       dashboard_top_items: { Args: DashboardFilterArgs & { p_limit?: number }; Returns: Json }
     }

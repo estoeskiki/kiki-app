@@ -43,7 +43,7 @@ export function ZonesCard({
       {hint ? <CardLabel className="mb-4">{hint}</CardLabel> : <div className="mb-4" />}
 
       {zones.length === 0 ? (
-        <p className="text-[12px] text-muted">Sin zonas configuradas.</p>
+        <p className="text-xs text-muted">Sin zonas configuradas.</p>
       ) : (
         <ul className="flex flex-col">
           {zones.map((zone) => (
@@ -52,7 +52,7 @@ export function ZonesCard({
               className="flex items-center justify-between gap-2 border-b border-line py-2 last:border-b-0"
             >
               <div className="min-w-0">
-                <div className="truncate text-[13px] font-semibold text-text-primary">
+                <div className="truncate text-sm font-semibold text-text-primary">
                   {zone.label}
                 </div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
@@ -60,7 +60,7 @@ export function ZonesCard({
                     <Badge tone="pink">Nº de mesa manual</Badge>
                   ) : null}
                   {canEdit ? (
-                    <code className="text-[10px] text-muted">
+                    <code className="text-2xs text-muted">
                       QR …{zone.qr_token.slice(-6)}
                     </code>
                   ) : null}
@@ -97,9 +97,9 @@ export function ZonesCard({
             required
             maxLength={60}
             placeholder="p. ej. Palco #3"
-            className="rounded-[7px] border border-line bg-surface-container px-2.5 py-1.5 text-[12px] text-text-primary outline-none focus:border-primary/40"
+            className="rounded-sm border border-line bg-surface-container px-2.5 py-1.5 text-xs text-text-primary outline-none focus-visible:outline-none focus:border-primary/40"
           />
-          <label className="flex items-center gap-2 text-[12px] text-text-primary">
+          <label className="flex items-center gap-2 text-xs text-text-primary">
             <input
               type="checkbox"
               name="allows_manual_number"

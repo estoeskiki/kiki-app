@@ -1,3 +1,4 @@
+import { CONTENT_WIDTH } from '@/components/ui/Container';
 import { Badge, RoleBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardLabel, CardTitle, EmptyState, PageHeading } from '@/components/ui/Card';
@@ -11,7 +12,7 @@ import { updateRestaurant } from '../restaurants/actions';
 export const metadata = { title: 'Ajustes · Kiki' };
 
 const INPUT =
-  'w-full rounded-[8px] border border-line bg-surface-container px-3 py-2 text-[13px] text-text-primary outline-none focus:border-primary/40';
+  'w-full rounded-md border border-line bg-surface-container px-3 py-2 text-sm text-text-primary outline-none focus-visible:outline-none focus:border-primary/40';
 
 /**
  * Per-restaurant identity and branding — the assets the kiosk and the public
@@ -43,7 +44,7 @@ export default async function SettingsPage({
   const administers = canAdminister(viewer);
 
   return (
-    <div className="fade-in px-7 pb-12 pt-6">
+    <div className={`fade-in ${CONTENT_WIDTH} pb-12 pt-6`}>
       <PageHeading
         title="Ajustes"
         subtitle={restaurant ? restaurant.name : undefined}
@@ -126,7 +127,7 @@ export default async function SettingsPage({
                   </div>
                 </form>
               ) : (
-                <p className="text-[12px] text-muted">
+                <p className="text-xs text-muted">
                   Tu rol permite ver estos ajustes pero no modificarlos.
                 </p>
               )}
@@ -138,7 +139,7 @@ export default async function SettingsPage({
                 <Row label="Correo" value={viewer.email} />
                 <Row label="Nombre" value={viewer.display_name ?? '—'} />
                 <div className="flex items-baseline justify-between gap-3 border-b border-line py-2">
-                  <span className="text-[12px] text-muted">Rol</span>
+                  <span className="text-xs text-muted">Rol</span>
                   <RoleBadge role={viewer.role} isPlatformAdmin={viewer.is_platform_admin} />
                 </div>
                 <Row
@@ -148,7 +149,7 @@ export default async function SettingsPage({
                 {viewer.food_court_ids.length > 0 ? (
                   <Row label="Patios de comida" value={String(viewer.food_court_ids.length)} />
                 ) : null}
-                <p className="mt-3 text-[11px] text-muted">
+                <p className="mt-3 text-2xs text-muted">
                   Estas credenciales son las mismas que usas en la app de administración.
                 </p>
               </Card>
@@ -158,18 +159,18 @@ export default async function SettingsPage({
                 <CardLabel className="mb-3">Cómo aparece este local a los clientes</CardLabel>
                 <Row label="Slug" value={`/${restaurant.slug}`} />
                 <div className="flex items-baseline justify-between gap-3 border-b border-line py-2">
-                  <span className="text-[12px] text-muted">Publicado</span>
+                  <span className="text-xs text-muted">Publicado</span>
                   <Badge tone={restaurant.is_active ? 'lime' : 'pink'}>
                     {restaurant.is_active ? 'Sí' : 'Oculto'}
                   </Badge>
                 </div>
                 <div className="flex items-baseline justify-between gap-3 py-2">
-                  <span className="text-[12px] text-muted">Aceptando pedidos</span>
+                  <span className="text-xs text-muted">Aceptando pedidos</span>
                   <Badge tone={restaurant.is_open ? 'lime' : 'neutral'}>
                     {restaurant.is_open ? 'Sí' : 'No'}
                   </Badge>
                 </div>
-                <p className="mt-2 text-[11px] text-muted">
+                <p className="mt-2 text-2xs text-muted">
                   Ambos se cambian desde la ficha del restaurante.
                 </p>
               </Card>
@@ -193,8 +194,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-line py-2 last:border-b-0">
-      <span className="shrink-0 text-[12px] text-muted">{label}</span>
-      <span className="truncate text-right text-[12px] font-semibold text-text-primary">{value}</span>
+      <span className="shrink-0 text-xs text-muted">{label}</span>
+      <span className="truncate text-right text-xs font-semibold text-text-primary">{value}</span>
     </div>
   );
 }

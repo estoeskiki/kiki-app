@@ -12,7 +12,13 @@ export const LOCALE = 'es-PA';
 
 const currencyFormatters = new Map<string, Intl.NumberFormat>();
 
-/** Integer cents -> "$12.43". Never do this arithmetic anywhere else. */
+/**
+ * Integer cents -> "$12.43". Never do this arithmetic anywhere else.
+ *
+ * currencyDisplay: 'narrowSymbol' is what keeps this reading as money. es-PA
+ * renders USD as the ISO code by default — "USD 76.25" — which is correct but
+ * looks like a data dump rather than a figure. narrowSymbol gives "$76.25".
+ */
 export function formatMoney(cents: number | null | undefined, currency = DEFAULT_CURRENCY): string {
   const value = (cents ?? 0) / 100;
   let fmt = currencyFormatters.get(currency);
@@ -20,6 +26,7 @@ export function formatMoney(cents: number | null | undefined, currency = DEFAULT
     fmt = new Intl.NumberFormat(LOCALE, {
       style: 'currency',
       currency,
+      currencyDisplay: 'narrowSymbol',
       maximumFractionDigits: 2,
     });
     currencyFormatters.set(currency, fmt);
@@ -34,6 +41,7 @@ export function formatMoneyCompact(cents: number | null | undefined, currency = 
   return new Intl.NumberFormat(LOCALE, {
     style: 'currency',
     currency,
+    currencyDisplay: 'narrowSymbol',
     notation: 'compact',
     maximumFractionDigits: 1,
   }).format(value);
@@ -89,6 +97,26 @@ export function formatDayLabel(day: string): string {
 }
 
 /** Compact elapsed time for live feeds: "ahora", "4m", "2h", "3d". */
+/**
+ * Whole seconds -> "18m", "1h 24m", "3d 2h". Used for fulfillment/stage
+ * durations, which are computed server-side and always non-negative integers.
+ */
+export function formatDuration(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.round(totalSeconds));
+  if (seconds < 60) return `${seconds}s`;
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours < 24) return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+}
+
 export function formatAgo(iso: string, now: number = Date.now()): string {
   const seconds = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 1000));
   if (seconds < 10) return 'ahora';

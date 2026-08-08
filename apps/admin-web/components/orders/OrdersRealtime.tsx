@@ -61,7 +61,7 @@ export function OrdersRealtime({ enabled = true }: { enabled?: boolean }) {
   }, [enabled, router]);
 
   return (
-    <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.08em] text-muted">
+    <span className="flex items-center gap-1.5 text-2xs uppercase tracking-[0.08em] text-muted">
       <span className="pulse-dot size-[6px] rounded-full bg-primary shadow-[0_0_6px_var(--color-primary)]" />
       {pendingCount > 0 ? `${pendingCount} cambio${pendingCount === 1 ? '' : 's'}…` : 'En vivo'}
     </span>

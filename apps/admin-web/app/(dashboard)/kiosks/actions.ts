@@ -3,6 +3,7 @@
 import { randomBytes } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { dbId } from '@/lib/validation';
 import { canAdminister, requireViewer } from '@/lib/auth/dal';
 import { assertFoodCourtInScope, assertRestaurantInScope } from '@/lib/auth/scope';
 import { createClient } from '@/lib/supabase/server';
@@ -26,7 +27,7 @@ import { createClient } from '@/lib/supabase/server';
  * exactly once — it is never rendered again after the page that created it.
  */
 
-const uuid = z.string().uuid();
+const uuid = dbId;
 
 function fail(message: string): never {
   throw new Error(message);

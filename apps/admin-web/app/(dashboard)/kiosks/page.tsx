@@ -1,3 +1,4 @@
+import { CONTENT_WIDTH } from '@/components/ui/Container';
 import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardLabel, EmptyState, PageHeading } from '@/components/ui/Card';
@@ -69,7 +70,7 @@ export default async function KiosksPage() {
   const canDelete = viewer.is_platform_admin || viewer.role === 'owner';
 
   return (
-    <div className="fade-in px-7 pb-12 pt-6">
+    <div className={`fade-in ${CONTENT_WIDTH} pb-12 pt-6`}>
       <PageHeading
         title="Kioskos"
         subtitle={`${rows.length} dispositivo${rows.length === 1 ? '' : 's'} registrado${rows.length === 1 ? '' : 's'}`}
@@ -131,7 +132,7 @@ export default async function KiosksPage() {
                     </TD>
                     <TD>
                       {/* Only the tail: this column is the pairing secret. */}
-                      <code className="text-[11px] text-muted">…{device.token_hash.slice(-4)}</code>
+                      <code className="text-2xs text-muted">…{device.token_hash.slice(-4)}</code>
                     </TD>
                     <TD>
                       <div className="flex items-center justify-end gap-2">
@@ -140,7 +141,7 @@ export default async function KiosksPage() {
                           <input type="hidden" name="value" value={String(!device.is_active)} />
                           <button
                             type="submit"
-                            className="text-[10px] font-bold uppercase tracking-[0.06em] text-muted transition-colors hover:text-text-primary"
+                            className="text-2xs font-bold uppercase tracking-[0.06em] text-muted transition-colors hover:text-text-primary"
                           >
                             {device.is_active ? 'Revocar' : 'Reactivar'}
                           </button>
@@ -170,7 +171,7 @@ export default async function KiosksPage() {
 
       <Card className="mt-4 max-w-[820px] p-5">
         <CardLabel className="mb-1">Emitir token</CardLabel>
-        <p className="mb-4 text-[11px] text-muted">
+        <p className="mb-4 text-2xs text-muted">
           Revocar un token impide nuevos emparejamientos con él. Un kiosko ya emparejado conserva su
           sesión hasta que se reinicie la app.
         </p>
@@ -201,10 +202,10 @@ function FleetStat({
         aria-hidden
       />
       <div>
-        <div className="font-heading text-[28px] font-bold leading-none tracking-[-0.04em] tabular-nums text-text-primary">
+        <div className="font-heading text-3xl font-bold leading-none tracking-[-0.04em] tabular-nums text-text-primary">
           {value}
         </div>
-        <div className="mt-0.5 text-[11px] text-muted">{label}</div>
+        <div className="mt-0.5 text-2xs text-muted">{label}</div>
       </div>
     </Card>
   );

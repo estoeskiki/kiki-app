@@ -29,7 +29,7 @@ export function AreaChart({
   if (data.length === 0) {
     return (
       <div
-        className="flex items-center justify-center text-[12px] text-muted"
+        className="flex items-center justify-center text-xs text-muted"
         style={{ height }}
       >
         Sin datos en este período
@@ -74,6 +74,12 @@ export function AreaChart({
     <div className="relative w-full">
       <svg
         viewBox={`0 0 ${W} ${height}`}
+        // Without this the default xMidYMid/meet preserves the 800:190 ratio, so
+        // on a wide card the chart scales to fit the fixed HEIGHT and renders as
+        // a small centred drawing with dead gutters either side. The chart is
+        // meant to fill its container, and stroke widths are small enough that
+        // the non-uniform scale is not visible.
+        preserveAspectRatio="none"
         className="block w-full"
         style={{ height }}
         onMouseLeave={() => setActive(null)}
@@ -154,7 +160,7 @@ export function AreaChart({
 
       {hovered ? (
         <div
-          className="pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap rounded-[8px] border border-line-strong bg-surface-container px-2.5 py-1.5 text-[12px]"
+          className="pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap rounded-md border border-line-strong bg-surface-container px-2.5 py-1.5 text-xs"
           style={{
             top: Math.max(4, (hovered.y / height) * height - 42),
             left: `${Math.min(Math.max((hovered.x / W) * 100, 10), 90)}%`,
