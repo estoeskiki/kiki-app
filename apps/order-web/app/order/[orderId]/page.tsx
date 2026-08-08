@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { getOrderStatus } from '@/lib/api';
 import { formatCurrency } from '@/lib/currency';
+import { getYappyAccount } from '@/lib/yappyAccounts';
 import { useSessionStore } from '@/store/useSessionStore';
 import type { OrderStatusResult } from '@/lib/types';
 
@@ -256,6 +258,9 @@ export default function OrderTrackingPage() {
             const subTerminal = sub.status === 'completed' || subCancelled;
             const subCurrent = stepIndex(sub.status);
             const subProgressPct = (subCurrent / (STEPS.length - 1)) * 100;
+            // Offer paying ahead by Yappy only while the order is still being
+            // worked (not completed/cancelled) and we know this stall's handle.
+            const yappyHandle = subTerminal ? null : getYappyAccount(sub.restaurant_name);
             return (
               <div key={i} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
                 <div className="flex flex-col gap-3 border-b border-white/10 bg-white/[0.03] px-4 py-3">
@@ -309,6 +314,25 @@ export default function OrderTrackingPage() {
                     </div>
                   )}
                 </div>
+
+                {yappyHandle && (
+                  <div className="border-b border-white/10 px-4 py-3">
+                    <div className="flex items-center gap-3 rounded-xl border border-[#2ca5df]/40 bg-[#2ca5df]/10 px-3 py-2.5">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
+                        <Image src="/yappy-logo.png" alt="Yappy" width={40} height={40} className="object-contain" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-body text-sm font-bold leading-snug text-white">
+                          ¿Quieres adelantar el pago?
+                        </p>
+                        <p className="mt-0.5 font-body text-xs leading-snug text-white/70">
+                          Págalo por Yappy a <span className="font-bold text-white">{yappyHandle}</span> mientras preparamos tu orden.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <ul className="flex flex-col divide-y divide-white/10">
                   {sub.items.map((item, j) => (
                     <li key={j} className="flex items-start gap-3 px-4 py-2.5 font-body text-sm text-white/70">
