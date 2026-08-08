@@ -258,9 +258,13 @@ export default function OrderTrackingPage() {
             const subTerminal = sub.status === 'completed' || subCancelled;
             const subCurrent = stepIndex(sub.status);
             const subProgressPct = (subCurrent / (STEPS.length - 1)) * 100;
-            // Offer paying ahead by Yappy only while the order is still being
-            // worked (not completed/cancelled) and we know this stall's handle.
-            const yappyHandle = subTerminal ? null : getYappyAccount(sub.restaurant_name);
+            // Offer paying ahead by Yappy only when the customer chose Yappy,
+            // the order is still being worked (not completed/cancelled), and we
+            // know this stall's directory handle.
+            const yappyHandle =
+              subTerminal || order.payment_method !== 'yappy'
+                ? null
+                : getYappyAccount(sub.restaurant_name);
             return (
               <div key={i} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
                 <div className="flex flex-col gap-3 border-b border-white/10 bg-white/[0.03] px-4 py-3">
@@ -326,7 +330,7 @@ export default function OrderTrackingPage() {
                           ¿Quieres adelantar el pago?
                         </p>
                         <p className="mt-0.5 font-body text-xs leading-snug text-white/70">
-                          Págalo por Yappy a <span className="font-bold text-white">{yappyHandle}</span> mientras preparamos tu orden.
+                          Págalo por Yappy mientras preparamos tu orden. Nos encuentras en el directorio Yappy de comercios como <span className="font-bold text-white">{yappyHandle}</span>.
                         </p>
                       </div>
                     </div>
