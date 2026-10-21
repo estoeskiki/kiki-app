@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { OrderType, RestaurantSummary, StorefrontData, ZoneSummary } from '@/lib/types';
+import { useCartStore } from './useCartStore';
 
 export type OrderingMode = 'restaurant' | 'food_court' | null;
 
@@ -63,6 +64,16 @@ export const useSessionStore = create<SessionState>()(
 
       setFromStorefront: (slug, tableToken, data) => {
         const state = get();
+
+        // The cart persists in localStorage (survives tabs and days) while
+        // this session is per-tab, so a cart filled at one venue would follow
+        // the customer into the next one. Keep only lines from restaurants of
+        // the storefront being opened — the same venue keeps its cart intact.
+        if (data.type === 'restaurant') {
+          useCartStore.getState().retainRestaurants([data.restaurant.id]);
+        } else if (data.type === 'food_court') {
+          useCartStore.getState().retainRestaurants(data.restaurants.map((r) => r.id));
+        }
 
         if (data.type === 'restaurant') {
           const isSameStorefront = state.mode === 'restaurant' && state.restaurantId === data.restaurant.id;

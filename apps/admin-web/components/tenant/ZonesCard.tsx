@@ -2,6 +2,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardLabel, CardTitle } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
+import { OrderLinkActions } from '@/components/tenant/OrderLink';
+import { zoneOrderLink } from '@/lib/orderSite';
 import { createZone, setZoneActive } from '@/app/(dashboard)/restaurants/actions';
 
 export type ZoneRow = {
@@ -18,9 +20,9 @@ export type ZoneRow = {
  * filter bar filters by.
  *
  * qr_token is the bearer credential embedded in the printed QR: anyone holding
- * it can open that zone's storefront. It is shown truncated and only to users
- * who can already administer the zone, and it is never accepted as input — the
- * schema generates it.
+ * it can open that zone's storefront. Its ordering link is shown truncated and
+ * only to users who can already administer the zone (copy/open use the full
+ * URL), and it is never accepted as input — the schema generates it.
  */
 export function ZonesCard({
   zones,
@@ -46,44 +48,50 @@ export function ZonesCard({
         <p className="text-xs text-muted">Sin zonas configuradas.</p>
       ) : (
         <ul className="flex flex-col">
-          {zones.map((zone) => (
-            <li
-              key={zone.id}
-              className="flex items-center justify-between gap-2 border-b border-line py-2 last:border-b-0"
-            >
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-text-primary">
-                  {zone.label}
-                </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                  {zone.allows_manual_number ? (
-                    <Badge tone="pink">Nº de mesa manual</Badge>
-                  ) : null}
-                  {canEdit ? (
-                    <code className="text-2xs text-muted">
-                      QR …{zone.qr_token.slice(-6)}
+          {zones.map((zone) => {
+            const link = canEdit ? zoneOrderLink(zone.qr_token) : null;
+            return (
+              <li
+                key={zone.id}
+                className="flex items-center justify-between gap-3 border-b border-line py-2.5 last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate text-sm font-semibold text-text-primary">
+                      {zone.label}
+                    </span>
+                    {zone.allows_manual_number ? (
+                      <Badge tone="pink">Nº de mesa manual</Badge>
+                    ) : null}
+                  </div>
+                  {link ? (
+                    <code className="mt-0.5 block truncate text-2xs text-muted" title="Link de pedidos">
+                      {link.display}
                     </code>
                   ) : null}
                 </div>
-              </div>
 
-              {canEdit ? (
-                <form action={setZoneActive}>
-                  <input type="hidden" name="id" value={zone.id} />
-                  <input type="hidden" name="value" value={String(!zone.is_active)} />
-                  <button type="submit" aria-pressed={zone.is_active} className="cursor-pointer">
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {link ? <OrderLinkActions url={link.url} /> : null}
+                  {canEdit ? (
+                    <form action={setZoneActive} className="ml-1">
+                      <input type="hidden" name="id" value={zone.id} />
+                      <input type="hidden" name="value" value={String(!zone.is_active)} />
+                      <button type="submit" aria-pressed={zone.is_active} className="cursor-pointer">
+                        <Badge tone={zone.is_active ? 'lime' : 'neutral'}>
+                          {zone.is_active ? 'Activa' : 'Inactiva'}
+                        </Badge>
+                      </button>
+                    </form>
+                  ) : (
                     <Badge tone={zone.is_active ? 'lime' : 'neutral'}>
                       {zone.is_active ? 'Activa' : 'Inactiva'}
                     </Badge>
-                  </button>
-                </form>
-              ) : (
-                <Badge tone={zone.is_active ? 'lime' : 'neutral'}>
-                  {zone.is_active ? 'Activa' : 'Inactiva'}
-                </Badge>
-              )}
-            </li>
-          ))}
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 

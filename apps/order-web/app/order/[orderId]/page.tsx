@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getOrderStatus } from '@/lib/api';
+import { getSimulatedOrderStatus, isSimulatedOrderId } from '@/lib/demo';
 import { formatCurrency } from '@/lib/currency';
 import { useSessionStore } from '@/store/useSessionStore';
 import type { OrderStatusResult } from '@/lib/types';
@@ -92,7 +93,11 @@ export default function OrderTrackingPage() {
 
     async function poll() {
       try {
-        const result = await getOrderStatus(orderId);
+        // demo-2 orders never reach the database — read them from this
+        // browser instead, with status derived from elapsed time.
+        const result = isSimulatedOrderId(orderId)
+          ? getSimulatedOrderStatus(orderId)
+          : await getOrderStatus(orderId);
         if (cancelled) return;
         if (result === 'expired') {
           // Permanent — stop polling, the window never reopens.
@@ -227,7 +232,7 @@ export default function OrderTrackingPage() {
           </div>
         </div>
 
-        {!isTerminal && (order.payment_method === 'yappy' || order.payment_method === 'card_on_delivery') && (
+        {!isTerminal && order.payment_status !== 'paid' && (order.payment_method === 'yappy' || order.payment_method === 'card_on_delivery') && (
           <div
             className="fade-up-item flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3.5"
             style={{ animationDelay: '140ms' }}

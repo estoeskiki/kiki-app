@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
     const menuItemIds = [...new Set(body.items.map((i) => i.menuItemId))]
     const [restaurantsResult, menuResult] = await Promise.all([
       foodCourtId
-        ? supabaseAdmin.from('restaurants').select('id, name, tax_rate, is_open').eq('food_court_id', foodCourtId)
+        ? supabaseAdmin.from('restaurants').select('id, name, tax_rate, is_open, food_courts(is_demo)').eq('food_court_id', foodCourtId)
         : supabaseAdmin.from('restaurants').select('id, name, tax_rate, is_open').eq('id', restaurantId),
       supabaseAdmin
         .from('menu_items')
@@ -212,6 +212,14 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'restaurant_not_found' }, 404)
     }
     const restaurantById = new Map(restaurants.map((r) => [r.id, r]))
+
+    // Demo food courts (migration 047) simulate payment in the browser, so
+    // their orders arrive already paid. Read from the DB, never from the
+    // client — a real venue's order can't be marked paid this way.
+    const isDemo = foodCourtId
+      ? restaurants.some((r: any) => r.food_courts?.is_demo === true)
+      : false
+    const paymentStatus = isDemo ? 'paid' : 'pending'
 
     if (menuError || !menuItems) {
       return jsonResponse({ error: 'failed_to_load_menu' }, 500)
@@ -347,7 +355,7 @@ Deno.serve(async (req) => {
         customer_phone: body.customerPhone ?? null,
         channel,
         payment_method: body.paymentMethod,
-        payment_status: 'pending',
+        payment_status: paymentStatus,
         table_id: tableId,
         table_label: tableLabel,
         table_number: tableNumber,
@@ -377,7 +385,7 @@ Deno.serve(async (req) => {
           total: plan.total,
           channel,
           payment_method: body.paymentMethod,
-          payment_status: 'pending',
+          payment_status: paymentStatus,
           table_label: tableLabel,
           table_number: tableNumber,
           delivery_address: body.deliveryAddress ?? null,

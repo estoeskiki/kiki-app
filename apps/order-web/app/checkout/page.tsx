@@ -6,11 +6,16 @@ import { useCartStore } from '@/store/useCartStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useLastOrderStore } from '@/store/useLastOrderStore';
 import { createWebOrder, validateCart, CartInvalidError } from '@/lib/api';
+import { formatCurrency } from '@/lib/currency';
 import { Header } from '@/components/layout/Header';
 import { CartItemRow } from '@/components/cart/CartItemRow';
 import { CartSummary } from '@/components/cart/CartSummary';
 import { Button } from '@/components/ui/Button';
+import { DemoPaymentOverlay, type DemoPaymentPhase } from '@/components/checkout/DemoPaymentOverlay';
+import { createSimulatedOrder, getDemo } from '@/lib/demo';
 import type { PaymentMethod } from '@/lib/types';
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Digits or dashes only, at most one dash — filters as the customer types
 // rather than validating after the fact, so it's impossible to end up with
@@ -38,6 +43,7 @@ export default function CheckoutPage() {
   const foodCourtId = useSessionStore((s) => s.foodCourtId);
   const tableToken = useSessionStore((s) => s.tableToken);
   const tableId = useSessionStore((s) => s.tableId);
+  const tableLabel = useSessionStore((s) => s.tableLabel);
   const tableAllowsManualNumber = useSessionStore((s) => s.tableAllowsManualNumber);
   const zones = useSessionStore((s) => s.zones);
   const setTable = useSessionStore((s) => s.setTable);
@@ -46,6 +52,9 @@ export default function CheckoutPage() {
   const orderType = useSessionStore((s) => s.orderType);
   const setOrderType = useSessionStore((s) => s.setOrderType);
   const getTaxRate = useSessionStore((s) => s.getTaxRate);
+  // Demo storefronts (/demo-1, /demo-2) pay "online" through a simulated
+  // gateway instead of on delivery — see lib/demo.ts.
+  const demo = getDemo(tableToken);
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card_on_delivery');
   const [customerName, setCustomerName] = useState('');
@@ -56,6 +65,7 @@ export default function CheckoutPage() {
   // multiple restaurants (food court mode).
   const [notesByRestaurant, setNotesByRestaurant] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentPhase, setPaymentPhase] = useState<DemoPaymentPhase | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Restaurants that closed / items that went unavailable since browsing.
   // Populated by the soft pre-check on mount and by a submit-time rejection.
@@ -120,7 +130,7 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
     setError(null);
     try {
-      const { orderId, orderNumber } = await createWebOrder({
+      const placeOrder = () => createWebOrder({
         restaurantId: restaurantId ?? undefined,
         foodCourtId: foodCourtId ?? undefined,
         tableToken: tableToken ?? undefined,
@@ -142,12 +152,38 @@ export default function CheckoutPage() {
           selectedOptionIds: Object.values(item.selectedCustomizations).flat(),
         })),
       });
+
+      let placed: { orderId: string; orderNumber: number };
+      if (demo) {
+        // Hold the spinner for a beat even when the order is placed instantly,
+        // so it reads as a payment being processed.
+        setPaymentPhase('processing');
+        [placed] = await Promise.all([
+          demo.simulated
+            ? createSimulatedOrder({
+                groups,
+                getTaxRate,
+                orderType,
+                paymentMethod,
+                tableLabel,
+                tableNumber: tableAllowsManualNumber ? tableNumber.trim() || null : null,
+              })
+            : placeOrder(),
+          wait(1600),
+        ]);
+        setPaymentPhase('approved');
+        await wait(900);
+      } else {
+        placed = await placeOrder();
+      }
+      const { orderId, orderNumber } = placed;
       // Cart is cleared on the thank-you bridge screen's mount, not here — so
       // this page's empty-cart state doesn't flash for a frame while the
       // route transition is in flight.
       setLastOrder({ orderId, orderNumber, customerName: customerName.trim() });
       router.replace(`/order/${orderId}/thank-you`);
     } catch (err: any) {
+      setPaymentPhase(null);
       // A last-second race (closed/unavailable between our pre-check and submit)
       // comes back structured — surface it as banners, not a raw error string.
       if (err instanceof CartInvalidError) {
@@ -331,7 +367,9 @@ export default function CheckoutPage() {
 
         <section className="flex flex-col gap-2">
           <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Pago</h2>
-          <p className="font-body text-xs text-text-muted">El pedido se paga cuando te lo entreguen.</p>
+          <p className="font-body text-xs text-text-muted">
+            {demo ? 'Demo: el pago se simula, no se cobra nada.' : 'El pedido se paga cuando te lo entreguen.'}
+          </p>
           {(['yappy', 'card_on_delivery'] as const).map((method) => (
             <button
               key={method}
@@ -340,7 +378,8 @@ export default function CheckoutPage() {
                 }`}
             >
               <span className="font-body text-sm font-semibold text-text-primary">
-                {method === 'yappy' ? 'Yappy (en entrega)' : 'Tarjeta (en entrega)'}
+                {method === 'yappy' ? 'Yappy' : 'Tarjeta'}
+                {demo ? '' : ' (en entrega)'}
               </span>
               {paymentMethod === method && <span className="text-primary">✓</span>}
             </button>
@@ -352,8 +391,10 @@ export default function CheckoutPage() {
         {error && <p className="font-body text-sm text-error">{error}</p>}
 
         <Button onClick={handleSubmit} disabled={!canSubmit} size="xl" className="w-full">
-          {isSubmitting ? 'Enviando pedido…' : 'Confirmar pedido'}
+          {isSubmitting ? 'Enviando pedido…' : demo ? `Pagar ${formatCurrency(subtotal + tax)}` : 'Confirmar pedido'}
         </Button>
+
+        {paymentPhase && <DemoPaymentOverlay phase={paymentPhase} method={paymentMethod} total={subtotal + tax} />}
 
         <p className="mt-2 text-center font-body font-bold text-xs tracking-[-0.02em] text-text-primary">
           powered by <span className="font-heading font-bold tracking-[-0.036em] text-text-primary">kiki</span>

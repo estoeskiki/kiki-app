@@ -14,6 +14,8 @@ interface CartState {
   removeItem: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, newQty: number) => void;
   clearCart: () => void;
+  /** Drop lines from restaurants outside the storefront being opened. */
+  retainRestaurants: (restaurantIds: string[]) => void;
   getSubtotal: () => number;
   /** Group items by restaurant — used for the multi-restaurant (mall) cart view */
   getItemsByRestaurant: () => { restaurantId: string; restaurantName: string; items: CartItem[] }[];
@@ -73,6 +75,12 @@ export const useCartStore = create<CartState>()(
       },
 
       clearCart: () => set({ items: [] }),
+
+      retainRestaurants: (restaurantIds) => {
+        const keep = new Set(restaurantIds);
+        if (get().items.every((item) => keep.has(item.restaurantId))) return;
+        set((state) => ({ items: state.items.filter((item) => keep.has(item.restaurantId)) }));
+      },
 
       getSubtotal: () => get().items.reduce((sum, item) => sum + item.lineTotal, 0),
 

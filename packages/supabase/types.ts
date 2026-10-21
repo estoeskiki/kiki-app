@@ -75,6 +75,7 @@ export interface Database {
           address: string | null
           logo_url: string | null
           created_at: string
+          is_demo: boolean
         }
         Insert: Partial<Database['public']['Tables']['food_courts']['Row']> & { name: string; slug: string }
         Update: Partial<Database['public']['Tables']['food_courts']['Row']>

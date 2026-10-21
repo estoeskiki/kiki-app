@@ -41,7 +41,7 @@ export default async function FoodCourtDetailPage({
 
   const { data: foodCourt } = await supabase
     .from('food_courts')
-    .select('id, name, slug, address')
+    .select('id, name, slug, address, is_demo')
     .eq('id', foodCourtId)
     .maybeSingle();
 
@@ -108,6 +108,7 @@ export default async function FoodCourtDetailPage({
           {foodCourt.name}
         </h1>
         <Badge tone="neutral">/{foodCourt.slug}</Badge>
+        {foodCourt.is_demo ? <Badge tone="pink">Demo</Badge> : null}
       </div>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">

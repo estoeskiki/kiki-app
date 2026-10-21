@@ -37,6 +37,9 @@ const nextConfig: NextConfig = {
       // restaurants/food courts. Remove once those are replaced with real
       // uploads to storefront-media.
       { protocol: 'https', hostname: 'picsum.photos' },
+      // Unsplash: menu + welcome photos of the demo food courts (migration
+      // 047, /demo-1 and /demo-2). Unsplash allows hotlinking these.
+      { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
 };
