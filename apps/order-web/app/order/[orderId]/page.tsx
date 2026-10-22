@@ -229,6 +229,11 @@ export default function OrderTrackingPage() {
                 {order.table_number ? ` · Mesa ${order.table_number}` : ''}
               </span>
             )}
+            {order.payment_status === 'paid' && (
+              <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 font-body text-xs font-semibold text-primary">
+                ✓ Pagado{order.payment_method === 'yappy' ? ' con Yappy' : ''}
+              </span>
+            )}
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Space_Grotesk, Syne } from 'next/font/google';
 import './globals.css';
+import { YappyWaitingOverlay } from '@/components/checkout/YappyWaitingOverlay';
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -29,7 +30,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" className={`${spaceGrotesk.variable} ${syne.variable} h-full`}>
-      <body className="min-h-full font-body antialiased">{children}</body>
+      <body className="min-h-full font-body antialiased">
+        {children}
+        {/* Global so a Yappy payment in flight resumes on any page after a reload. */}
+        <YappyWaitingOverlay />
+      </body>
     </html>
   );
 }
