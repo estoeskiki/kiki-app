@@ -4,7 +4,7 @@ import { X, Phone, MapPin } from 'lucide-react-native';
 import { Order } from '../../data/types';
 import { StatusBadge } from './StatusBadge';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { paymentMethodLabel } from '../../utils/orderLabels';
+import { paymentMethodLabel, paymentStatusLabel } from '../../utils/orderLabels';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/useTheme';
 import { fonts, fontSizes } from '../../theme/typography';
@@ -131,6 +131,9 @@ export function OrderDetailsModal({
                       <View style={[styles.dot, { backgroundColor: colors.border }]} />
                       <Text style={[styles.orderType, { color: colors.primary }]}>
                         {paymentMethodLabel(order.paymentMethod)}
+                      </Text>
+                      <Text style={[styles.orderType, { color: order.paymentStatus === 'paid' ? colors.success : colors.warning, fontWeight: '800' }]}>
+                        {paymentStatusLabel(order.paymentStatus)}
                       </Text>
                     </>
                   )}

@@ -79,7 +79,7 @@ export const printTicket = async (order: Order, restaurantName: string = 'Kiki',
         console.log(`Ubicación: ${order.tableLabel}${order.tableNumber ? ` · Mesa ${order.tableNumber}` : ''}`);
       }
       if (order.paymentMethod) {
-        console.log(`Pago: ${paymentMethodLabel(order.paymentMethod)}`);
+        console.log(`Pago: ${paymentMethodLabel(order.paymentMethod)} - ${order.paymentStatus === 'paid' ? 'PAGADO' : 'POR COBRAR'}`);
       }
       console.log(`----------------------------------------`);
       order.items.forEach(item => {
@@ -119,7 +119,7 @@ export const printTicket = async (order: Order, restaurantName: string = 'Kiki',
         await SenraisePrinter.printText(`Ubicación: ${order.tableLabel}${order.tableNumber ? ` · Mesa ${order.tableNumber}` : ''}\n`);
       }
       if (order.paymentMethod) {
-        await SenraisePrinter.printText(`Pago: ${paymentMethodLabel(order.paymentMethod)}\n`);
+        await SenraisePrinter.printText(`Pago: ${paymentMethodLabel(order.paymentMethod)} - ${order.paymentStatus === 'paid' ? 'PAGADO' : 'POR COBRAR'}\n`);
       }
       await SenraisePrinter.printText("--------------------------------\n");
 

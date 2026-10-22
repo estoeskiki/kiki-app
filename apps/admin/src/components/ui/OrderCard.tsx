@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Order } from '../../data/types';
 import { StatusBadge } from './StatusBadge';
-import { paymentMethodLabel } from '../../utils/orderLabels';
+import { paymentMethodLabel, paymentStatusLabel } from '../../utils/orderLabels';
 import { useTheme } from '../../theme/useTheme';
 import { fonts, fontSizes } from '../../theme/typography';
 import { spacing, borderRadius } from '../../theme/spacing';
@@ -92,6 +92,13 @@ export const OrderCard = React.memo(function OrderCard({ order, onPress, onAdvan
             <View style={[styles.typePill, { backgroundColor: colors.primary }]}>
               <Text style={[styles.typeText, { color: colors.onPrimary }]}>
                 {paymentMethodLabel(order.paymentMethod)}
+              </Text>
+            </View>
+          )}
+          {order.paymentMethod && (
+            <View style={[styles.typePill, { backgroundColor: order.paymentStatus === 'paid' ? colors.success : colors.warning }]}>
+              <Text style={[styles.typeText, { color: '#FFFFFF' }]}>
+                {paymentStatusLabel(order.paymentStatus)}
               </Text>
             </View>
           )}

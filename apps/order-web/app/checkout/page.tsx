@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/store/useCartStore';
 import { useSessionStore } from '@/store/useSessionStore';
@@ -13,6 +13,9 @@ import { CartSummary } from '@/components/cart/CartSummary';
 import { Button } from '@/components/ui/Button';
 import { DemoPaymentOverlay, type DemoPaymentPhase } from '@/components/checkout/DemoPaymentOverlay';
 import { createSimulatedOrder, getDemo } from '@/lib/demo';
+import { YappyButton } from '@/components/checkout/YappyButton';
+import { createYappyPayment, getPaymentOptions, reportClientSuccess, YappyCreateError, type YappyTransaction } from '@/lib/yappy';
+import { useYappyPendingStore } from '@/store/useYappyPendingStore';
 import type { PaymentMethod } from '@/lib/types';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -72,6 +75,20 @@ export default function CheckoutPage() {
   const [closedRestaurantIds, setClosedRestaurantIds] = useState<string[]>([]);
   const [unavailableItemIds, setUnavailableItemIds] = useState<string[]>([]);
 
+  // Pay-first Yappy (migration 049): only where get_payment_options says so
+  // (Plaza Mayor, UAT hours). Everywhere else checkout is unchanged.
+  const [yappyNow, setYappyNow] = useState(false);
+  const [yappyNotice, setYappyNotice] = useState<string | null>(null);
+  // Prefilled from the phone field until the customer edits it.
+  const [yappyAlias, setYappyAlias] = useState<string | null>(null);
+  const yappyPending = useYappyPendingStore((s) => s.pending);
+  const startYappyPending = useYappyPendingStore((s) => s.start);
+  const setYappyButtonHint = useYappyPendingStore((s) => s.setButtonHint);
+  const yappyRetryCount = useYappyPendingStore((s) => s.retryCount);
+  // One per cart: repeating a create with the same key returns the same
+  // Yappy transaction instead of charging again. New cart or retry → new key.
+  const checkoutKeyRef = useRef<string | null>(null);
+
   const groups = useMemo(() => getItemsByRestaurant(), [items, getItemsByRestaurant]);
 
   const closedSet = useMemo(() => new Set(closedRestaurantIds), [closedRestaurantIds]);
@@ -101,6 +118,22 @@ export default function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartSignature]);
 
+  useEffect(() => {
+    if (demo || !tableToken) return;
+    let cancelled = false;
+    getPaymentOptions(tableToken).then((o) => {
+      if (!cancelled) setYappyNow(o.yappy);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [demo, tableToken]);
+
+  const fullCartSignature = items.map((it) => `${it.id}:${it.quantity}`).join('|');
+  useEffect(() => {
+    checkoutKeyRef.current = crypto.randomUUID();
+  }, [fullCartSignature, yappyRetryCount]);
+
   const removeBlocked = () => {
     for (const it of items) {
       if (closedSet.has(it.restaurantId) || unavailableSet.has(it.menuItem.id)) removeItem(it.id);
@@ -125,32 +158,75 @@ export default function CheckoutPage() {
 
   const canSubmit = items.length > 0 && customerName.trim().length > 0 && isPhoneValid && !isSubmitting && !hasBlocked;
 
+  const payYappyNow = yappyNow && paymentMethod === 'yappy';
+  const aliasDigits = (yappyAlias ?? phoneDigits).replace(/\D/g, '');
+  const isAliasValid = /^\d{8}$/.test(aliasDigits);
+
+  const orderFields = () => ({
+    tableId: tableId ?? undefined,
+    tableNumber: tableAllowsManualNumber ? tableNumber.trim() || undefined : undefined,
+    orderType,
+    customerName: customerName.trim(),
+    customerPhone: customerPhone.trim() || undefined,
+    notes: Object.fromEntries(
+      Object.entries(notesByRestaurant)
+        .map(([rid, text]) => [rid, text.trim()])
+        .filter(([, text]) => text.length > 0),
+    ),
+    items: items.map((item) => ({
+      menuItemId: item.menuItem.id,
+      restaurantId: item.restaurantId,
+      quantity: item.quantity,
+      selectedOptionIds: Object.values(item.selectedCustomizations).flat(),
+    })),
+  });
+
+  // Called by the Yappy button's click. Creates the charge (no order yet —
+  // yappy-ipn creates it once Yappy confirms) and opens the waiting overlay.
+  const handleYappyCreate = async (): Promise<YappyTransaction | null> => {
+    if (!canSubmit || !isAliasValid || !tableToken || yappyPending) return null;
+    const checkoutKey = checkoutKeyRef.current ?? crypto.randomUUID();
+    checkoutKeyRef.current = checkoutKey;
+    const pendingFor = (paymentId: string) => ({
+      paymentId,
+      checkoutKey,
+      createdAt: Date.now(),
+      customerName: customerName.trim(),
+    });
+    setError(null);
+    try {
+      const tx = await createYappyPayment({ ...orderFields(), tableToken, checkoutKey, aliasYappy: aliasDigits });
+      startYappyPending(pendingFor(tx.paymentId));
+      return tx;
+    } catch (err: any) {
+      if (err instanceof CartInvalidError) {
+        setClosedRestaurantIds(err.closedRestaurantIds);
+        setUnavailableItemIds(err.unavailableItemIds);
+      } else if (err instanceof YappyCreateError && err.paymentId) {
+        // Outcome unknown — Yappy may have charged. Wait on that attempt
+        // rather than letting the customer start another.
+        startYappyPending(pendingFor(err.paymentId));
+      } else if (err instanceof YappyCreateError && err.code === 'yappy_unavailable') {
+        setYappyNow(false);
+        setYappyNotice(err.message);
+      } else {
+        setError(err.message ?? 'No pudimos iniciar el pago con Yappy. Intenta de nuevo.');
+      }
+      return null;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setIsSubmitting(true);
     setError(null);
     try {
       const placeOrder = () => createWebOrder({
+        ...orderFields(),
         restaurantId: restaurantId ?? undefined,
         foodCourtId: foodCourtId ?? undefined,
         tableToken: tableToken ?? undefined,
-        tableId: tableId ?? undefined,
-        tableNumber: tableAllowsManualNumber ? tableNumber.trim() || undefined : undefined,
-        orderType,
-        customerName: customerName.trim(),
-        customerPhone: customerPhone.trim() || undefined,
         paymentMethod,
-        notes: Object.fromEntries(
-          Object.entries(notesByRestaurant)
-            .map(([rid, text]) => [rid, text.trim()])
-            .filter(([, text]) => text.length > 0),
-        ),
-        items: items.map((item) => ({
-          menuItemId: item.menuItem.id,
-          restaurantId: item.restaurantId,
-          quantity: item.quantity,
-          selectedOptionIds: Object.values(item.selectedCustomizations).flat(),
-        })),
       });
 
       let placed: { orderId: string; orderNumber: number };
@@ -368,8 +444,13 @@ export default function CheckoutPage() {
         <section className="flex flex-col gap-2">
           <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-text-muted">Pago</h2>
           <p className="font-body text-xs text-text-muted">
-            {demo ? 'Demo: el pago se simula, no se cobra nada.' : 'El pedido se paga cuando te lo entreguen.'}
+            {demo
+              ? 'Demo: el pago se simula, no se cobra nada.'
+              : payYappyNow
+                ? 'Pagas ahora con Yappy. Tu pedido llega a cocina apenas Yappy confirma el pago.'
+                : 'El pedido se paga cuando te lo entreguen.'}
           </p>
+          {yappyNotice && <p className="font-body text-xs font-semibold text-error">{yappyNotice}</p>}
           {(['yappy', 'card_on_delivery'] as const).map((method) => (
             <button
               key={method}
@@ -378,21 +459,53 @@ export default function CheckoutPage() {
                 }`}
             >
               <span className="font-body text-sm font-semibold text-text-primary">
-                {method === 'yappy' ? 'Yappy' : 'Tarjeta'}
-                {demo ? '' : ' (en entrega)'}
+                {method === 'yappy' ? (yappyNow ? 'Yappy — pagas ahora' : 'Yappy') : 'Tarjeta'}
+                {demo || (method === 'yappy' && yappyNow) ? '' : ' (en entrega)'}
               </span>
               {paymentMethod === method && <span className="text-primary">✓</span>}
             </button>
           ))}
+          {payYappyNow && (
+            <div className="mt-1 flex flex-col gap-1">
+              <span className="font-body text-sm font-semibold text-text-secondary">Número Yappy</span>
+              <input
+                value={yappyAlias ?? phoneDigits}
+                onChange={(e) => setYappyAlias(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="Ej. 61234567"
+                type="tel"
+                inputMode="numeric"
+                className="h-12 rounded-lg border border-border-light bg-surface px-4 font-body text-text-primary outline-none focus:border-primary"
+              />
+              {aliasDigits.length > 0 && !isAliasValid && (
+                <p className="font-body text-xs text-error">Tu número Yappy debe tener 8 dígitos.</p>
+              )}
+            </div>
+          )}
         </section>
 
         <CartSummary subtotal={subtotal} tax={tax} />
 
         {error && <p className="font-body text-sm text-error">{error}</p>}
 
-        <Button onClick={handleSubmit} disabled={!canSubmit} size="xl" className="w-full">
-          {isSubmitting ? 'Enviando pedido…' : demo ? `Pagar ${formatCurrency(subtotal + tax)}` : 'Confirmar pedido'}
-        </Button>
+        {payYappyNow ? (
+          <YappyButton
+            disabled={!canSubmit || !isAliasValid || !!yappyPending}
+            onCreate={handleYappyCreate}
+            onSuccess={() => {
+              const id = useYappyPendingStore.getState().pending?.paymentId;
+              if (id) reportClientSuccess(id);
+            }}
+            onError={(status) => setYappyButtonHint(status)}
+            onUnavailable={() => {
+              setYappyNow(false);
+              setYappyNotice('Yappy no está disponible en este momento. Puedes pagar en entrega.');
+            }}
+          />
+        ) : (
+          <Button onClick={handleSubmit} disabled={!canSubmit} size="xl" className="w-full">
+            {isSubmitting ? 'Enviando pedido…' : demo ? `Pagar ${formatCurrency(subtotal + tax)}` : 'Confirmar pedido'}
+          </Button>
+        )}
 
         {paymentPhase && <DemoPaymentOverlay phase={paymentPhase} method={paymentMethod} total={subtotal + tax} />}
 
