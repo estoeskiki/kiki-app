@@ -25,17 +25,26 @@ import {
   type YappyEnv,
 } from '../_shared/yappy.ts'
 
-// Only the registered storefront domain (and local dev) may call this.
+// Only the registered storefront domain (and local dev on any port) may call
+// this. Defense in depth only — the table token + rate limits are the real
+// gate; CORS doesn't stop a non-browser client.
 const allowedOrigins = new Set(
-  [Deno.env.get('YAPPY_UAT_DOMAIN'), Deno.env.get('YAPPY_PROD_DOMAIN'), 'http://localhost:3000']
+  [Deno.env.get('YAPPY_UAT_DOMAIN'), Deno.env.get('YAPPY_PROD_DOMAIN')]
     .filter((o): o is string => !!o)
-    .map((o) => o.replace(/\/+$/, '')),
+    .map((o) => o.trim().replace(/\/+$/, ''))
+    // The storefront is also reachable as www.<domain>; Yappy itself only
+    // ever sees the registered domain (it's sent server-side), so accepting
+    // the www origin here is safe.
+    .flatMap((o) => [o, o.replace(/^https:\/\/(?!www\.)/, 'https://www.')]),
 )
+const LOCAL_DEV_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/
 
 function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') ?? ''
+  const allowed = allowedOrigins.has(origin) || LOCAL_DEV_ORIGIN.test(origin)
+  if (origin && !allowed) console.warn(`yappy-create: CORS origin not allowed: ${origin}`)
   return {
-    ...(allowedOrigins.has(origin) ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' } : {}),
+    ...(allowed ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' } : {}),
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Max-Age': '86400',
   }

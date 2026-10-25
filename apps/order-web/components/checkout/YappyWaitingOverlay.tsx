@@ -165,7 +165,13 @@ function WaitingCard({ pending }: { pending: YappyPending }) {
   } else if (now < graceEndsAt) {
     icon = 'spin';
     title = 'Esperando confirmación de Yappy';
-    body = 'Si ya confirmaste en Yappy, no pagues de nuevo. Te avisamos apenas llegue la confirmación.';
+    body = (
+      <>
+        Si ya confirmaste en Yappy, no pagues de nuevo. Te avisamos apenas llegue la confirmación.
+        <span className="mt-2 block font-heading text-3xl font-black tabular-nums text-text-primary">{mmss(graceEndsAt - now)}</span>
+        <span className="mt-1 block text-xs text-text-muted">Si no llega, podrás reintentar al terminar.</span>
+      </>
+    );
   } else {
     icon = 'warn';
     title = 'No recibimos confirmación';
