@@ -112,8 +112,10 @@ export async function reportClientSuccess(paymentId: string): Promise<void> {
 
 // ─── Pending attempt (survives a closed tab) ────────────────────────────────
 const PENDING_KEY = 'kiki-yappy-pending';
-// Yappy's 5 min window + the 10 min "don't pay again" grace in the overlay.
-export const PENDING_TTL_MS = 15 * 60 * 1000;
+// Yappy's 5 min window + the 1 min "don't pay again" grace in the overlay.
+// yappy_begin_payment frees the alias at 5:30 so the retry offered here is
+// never refused as alias_busy (keep the two in step).
+export const PENDING_TTL_MS = 6 * 60 * 1000;
 
 export interface YappyPending {
   paymentId: string;

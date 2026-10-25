@@ -93,14 +93,25 @@ export function YappyButton({
       if (!el || busy || cb.current.disabled) return;
       busy = true;
       el.isButtonLoading = true;
+      let paying = false;
       try {
         const tx = await cb.current.onCreate();
         if (tx && !cancelled) {
           el.eventPayment({ transactionId: tx.transactionId, token: tx.token, documentName: tx.documentName });
+          paying = true;
         }
       } finally {
         busy = false;
-        if (el) el.isButtonLoading = false;
+        if (el) {
+          el.isButtonLoading = false;
+          // On click the component adds `disable-btn` (opacity + no pointer
+          // events) to its inner button and only removes it from its own
+          // payment subscription, which never starts if we refused (E005,
+          // rate limit…). Unlock it so the customer can fix and retry.
+          if (!paying) {
+            (el.shadowRoot ?? el).querySelectorAll('.disable-btn').forEach((n) => n.classList.remove('disable-btn'));
+          }
+        }
       }
     };
     const handleSuccess = (e: Event) => cb.current.onSuccess(String((e as CustomEvent).detail ?? ''));
