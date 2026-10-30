@@ -1,7 +1,7 @@
 # Plan: Payments architecture — payment methods per platform, venue vs per-restaurant
 
 Status: **draft, iterating** · Started 2026-10-25 · Owner: Edgar · Rev 4 (mode drives cart, methods per platform)
-Related: `plans/payments-test-matrix.md` (every combination), `plans/yappy-test-plan.md` (Yappy UAT), migrations `049_yappy_payments.sql`, `050_yappy_shorter_grace.sql`
+Related: `plans/payments-phase-2.md` (implementation handover), `plans/payments-test-matrix.md` (every combination), `plans/yappy-test-plan.md` (Yappy UAT), migrations `049_yappy_payments.sql`, `050_yappy_shorter_grace.sql`
 
 ## 1. Context and goals
 
@@ -470,7 +470,7 @@ old `payment_method` values are real → rename in place, keep the old values ac
 1. ~~**Finish Yappy UAT on current code**~~ — done 2026-10-30 (results in `plans/yappy-test-plan.md` §8).
    In parallel from now (calendar time, blocks nothing): Yappy support email, legal question (section 9), Yappy
    prod credentials / onboarding paperwork.
-2. **Schema + security + core + Yappy adapter** — sections 4–7, `payment_mode`, method settings, Plaza Mayor as
+2. **Schema + security + core + Yappy adapter** (step-by-step handover: `plans/payments-phase-2.md`) — sections 4–7, `payment_mode`, method settings, Plaza Mayor as
    today. Checkout (web + kiosk) renders `resolve_payment_options`. UAT follow-ups land here, not in the old
    `yappy_*` code: alias check `^6\d{7}$` + YAPPY-004 message (adapter), successful payments don't count toward
    the per-alias limit (`begin_payment`), end the wait on the button's DENIED / CANCELLED + "Cancelar" (overlay).
