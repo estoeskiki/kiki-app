@@ -467,10 +467,16 @@ old `payment_method` values are real → rename in place, keep the old values ac
 
 ## 8. Phases
 
-1. **Finish Yappy UAT on current code** — T1 (E), T2 (C) once UAT app access arrives.
+1. ~~**Finish Yappy UAT on current code**~~ — done 2026-10-30 (results in `plans/yappy-test-plan.md` §8).
+   In parallel from now (calendar time, blocks nothing): Yappy support email, legal question (section 9), Yappy
+   prod credentials / onboarding paperwork.
 2. **Schema + security + core + Yappy adapter** — sections 4–7, `payment_mode`, method settings, Plaza Mayor as
-   today. Checkout (web + kiosk) renders `resolve_payment_options`. Rerun UAT T1–T5 + `plans/payments-test-matrix.md`
-   layers A–F, H, I at L1.
+   today. Checkout (web + kiosk) renders `resolve_payment_options`. UAT follow-ups land here, not in the old
+   `yappy_*` code: alias check `^6\d{7}$` + YAPPY-004 message (adapter), successful payments don't count toward
+   the per-alias limit (`begin_payment`), end the wait on the button's DENIED / CANCELLED + "Cancelar" (overlay).
+   Then `plans/payments-test-matrix.md` layers A–F, H, I at L1 + Yappy UAT T1–T5 again on the new code.
+2b. **Go live with Yappy** — only after phase 2 passes: prod merchant as an encrypted `payment_accounts` row,
+   Plaza Mayor `venue`, legal blocker cleared, `plans/yappy-test-plan.md` §9 checklist.
 3. **`per_restaurant` + standalone** — single-restaurant cart, restaurant merchants, `payment-admin`, admin grid.
 4. **Kiosk `card_present`** — `payment_terminals`, kiosk writes `payments`.
 5. **Card gateway** — `card_online` + `wallet` adapter (pick gateway).
@@ -499,6 +505,7 @@ old `payment_method` values are real → rename in place, keep the old values ac
 |---|---|
 | 2026-10-30 | Restaurant kiosk in a `venue` food court: pay-first methods without the restaurant's own merchant fall back to the food court's merchant (like web), never for datáfono. Payout derived from the collecting merchant's owner, not the device. |
 | 2026-10-30 | Restaurant kiosks (`device_tokens.restaurant_id`) always act as the restaurant — own menu, own methods (kiosk channel), own merchants — even inside a `venue` food court; web and food court kiosks follow the food court mode. Restaurant-kiosk orders in a venue are directly collected, out of payout. |
+| 2026-10-30 | Sequencing: Yappy goes live only on the new architecture (after phase 2 + rerun UAT), never on the old `yappy_*` code; UAT follow-up fixes are built into phase 2. |
 | 2026-10-30 | Datáfono is tied to one merchant → `card_present` only on **single-restaurant kiosks** (`device_tokens.restaurant_id`), whatever the food court mode; terminal on that restaurant's merchant; food court kiosks never offer it. In a `venue` food court such orders are directly collected and excluded from payout. |
 | 2026-10-30 | Efectivo en entrega dropped (`cash_on_delivery` → `cash_counter`). In `per_restaurant` food courts each restaurant decides its methods, no food court cap. Pay-later in multi-restaurant `venue` orders is collected once per restaurant via `sub_orders.payment_status`, as COS does now. |
 | 2026-10-30 | Rev 4: `food_courts.payment_mode` (venue / per_restaurant) decides cart rule **and** payment owner — no mixed setups, `single_restaurant_cart` dropped. Standalone restaurants = own owner. Method catalog: `card_online`, `wallet`, `yappy`, `card_present`, `cash_counter`, `yappy_on_delivery`, `card_on_delivery`; channels `web`, `kiosk`. `payment_method_settings` (owner × method: channels + merchant) replaces routes and `food_court_payment_methods`. Pay-later methods configured in the same table. `payment_method` values disambiguated. |
