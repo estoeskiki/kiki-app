@@ -532,6 +532,24 @@ Usar el número de prueba de Yappy como `aliasYappy` y la app de pruebas en Andr
 
 **Criterio de "hecho":** T1–T5 pasan, con al menos un caso real E, C y X con hash válido (es requisito del checklist de producción).
 
+### Resultados UAT (Plaza Mayor)
+
+| # | Resultado | Evidencia |
+|---|---|---|
+| T1 | ✅ | 2026-10-29 `99a7dc6a` QBRZY-87919484 (IPN +1:21); 2026-10-30 `b1b4bd9d` LEKTN-65431487 (IPN +24 s). Orden pagada, sub_orders pagadas, totales cuadran |
+| T2 | ✅ | 2026-10-30 `d4725ac9` (C +30 s), `85763508` (C +9 s), hash válido. Un rechazo previo (`9e3be2fe`, 16:27 UTC) nunca recibió IPN (ni C ni X) → expirado por nuestro servidor |
+| T3 | ✅ | `292f12e2`, `a8eb1123`, `230ea27a`, `070b7ea5`: X ~4–7 s tras expirar, hash válido |
+| T4 | ✅ | hash falso → `{"success":false}`, `invalid_hash`, sin cambios. 2026-10-30: IPN real con `status` cambiado a C → `invalid_hash`, pago sigue `executed` |
+| T5 | ✅ | 2026-10-30 IPN real de `b1b4bd9d` reenviado 2× → 200 `{"success":true}`, `already_executed`, 1 sola orden, sin attention |
+| T6 | ✅ | 60800558 → E005 con mensaje claro |
+| T7 | ⚠️ | 7 dígitos bloqueado local + servidor; monto fuera de rango → `amount_out_of_range`. `12345678` (no empieza con 6) llega a Yappy → YAPPY-004 con mensaje genérico (pendiente: validar `^6\d{7}$` + mapear YAPPY-004) |
+| T8 | ➖ | Mismo número y monto (38.97) tras un C en < 1 min → Yappy aceptó y ejecutó (no lo trató como duplicado). Dos activos a la vez los bloquea nuestro servidor (`alias_busy` / mismo intento) |
+| T9 | ✅ | Pagos seguidos 20:50 / 20:55 (2026-10-29) y 21:43–21:44 (2026-10-30) sin 401 |
+| T10 | ✅ | IPN 653–821 ms (logs), reenvíos 0.9–1.7 s |
+| T11 | ✅ | Domingo: `outside_uat_hours`, sin estados corruptos |
+| Reanudar | ✅ | Cerrar pestaña durante la espera y volver → retoma el intento (Edgar, 2026-10-30) |
+| Límite | ✅ | 4º intento del mismo número en 10 min → "Demasiados intentos" (`rate_limited`) |
+
 **Si algo falla:**
 - 401 en validate → `merchantId` o `urlDomain` no coinciden exactamente / credenciales de otro ambiente.
 - 401 en payment-wc → token vencido/reutilizado o se envió con "Bearer".
