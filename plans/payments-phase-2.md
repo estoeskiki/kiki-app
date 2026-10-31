@@ -14,7 +14,11 @@ goal, the files to touch, the exact contract, the checks that prove it is done, 
 ### 0.1 Read before writing code
 1. `plans/payments-architecture.md` — sections 1–7 and the decisions log (section 10). Everything here follows it;
    if something here contradicts it, stop and ask Edgar.
+0. `plans/README.md` — what each of the five plan documents is for and which wins when they disagree.
 2. `plans/payments-test-matrix.md` — the fixture world and cell IDs. Phase 2 must make the L1 layers pass.
+2b. `plans/payments-onboarding.md` — sections 4–5: why S1/S4/S5 include onboarding pieces (adapter fields,
+   `testCredentials`, `onboard_account`, `last_test_*`). The UI itself is phase 3 — do not build it.
+2c. `plans/yappy-test-plan.md` — Yappy API, IPN, hash and UAT reference (S4, S9) and the T1–T5 rerun at the end.
 3. The current code this replaces (all of it is read in step S0):
    `supabase/migrations/049_yappy_payments.sql`, `050_yappy_shorter_grace.sql`,
    `supabase/functions/yappy-create/index.ts`, `yappy-ipn/index.ts`, `_shared/yappy.ts`, `_shared/pricing.ts`,
