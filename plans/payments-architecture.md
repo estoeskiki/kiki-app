@@ -476,7 +476,8 @@ old `payment_method` values are real → rename in place, keep the old values ac
    the per-alias limit (`begin_payment`), end the wait on the button's DENIED / CANCELLED + "Cancelar" (overlay).
    Then `plans/payments-test-matrix.md` layers A–F, H, I at L1 + Yappy UAT T1–T5 again on the new code.
 2b. **Go live with Yappy** — only after phase 2 passes: prod merchant as an encrypted `payment_accounts` row,
-   Plaza Mayor `venue`, legal blocker cleared, `plans/yappy-test-plan.md` §9 checklist.
+   Plaza Mayor `venue`, legal blocker cleared, `plans/yappy-test-plan.md` §9 checklist. Last step: migration adding
+   guard rule `uat_account_on_live_owner` (UAT merchants only on demo food courts, `plans/payments-onboarding.md` 4.4).
 3. **Onboarding UI + `per_restaurant` + standalone** — first the admin-web Pagos card (`plans/payments-onboarding.md`:
    pick methods per platform, add a merchant's credentials, test, preview checkout; its backend lands in phase 2),
    then the single-restaurant cart UI and restaurant merchants.
@@ -505,6 +506,7 @@ old `payment_method` values are real → rename in place, keep the old values ac
 
 | date | decision |
 |---|---|
+| 2026-10-31 | Onboarding answers: Kiki staff enter credentials (no self-service yet); no re-auth for secret writes; after go-live UAT merchants only on demo food courts (guard rule added by the go-live migration); Kiki's own merchants under Settings. |
 | 2026-10-31 | Onboarding of a food court / restaurant is done in admin-web (Pagos card on its page): methods per platform, merchant credentials typed into a form (encrypted by `payment-admin`), credential test, checkout preview. Adapters declare their fields; new providers need code, new merchants never do. A `prod` merchant must pass a test before any method uses it. Backend in phase 2, UI first in phase 3. Spec: `plans/payments-onboarding.md`. |
 | 2026-10-30 | Restaurant kiosk in a `venue` food court: pay-first methods without the restaurant's own merchant fall back to the food court's merchant (like web), never for datáfono. Payout derived from the collecting merchant's owner, not the device. |
 | 2026-10-30 | Restaurant kiosks (`device_tokens.restaurant_id`) always act as the restaurant — own menu, own methods (kiosk channel), own merchants — even inside a `venue` food court; web and food court kiosks follow the food court mode. Restaurant-kiosk orders in a venue are directly collected, out of payout. |
