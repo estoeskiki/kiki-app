@@ -258,6 +258,7 @@ verified by `account_id`.
 | H-25 | `import_env_secret` with `YAPPY_PROD_PLAZAMAYOR_SECRET` | accepted, stored encrypted |
 | H-26 | any `payment-admin` response (list, onboard, rotate, test) | contains no secret plaintext |
 | H-27 | `describe_owner` for RV1 (restaurant in FCV) | only kiosk channel writable, own merchants only |
+| H-28 | after go-live migration: enabled setting on a non-demo food court / standalone → `env='uat'` merchant | `uat_account_on_live_owner`; same on a demo food court ⇒ allowed |
 
 ## I. Mode changes
 

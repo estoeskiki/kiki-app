@@ -1,6 +1,6 @@
 # Plan: Payment onboarding from admin-web
 
-Status: **draft for review** · Written 2026-10-31 · Owner: Edgar
+Status: **agreed** (questions answered 2026-10-31) · Written 2026-10-31 · Owner: Edgar
 Design: `plans/payments-architecture.md` (rev 4+). Backend it builds on: `plans/payments-phase-2.md` (S1, S4, S5).
 Tests: `plans/payments-test-matrix.md` layer H, including H.3 onboarding (H-21…H-27), + section 9 here.
 
@@ -124,7 +124,8 @@ and the Kiosco column the restaurant kiosk's options including the fallback (arc
 ## 4. Rules the UI follows (all enforced server-side too)
 
 ### 4.1 Who
-- **Phase 3: platform admins only** (`is_platform_admin()`), exactly like `payment-admin` in phase 2. Other roles
+- **Phase 3: platform admins only** (`is_platform_admin()`), exactly like `payment-admin` in phase 2 — Kiki staff
+  type merchants' credentials (decided 2026-10-31). Other roles
   see the Pagos card read-only (methods + status, no merchant ids, no actions).
 - Later (flag `payments.self_service`): food court admins and restaurant owners per architecture 4.2, same UI,
   role checks already inside `payment-admin`.
@@ -137,9 +138,7 @@ and the Kiosco column the restaurant kiosk's options including the fallback (arc
 - Merchant id is not secret but is shown masked (`1234…89`) in lists; full value only in Editar.
 - `set_secret` / `onboard_account` request bodies are never logged (phase 2 S5 rule). Vercel: the server action
   must not `console.log` form data.
-- Recent sign-in for secret writes: `payment-admin` rejects `set_secret` / `onboard_account` when the JWT's
-  `iat` is older than 15 minutes with `reauth_required`; the UI asks for the password again (Supabase
-  `reauthenticate`) and retries. (Open question 10.2.)
+- No re-authentication step for secret writes (decided 2026-10-31): a valid platform-admin session is enough.
 
 ### 4.3 What each owner may configure (mirror of architecture 4.3 guards)
 | Owner | Channels | Merchants it can pick |
@@ -155,8 +154,13 @@ The UI reads these from `describe_owner` (5.2) instead of re-implementing them, 
 ### 4.4 Production safety
 - A method on a **production** owner can only point at a merchant whose last test passed after its last secret
   change (`payment-admin` checks; UI shows why).
-- `env='uat'` merchants can be used anywhere but show `Solo UAT` everywhere and trigger the UAT-hours gate
-  (as today).
+- `env='uat'` merchants show `Solo UAT` everywhere and trigger the UAT-hours gate (as today).
+- **From go-live (2b) on, UAT merchants only on demo food courts** (`food_courts.is_demo`, decided 2026-10-31).
+  Guard rule `uat_account_on_live_owner`: an enabled setting may reference an `env='uat'` account only if its owner
+  is a demo food court or a restaurant inside one. Standalone restaurants and non-demo food courts (Plaza Mayor,
+  COS) can only use `prod` merchants. Added by the go-live migration, not in phase 2, because Plaza Mayor (not a
+  demo) runs on the UAT merchant until then. The migration fails if any live owner still points at a UAT merchant.
+  The UI hides UAT in "Ambiente" for non-demo owners after go-live.
 - Every write lands in `payment_config_audit` (phase 2 S1) with the caller as actor; the Historial section shows it.
 
 ## 5. Backend additions
@@ -309,9 +313,8 @@ admin-web (manual, then Playwright later):
 - Rotate secret ⇒ v2 active, v1 retired, test passes, an IPN signed with v1 still verifies (C-11).
 - Read-only role sees status, no merchant ids, no buttons.
 
-## 10. Open questions
-1. Does the merchant type its own credentials (needs self-service, 4.1) or always Kiki ops? Phase 3 assumes Kiki
-   ops.
-2. Re-auth for secret writes (4.2): 15 minutes OK, or skip it for platform admins?
-3. Should a UAT merchant be allowed on a non-demo owner at all after go-live, or only on `is_demo` food courts?
-4. Kiki's own merchants: page under Settings (proposed) or a separate "Pagos" nav item?
+## 10. Decisions (answered 2026-10-31)
+1. Who types credentials: **Kiki staff** for now (platform admins). Self-service later behind `payments.self_service`.
+2. Re-auth for secret writes: **no**.
+3. UAT merchants after go-live: **only on demo food courts** (4.4, guard `uat_account_on_live_owner`, H-28).
+4. Kiki's own merchants: **Settings** → Cuentas de cobro de Kiki.

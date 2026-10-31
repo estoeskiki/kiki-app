@@ -571,6 +571,7 @@ Checklist:
   - CDN: `https://bt-cdn.yappy.cloud/v1/cdn/web-component-btn-yappy.js`
 - [ ] `ipnUrl` apuntando a la URL productiva permanente (no túneles).
 - [ ] Smoke test con **$0.01** y un número Yappy real; verificar IPN y hash.
+- [ ] Plaza Mayor apunta al merchant productivo; luego migración con la regla `uat_account_on_live_owner` (merchants UAT solo en patios demo, `plans/payments-onboarding.md` 4.4).
 - [ ] Monitoreo: logs estructurados por IPN, alerta si falla la validación de hash, conteo de transacciones por estado; vigilar 24 h tras el lanzamiento.
 
 Producción funciona 24/7 y con la app Yappy pública (multi-banco, 8 bancos en Panamá).
