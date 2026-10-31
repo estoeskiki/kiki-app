@@ -1,7 +1,7 @@
 # Plan: Payments architecture — payment methods per platform, venue vs per-restaurant
 
 Status: **draft, iterating** · Started 2026-10-25 · Owner: Edgar · Rev 4 (mode drives cart, methods per platform)
-Related: `plans/payments-phase-2.md` (implementation handover), `plans/payments-test-matrix.md` (every combination), `plans/yappy-test-plan.md` (Yappy UAT), migrations `049_yappy_payments.sql`, `050_yappy_shorter_grace.sql`
+Related: `plans/payments-phase-2.md` (implementation handover), `plans/payments-onboarding.md` (admin-web onboarding), `plans/payments-test-matrix.md` (every combination), `plans/yappy-test-plan.md` (Yappy UAT), migrations `049_yappy_payments.sql`, `050_yappy_shorter_grace.sql`
 
 ## 1. Context and goals
 
@@ -477,7 +477,9 @@ old `payment_method` values are real → rename in place, keep the old values ac
    Then `plans/payments-test-matrix.md` layers A–F, H, I at L1 + Yappy UAT T1–T5 again on the new code.
 2b. **Go live with Yappy** — only after phase 2 passes: prod merchant as an encrypted `payment_accounts` row,
    Plaza Mayor `venue`, legal blocker cleared, `plans/yappy-test-plan.md` §9 checklist.
-3. **`per_restaurant` + standalone** — single-restaurant cart, restaurant merchants, `payment-admin`, admin grid.
+3. **Onboarding UI + `per_restaurant` + standalone** — first the admin-web Pagos card (`plans/payments-onboarding.md`:
+   pick methods per platform, add a merchant's credentials, test, preview checkout; its backend lands in phase 2),
+   then the single-restaurant cart UI and restaurant merchants.
 4. **Kiosk `card_present`** — `payment_terminals`, kiosk writes `payments`.
 5. **Card gateway** — `card_online` + `wallet` adapter (pick gateway).
 6. **Later** — refunds, settlement/payout reports for `venue`, commissions.
@@ -503,6 +505,7 @@ old `payment_method` values are real → rename in place, keep the old values ac
 
 | date | decision |
 |---|---|
+| 2026-10-31 | Onboarding of a food court / restaurant is done in admin-web (Pagos card on its page): methods per platform, merchant credentials typed into a form (encrypted by `payment-admin`), credential test, checkout preview. Adapters declare their fields; new providers need code, new merchants never do. A `prod` merchant must pass a test before any method uses it. Backend in phase 2, UI first in phase 3. Spec: `plans/payments-onboarding.md`. |
 | 2026-10-30 | Restaurant kiosk in a `venue` food court: pay-first methods without the restaurant's own merchant fall back to the food court's merchant (like web), never for datáfono. Payout derived from the collecting merchant's owner, not the device. |
 | 2026-10-30 | Restaurant kiosks (`device_tokens.restaurant_id`) always act as the restaurant — own menu, own methods (kiosk channel), own merchants — even inside a `venue` food court; web and food court kiosks follow the food court mode. Restaurant-kiosk orders in a venue are directly collected, out of payout. |
 | 2026-10-30 | Sequencing: Yappy goes live only on the new architecture (after phase 2 + rerun UAT), never on the old `yappy_*` code; UAT follow-up fixes are built into phase 2. |

@@ -248,6 +248,17 @@ verified by `account_id`.
 | H-19 | any allowed change | audit row written + Kiki alert on merchant change | yes |
 | H-20 | restaurant staff | any payment config change | denied |
 
+### H.3 Onboarding (`plans/payments-onboarding.md`)
+| id | case | expect |
+|---|---|---|
+| H-21 | enabled setting → `prod` merchant never tested | `account_untested` |
+| H-22 | enabled setting → `prod` merchant tested on secret v1, active secret is v2 | `account_untested` |
+| H-23 | `onboard_account` with invalid config (no merchant id) | error, no account row, no secret row |
+| H-24 | `import_env_secret` with `PAYMENTS_KEK_1` / `SUPABASE_SERVICE_ROLE_KEY` / `YAPPY_UAT_BASE_URL` | rejected |
+| H-25 | `import_env_secret` with `YAPPY_PROD_PLAZAMAYOR_SECRET` | accepted, stored encrypted |
+| H-26 | any `payment-admin` response (list, onboard, rotate, test) | contains no secret plaintext |
+| H-27 | `describe_owner` for RV1 (restaurant in FCV) | only kiosk channel writable, own merchants only |
+
 ## I. Mode changes
 
 | id | change | expect |

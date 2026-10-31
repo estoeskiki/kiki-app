@@ -100,7 +100,8 @@ goal, the files to touch, the exact contract, the checks that prove it is done, 
   copied into `payments` / `payment_events`.
 
 ### Not in phase 2 (later phases — do not build)
-- Admin UI for merchants / method settings (phase 3). In phase 2 configuration is done by migration seeds and
+- Admin UI for merchants / method settings (phase 3, spec: `plans/payments-onboarding.md`; its backend pieces —
+  adapter `fields` / `testCredentials`, `onboard_account`, `describe_*`, `last_test_*` — **are** in phase 2). In phase 2 configuration is done by migration seeds and
   `payment-admin` calls from a platform admin.
 - per_restaurant cart enforcement **in the UI** (phase 3). Server-side enforcement *is* in phase 2.
 - Restaurant-owned merchants in use, Yappy on kiosk, `card_present` terminals, card gateway / wallet adapters.
@@ -194,6 +195,10 @@ CREATE TABLE public.payment_accounts (
   food_court_id    uuid REFERENCES public.food_courts(id) ON DELETE RESTRICT,
   config           jsonb NOT NULL DEFAULT '{}'::jsonb,   -- non-secret, validated by the adapter
   enabled          boolean NOT NULL DEFAULT true,
+  last_test_at       timestamptz,   -- credential test (payment-admin test_account), plans/payments-onboarding.md 5.3
+  last_test_ok       boolean,
+  last_test_error    text,          -- readable message only, never raw provider bodies
+  last_test_version  int,           -- secret version tested; stale when < active version
   disabled_reason  text,
   disabled_at      timestamptz,
   created_by       uuid,
@@ -273,6 +278,8 @@ CREATE TABLE public.payment_config_audit (
      - account must be Kiki-owned (both owner columns null) or owned by **this** food court else `account_not_owned`.
    - account (when set): `enabled` irrelevant here, but `method = ANY (provider.methods)` else
      `provider_method_mismatch`.
+   - account `env = 'prod'` and the setting is enabled (non-empty `channels`) ⇒ `last_test_ok` and
+     `last_test_version` = the active secret version, else `account_untested` (H-21, H-22; onboarding plan 4.4).
 3. `payment_accounts_guard()` — `BEFORE UPDATE`: forbid changing `provider`, `restaurant_id`, `food_court_id`
    after creation (`account_owner_immutable`). Ownership changes = new account.
 4. `payment_mode_guard()` — `BEFORE UPDATE OF payment_mode ON food_courts`: block the change if it would leave
@@ -522,7 +529,12 @@ Keep `_shared/yappy.ts` as a thin re-export until S16 so `yappy-create` / `yappy
 ```ts
 export type Method = 'card_online' | 'wallet' | 'yappy' | 'card_present' | 'cash_counter' | 'yappy_on_delivery' | 'card_on_delivery'
 export type Channel = 'web' | 'kiosk'
-export interface Credentials { accountId: string; version: number; config: Record<string, unknown>; secret: string; env: 'uat' | 'prod' }
+export interface Credentials { accountId: string; version: number; config: Record<string, unknown>; secrets: Record<string, string>; env: 'uat' | 'prod' }
+// secrets = the decrypted JSON object of the adapter's kind:'secret' fields (Yappy: { secretKey })
+export interface CredentialField {   // drives the admin-web onboarding form (plans/payments-onboarding.md 5.1)
+  key: string; kind: 'config' | 'secret'; label: string; input: 'text' | 'url' | 'password'
+  required: boolean; pattern?: string; default?: string; advanced?: boolean; help?: string
+}
 export interface ChargeInput { paymentId: string; providerRef: string; payerRef: string | null; subtotalCents: number; taxCents: number; callbackUrl: string }
 export type ChargeResult =
   | { kind: 'created'; providerTxnId: string; providerData: Record<string, unknown>; clientPayload: Record<string, unknown> }
@@ -531,8 +543,11 @@ export type ChargeResult =
 export interface CallbackResult { providerRef: string; status: 'E' | 'C' | 'X' | string; confirmation: string | null; signatureValid: boolean; raw: string }
 export interface PaymentAdapter {
   provider: string
+  label: string                                               // 'Yappy'
   methods: Method[]
+  fields: CredentialField[]
   validateConfig(config: unknown): void                       // throws with a readable message
+  testCredentials(creds: Credentials): Promise<{ ok: true } | { ok: false; code: string; message: string }>
   validatePayer(payerRef: string | null): { ok: true; value: string | null } | { ok: false; code: string; message: string }
   createCharge(input: ChargeInput, creds: Credentials): Promise<ChargeResult>
   parseCallback(req: Request): Promise<{ providerRef: string; raw: string }>
@@ -542,6 +557,11 @@ export interface PaymentAdapter {
 
 **`yappy.ts` adapter** — move logic from `_shared/yappy.ts` and `yappy-create/index.ts`:
 - `validateConfig`: `{merchantId: non-empty string, domain: https URL without trailing slash}`.
+- `fields`: `merchantId` (config, text, "ID del comercio", required), `secretKey` (secret, password, "Clave
+  secreta", required), `domain` (config, url, default `https://order.estoeskiki.com`, advanced). Help text: "Yappy
+  Comercial → Botón de Pago → Credenciales".
+- `testCredentials`: `validate/merchant` only (8 s timeout) — token ⇒ ok; Yappy E-code / 4xx ⇒ credential failure
+  with a readable message; timeout / 5xx ⇒ `provider_unavailable`. Never calls `payment-wc` (nothing is charged).
 - `validatePayer` (**UAT follow-up 1**): strip non-digits, drop leading `507` when 11 digits, require
   `^6\d{7}$`; message `'Ingresa un número Yappy válido (8 dígitos, empieza con 6).'`, code `invalid_alias`.
 - `createCharge`: validate/merchant (8 s timeout) → payment-wc (20 s) exactly as `yappy-create` today, base URL
@@ -574,9 +594,16 @@ Actions (POST JSON `{action, …}`):
 | action | input | effect |
 |---|---|---|
 | `create_account` | `provider, env, display_name, owner: {kind:'kiki'\|'food_court'\|'restaurant', id?}, config` | insert `payment_accounts`. `config` may be partial (e.g. only `domain`, merchant id added by `import_env_config`); `payment-create` runs `validateConfig` before every charge and fails with `CONFIG` if incomplete |
-| `import_env_config` | `account_id, key, env_var` | `env_var` allowlist: `YAPPY_UAT_MERCHANT_ID`, `YAPPY_PROD_MERCHANT_ID`; sets `config[key]` from the Edge secret server-side (re-run adapter `validateConfig`). Nobody copies the merchant id by hand. |
-| `import_env_secret` | `account_id, env_var` | `env_var` must be in an allowlist: `YAPPY_UAT_SECRET`, `YAPPY_PROD_SECRET`. Reads it from Edge secrets, encrypts, inserts version n+1 `active`, retires the previous active one. **The secret never leaves the server.** |
-| `set_secret` | `account_id, secret` | same as above with a provided value (used from the phase 3 UI over HTTPS; never from chat) |
+| `import_env_config` | `account_id, key, env_var` | `env_var` must match `^YAPPY_(UAT\|PROD)(_[A-Z0-9]+)*_MERCHANT_ID$` (e.g. `YAPPY_UAT_MERCHANT_ID`, `YAPPY_PROD_PLAZAMAYOR_MERCHANT_ID`); sets `config[key]` from the Edge secret server-side (re-run adapter `validateConfig`). Nobody copies the merchant id by hand. |
+| `import_env_secret` | `account_id, env_var` | `env_var` must match `^YAPPY_(UAT\|PROD)(_[A-Z0-9]+)*_SECRET$` — Yappy secrets only, never other Edge secrets (test: `PAYMENTS_KEK_1`, `SUPABASE_SERVICE_ROLE_KEY`, `YAPPY_UAT_BASE_URL` rejected). Stored as `{secretKey}`. Reads it from Edge secrets, encrypts, inserts version n+1 `active`, retires the previous active one. **The secret never leaves the server.** |
+| `set_secret` | `account_id, secrets` (object of the adapter's secret fields) | same as above with provided values (used from the phase 3 UI over HTTPS; never from chat); marks the last test stale |
+| `onboard_account` | `provider, env, display_name, owner, config, secrets` | one transaction: `create_account` + `validateConfig` + secret v1; invalid input ⇒ nothing written |
+| `update_account_config` | `account_id, config` (partial) | merge + `validateConfig`; marks the last test stale |
+| `test_account` | `account_id` | decrypt active secret, `adapter.testCredentials`, store `last_test_*` |
+| `describe_providers` | — | `[{code, label, methods, fields}]` from `registry.ts` (no secrets) |
+| `describe_owner` | `owner` | allowed channels per method, selectable merchants, `payment_mode`, `can_write` — the UI renders from this, never re-implements the rules |
+| `preview_options` | `owner` | `resolve_payment_options` for web and kiosk for that owner |
+| `list_audit` | `owner, limit` | `payment_config_audit` rows |
 | `retire_secret` / `revoke_secret` | `account_id, version` | state changes |
 | `set_account_enabled` | `account_id, enabled, reason?` | |
 | `upsert_setting` | `owner, method, channels, account_id?, sort_order?` | insert/update `payment_method_settings` (guards enforce rules) |
@@ -644,6 +671,7 @@ Commit: `feat(payments): seed method settings reproducing current checkout (054)
    - `create_account {provider:'yappy', env:'uat', display_name:'Kiki — Yappy (UAT)', owner:{kind:'kiki'}, config:{domain:'https://order.estoeskiki.com'}}`
    - `import_env_config {account_id, key:'merchantId', env_var:'YAPPY_UAT_MERCHANT_ID'}`
    - `import_env_secret {account_id, env_var:'YAPPY_UAT_SECRET'}`
+   - `test_account {account_id}` ⇒ `last_test_ok = true` (during UAT hours)
    - `upsert_setting {owner:{kind:'food_court', id:'fc000000-0000-0000-0000-000000000001'}, method:'yappy', channels:['web'], account_id}`
 3. Apply `055_payments_history_copy.sql` (S7 point 3).
 4. Checks: `select * from resolve_payment_options('web', 'fc000000-0000-0000-0000-000000000001', '{}')` during UAT
@@ -834,7 +862,7 @@ Phase 2 must pass:
 | D tampering | D-1 … D-4, D-6, D-7, D-8, D-9 (D-5 via L2 against `create-web-order`/`payment-create`) |
 | E collector/payout | E-1 … E-9 for `account_id` / owner columns (call `begin_payment` + `apply_payment_result('E')`); payout flag is derived — assert the owner of `account_id` |
 | F order record | F-3, F-5, F-6, F-7, F-8 (F-1/F-2/F-4 need adapters from later phases) |
-| H.1 constraints | H-1 … H-12 |
+| H.1 constraints | H-1 … H-12, H-21, H-22 |
 | I mode changes | I-1, I-3, I-4, I-5 (I-2 is UI) |
 Plus ports of the 049 test cases onto the new functions: one active attempt per payer and per cart, sibling
 double-execute ⇒ one order + `refund_required`, snapshot mismatch ⇒ warning not failure, broken snapshot ⇒
@@ -845,7 +873,7 @@ cancel frees the payer, `E` after client cancel creates the order + warning.
 - `node --experimental-strip-types --test supabase/functions/_shared/payments/*.test.ts`
 - Manual `curl` checks after deploy: `payment-webhook/yappy` with a bad hash (T4), replay of a real callback (T5),
   unknown provider path ⇒ 404; `create-web-order` with `channel:'kiosk'` and no kiosk JWT ⇒ 403 (D-5);
-  `payment-admin` as a non-admin ⇒ forbidden (H-13…H-20 subset).
+  `payment-admin` as a non-admin ⇒ forbidden (H-13…H-20 subset); onboarding actions H-23…H-27.
 
 #### L3 — Yappy UAT rerun (during UAT hours, Edgar has the UAT app)
 T1 E, T2 C, T3 X, T4 bad hash, T5 replay — through the new path. Plus: rejection ends the wait immediately;
